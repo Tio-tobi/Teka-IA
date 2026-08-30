@@ -1,0 +1,36 @@
+# --- dados pessoais do John: NUNCA subir ---
+#
+# Estes quatro guardam caminhos reais da maquina dele, comandos que ele digitou e o
+# que a Teka memorizou de conversas. Nada aqui e necessario para reproduzir o projeto,
+# e tudo aqui e sobre uma pessoa.
+.teka-diario.log
+memoria.bin
+memoria_backup.bin
+dados/propostas.txt
+
+# --- artefatos de build ---
+target/
+target-tmp/
+*.exe
+*.pdb
+
+# --- pesos e tabelas: gerados, e pesados ---
+# Modelo treinado sai de `teka agente`, a tabela de entropia sai de `teka ngrama`.
+# Ambos sao reproduziveis a partir do codigo e do corpus; versionar binario de 6 a 16
+# MB a cada experimento encheria o repositorio sem acrescentar informacao.
+*.bin
+*.safetensors
+pesos_antigos/
+
+# --- corpora: 128 MB de texto coletado ---
+# `teka coletar` reconstroi. O que importa versionar e o COLETOR, nao a coleta.
+dados/corpus_*.txt
+dados/val_*.txt
+dados/.cursor*
+
+# --- saidas de experimento ---
+# Cento e cinquenta logs de rodadas antigas. O que vale ficar esta escrito em
+# ARQUITETURA.md, que e onde os achados moram.
+*.log
+*.csv
+*.zip

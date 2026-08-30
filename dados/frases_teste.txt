@@ -1,0 +1,227 @@
+# Conjunto de teste escrito à mão — o benchmark honesto da Teka.
+#
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │  NUNCA adicione estas frases a MOLDES em src/learn/dados.rs.              │
+# │                                                                           │
+# │  Isso já aconteceu uma vez: as frases que a Teka errava foram             │
+# │  transformadas em templates, e a medição seguinte ficou sem sentido.      │
+# │  Se uma frase daqui for para o gerador, este arquivo deixa de medir       │
+# │  generalização e passa a medir memorização.                               │
+# │                                                                           │
+# │  Para consertar um erro visto aqui: escreva templates NOVOS que cubram    │
+# │  o mesmo fenômeno linguístico, não estas frases.                          │
+# └───────────────────────────────────────────────────────────────────────────┘
+#
+# formato:  ferramenta | pedido | argumento esperado (vazio se não houver)
+
+hora | sabe me falar o horario e a data de hoje |
+hora | quero conferir a data no sistema |
+hora | que dia sera amanha |
+
+listar_pasta | o que esta arquivado em target | target
+listar_pasta | percorre a pasta dados e me diz o que achou | dados
+listar_pasta | me da um panorama da pasta src | src
+
+ler_arquivo | quero inspecionar o conteudo de leia_me.txt | leia_me.txt
+ler_arquivo | despeja na tela o que tem em notas.md | notas.md
+ler_arquivo | exibe o miolo do arquivo config.json | config.json
+
+procurar_arquivo | sonda o computador atras de config | config
+procurar_arquivo | quero rastrear um arquivo de nome relatorio | relatorio
+procurar_arquivo | tem por acaso alguma coisa chamada backup | backup
+
+calcular | obtem o valor numerico de 45+55 | 45+55
+calcular | preciso somar 7*8-12 | 7*8-12
+calcular | qual numero sai de 1024*8 | 1024*8
+
+memoria | o consumo de ram esta alto |
+memoria | checa quanta memoria fisica sobrou |
+memoria | anda pesado de memoria esse computador |
+
+disco | quanto de gigabyte livre restou no armazenamento |
+disco | avalia o espaco disponivel no ssd |
+disco | to sem espaco no computador |
+
+executar_comando | dispara no console o dir | dir
+executar_comando | quero acionar o comando hostname | hostname
+
+escrever_arquivo | registra no arquivo notas.md o texto teste | notas.md
+
+# ── Lote 2 ──────────────────────────────────────────────────────────────────
+#
+# Escritas depois que o benchmark de 24 ficou pequeno demais para arbitrar:
+# com 24 frases cada uma valia 4,2 pontos, e qualquer mudanca mexia o numero
+# dentro do ruido.
+#
+# Cada grupo mira um fenomeno que o corpus de treino cobre mal:
+#   - frase DECLARATIVA (estado, nao ordem) — foi assim que ela errou "o consumo
+#     de ram esta alto", escolhendo procurar_arquivo com nome="alto"
+#   - PERGUNTA em vez de comando
+#   - vocabulario incomum (a outra falha: "arquivado" virou hora)
+#   - ACENTO, que o corpus de treino quase nao tem
+
+hora | to perdido, que dia e hoje mesmo |
+hora | me situa no tempo ai |
+hora | preciso saber em que dia estamos |
+hora | que horas o relogio marca agora |
+
+listar_pasta | quais itens moram dentro de src\model | src\model
+listar_pasta | faz um inventario de c:\temp | c:\temp
+listar_pasta | queria enxergar tudo que ha em anotacoes | anotacoes
+listar_pasta | despeja o indice da pasta documentos | documentos
+
+ler_arquivo | joga na tela o texto do arquivo diario.txt | diario.txt
+ler_arquivo | preciso da transcricao de relatorio.md | relatorio.md
+ler_arquivo | abre e le pra mim o conteudo de rascunho.txt | rascunho.txt
+ler_arquivo | o que diz o arquivo configuração.ini | configuração.ini
+
+procurar_arquivo | vasculha o pc atras de um tal de contrato | contrato
+procurar_arquivo | sumiu um arquivo chamado planilha aqui | planilha
+procurar_arquivo | cade o documento de nome atestado | atestado
+procurar_arquivo | localiza pra mim algo batizado de esboco | esboco
+
+calcular | resolve essa continha 300/4 | 300/4
+calcular | quanto da se eu fizer 17*23 | 17*23
+calcular | me diz o produto de 9*9 | 9*9
+calcular | faz a matematica de (5+3)*2 | (5+3)*2
+
+memoria | esse pc ta engasgando de tanto programa aberto |
+memoria | sobrou ram pra abrir mais coisa |
+memoria | quanto de memória a maquina ainda aguenta |
+memoria | o navegador comeu toda a ram de novo |
+
+disco | ja lotou o hd de novo |
+disco | nao consigo baixar nada, deve ser espaço |
+disco | me fala da saude do armazenamento |
+disco | quantos giga ainda cabem aqui dentro |
+
+executar_comando | chama o ipconfig no terminal | ipconfig
+executar_comando | manda um whoami ai | whoami
+executar_comando | queria disparar o systeminfo | systeminfo
+
+escrever_arquivo | guarda a frase lembrete no arquivo agenda.txt | agenda.txt
+escrever_arquivo | poe no diario.md a anotacao reuniao | diario.md
+escrever_arquivo | escreve ola dentro de teste.txt | teste.txt
+escrever_arquivo | salva a observacao urgente em avisos.txt | avisos.txt
+
+# ── perguntar: ela tem de saber NÃO agir ────────────────────────────────────
+#
+# Tres familias, iguais as dos moldes mas com frases ineditas: conversa,
+# coisa que ela nao tem, e pedido vago demais para virar chamada.
+#
+# Estas sao as unicas do arquivo cuja resposta certa e "nao faco nada".
+
+perguntar | e ai, como voce ta hoje |
+perguntar | voce consegue programar em rust |
+perguntar | me explica como funciona uma rede neural |
+perguntar | quero ouvir uma playlist relaxante |
+perguntar | posta isso no instagram pra mim |
+perguntar | manda um zap pro pedro |
+perguntar | cria uma planilha com os meus gastos |
+perguntar | reinicia a maquina agora |
+perguntar | faz o que eu te pedi ontem |
+perguntar | cuida disso ai pra mim |
+
+# ── Lote 3 do benchmark: de 69 para 150 frases ──────────────────────────────
+#
+# Motivo, medido: com 69 frases o chao de ruido e ~3 pontos, ou seja 2 frases.
+# O Lote 3 de treino consertou 2 dos 10 erros sistematicos — efeito real,
+# verificavel linha a linha — e o agregado nao mexeu, porque 2 frases sao
+# exatamente a largura do ruido. A regua parou de distinguir o que funciona.
+#
+# Com 150 frases, o mesmo ruido relativo cobre menos: uma frase vale 0,67% em vez
+# de 1,7%, e diferencas de 3-4 frases passam a ser visiveis.
+#
+# ATENCAO: os verbos daqui nao estao nas 292 aberturas do treino. Foi conferido.
+# E o que faz este arquivo medir GENERALIZACAO em vez de memoria.
+
+hora | me passa o horario do sistema |
+hora | preciso do dia da semana |
+hora | anota ai que horas sao |
+hora | to sem nocao de tempo hoje |
+hora | falta muito pro fim do dia |
+hora | confere o calendario pra mim |
+hora | em que mes estamos mesmo |
+
+listar_pasta | exibe os itens de C:\Users\User\Downloads | C:\Users\User\Downloads
+listar_pasta | enumera o que ha em src\backend | src\backend
+listar_pasta | traz a lista de arquivos de docs | docs
+listar_pasta | detalha o diretorio planilhas | planilhas
+listar_pasta | quero visualizar a pasta recibos | recibos
+listar_pasta | tabula o conteudo de scripts | scripts
+listar_pasta | separa o que tem em fotos\viagem | fotos\viagem
+
+ler_arquivo | extrai o texto de contrato.pdf | contrato.pdf
+ler_arquivo | puxa o conteudo de changelog.md | changelog.md
+ler_arquivo | carrega o arquivo requisitos.txt | requisitos.txt
+ler_arquivo | quero visualizar o boleto.txt | boleto.txt
+ler_arquivo | traz o que esta escrito em resumo.md | resumo.md
+ler_arquivo | acessa o arquivo treino.csv | treino.csv
+ler_arquivo | detalha o que ha em config\local.ini | config\local.ini
+
+procurar_arquivo | identifica onde esta o arquivo diploma | diploma
+procurar_arquivo | resgata um arquivo chamado chave | chave
+procurar_arquivo | reune tudo que se chame logo | logo
+procurar_arquivo | seleciona os arquivos de nome banner | banner
+procurar_arquivo | escaneia o pc por cadastro | cadastro
+procurar_arquivo | onde foi parar o arquivo licenca | licenca
+procurar_arquivo | preciso identificar o arquivo extrato | extrato
+
+calcular | gera o resultado de 66+34 | 66+34
+calcular | quanto fica 480-215 | 480-215
+calcular | tira a conta de 33*3 | 33*3
+calcular | preciso do valor de 720/8 | 720/8
+calcular | qual o total de (90+10)*2 | (90+10)*2
+calcular | reporta quanto da 4^5 | 4^5
+calcular | 250+750 da quanto | 250+750
+
+memoria | a maquina esta pesada de novo |
+memoria | monitora o consumo de ram |
+memoria | sera que falta memoria aqui |
+memoria | tudo travando, deve ser a ram |
+memoria | reporta o estado da memoria |
+memoria | o pc nao aguenta mais abas abertas |
+memoria | ta sobrando ram ou nao |
+
+disco | o computador avisou que ta sem espaco |
+disco | monitora o espaco em disco |
+disco | nao consigo instalar nada de tao cheio |
+disco | reporta a situacao do armazenamento |
+disco | quanto ainda cabe no ssd |
+disco | preciso liberar espaco, quanto tem |
+disco | o hd ta perto de encher |
+
+executar_comando | roda o comando netstat no prompt | netstat
+executar_comando | preciso rodar o comando chkdsk | chkdsk
+executar_comando | executa arp -a pra mim | arp -a
+executar_comando | quero rodar o comando driverquery | driverquery
+executar_comando | passa o comando query user no terminal | query user
+executar_comando | aciona o comando assoc | assoc
+executar_comando | manda o prompt executar o where cmd | where cmd
+
+escrever_arquivo | grava a frase teste final em relatorio.txt | relatorio.txt
+escrever_arquivo | poe no arquivo compras.txt o texto arroz | compras.txt
+escrever_arquivo | anota reuniao as dez em agenda.md | agenda.md
+escrever_arquivo | escreve backup feito no arquivo log.md | log.md
+escrever_arquivo | salva a nota conferir depois em memo.txt | memo.txt
+escrever_arquivo | registra prazo curto no arquivo aviso.txt | aviso.txt
+escrever_arquivo | insere a linha ok em resultado.txt | resultado.txt
+
+perguntar | qual seu nome mesmo |
+perguntar | voce entende sentimento |
+perguntar | ta calor ai onde voce ta |
+perguntar | me conta um segredo |
+perguntar | voce prefere manha ou noite |
+perguntar | eu posso confiar em voce |
+perguntar | queria te dar um abraco |
+perguntar | edita esse video pra mim |
+perguntar | monta uma apresentacao |
+perguntar | faz um bolo de chocolate |
+perguntar | leva o lixo pra fora |
+perguntar | dirige ate o mercado |
+perguntar | costura minha camisa |
+perguntar | canta parabens |
+perguntar | prega um prego na parede |
+perguntar | resolve a equacao da minha vida |
+perguntar | quem sabe depois |
+perguntar | melhor nao

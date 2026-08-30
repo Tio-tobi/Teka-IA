@@ -1,0 +1,886 @@
+# Exemplos escritos à mão — destilação.
+#
+# Moldes multiplicam o mesmo esqueleto com valores diferentes. Estas frases são
+# genuinamente distintas umas das outras, que é onde o gerador por moldes não
+# alcança.
+#
+# formato:  ferramenta | pedido | argumento1 | argumento2
+#
+# Os argumentos são localizados por busca de substring no pedido. Um exemplo cujo
+# argumento não apareça literalmente é descartado no carregamento.
+#
+# NUNCA copie frases de dados/frases_teste.txt para cá — aquilo é o benchmark, e
+# um teste quebra se acontecer.
+
+# ---------------------------------------------------------------- hora
+hora | consegue me dizer as horas
+hora | consegue me falar as horas
+hora | sabe dizer que horas sao
+hora | me fala as horas ai
+hora | ta na hora de quanto
+hora | horario atual
+hora | data de hoje
+hora | dia de hoje
+hora | que horas o computador marca
+hora | ve no relogio do sistema
+hora | preciso do dia e da hora
+hora | qual e o dia de hoje mesmo
+hora | to perdido no dia, me situa
+hora | anda, que horas sao
+hora | rapido, me diz a hora
+hora | to atrasado, que horas
+hora | quantas horas sao agora
+hora | hoje e segunda ou terca
+hora | em que mes estamos
+hora | qual o ano corrente
+hora | ja passou do meio dia
+hora | e de manha ainda
+hora | data e hora completas por favor
+hora | so a hora, por favor
+hora | me atualiza o relogio
+hora | consulta a hora do sistema
+hora | verifica a data
+hora | descobre que dia e hoje
+hora | informa o dia e a hora
+hora | diz o horario
+hora | fala a data
+hora | mostra a hora
+hora | ver as horas
+hora | checar data
+hora | dia e hora
+hora | horas
+hora | que data e essa de hoje
+hora | to sem nocao de tempo aqui
+hora | qual o momento atual
+hora | preciso registrar a hora
+
+# ---------------------------------------------------------------- listar_pasta
+listar_pasta | o que tem guardado dentro de src | src
+listar_pasta | quais os itens da pasta dados | dados
+listar_pasta | escancara a pasta src | src
+listar_pasta | vasculha o diretorio dados | dados
+listar_pasta | passa o olho em C:\Windows\System32 | C:\Windows\System32
+listar_pasta | me diz tudo que ha em D:\backup | D:\backup
+listar_pasta | conteudo do diretorio target\release | target\release
+listar_pasta | abre e me mostra src\model | src\model
+listar_pasta | tem quantos arquivos em C:\temp | C:\temp
+listar_pasta | radiografia da pasta anotacoes | anotacoes
+listar_pasta | quero enxergar o que ha em musicas | musicas
+listar_pasta | destrincha a pasta fotos\2026 | fotos\2026
+listar_pasta | joga na tela o conteudo de src\backend | src\backend
+listar_pasta | o que foi guardado em C:\Users\User\Documentos | C:\Users\User\Documentos
+listar_pasta | inspeciona o diretorio C:\Users\User\Downloads | C:\Users\User\Downloads
+listar_pasta | me fala dos arquivos de src | src
+listar_pasta | esvazia a duvida, o que tem em dados | dados
+listar_pasta | catalogo da pasta anotacoes | anotacoes
+listar_pasta | mapeia o diretorio src\model | src\model
+listar_pasta | quantas coisas tem em C:\temp | C:\temp
+listar_pasta | ve ai o que sobrou em D:\backup | D:\backup
+listar_pasta | quero a lista de src | src
+listar_pasta | lista completa de dados | dados
+listar_pasta | roda um inventario em musicas | musicas
+listar_pasta | dentro de fotos\2026 tem o que | fotos\2026
+listar_pasta | pode olhar a pasta target\release | target\release
+listar_pasta | curiosidade: o que ha em C:\Windows\System32 | C:\Windows\System32
+listar_pasta | percorre C:\Users\User\Projetos | C:\Users\User\Projetos
+listar_pasta | me poe a par do que tem em src\backend | src\backend
+listar_pasta | levanta os arquivos de C:\Users\User\Documentos | C:\Users\User\Documentos
+
+# ---------------------------------------------------------------- ler_arquivo
+ler_arquivo | despeja o conteudo de notas.md | notas.md
+ler_arquivo | abre pra mim o Cargo.toml | Cargo.toml
+ler_arquivo | quero enxergar o texto de leia_me.txt | leia_me.txt
+ler_arquivo | passa o olho em config.json | config.json
+ler_arquivo | o que diz o relatorio_final_v3.txt | relatorio_final_v3.txt
+ler_arquivo | escancara o src\main.rs | src\main.rs
+ler_arquivo | joga na tela o orcamento.csv | orcamento.csv
+ler_arquivo | destrincha o anotacoes\ideias.md | anotacoes\ideias.md
+ler_arquivo | quero saber o que ha escrito em lista_de_compras.txt | lista_de_compras.txt
+ler_arquivo | recupera o texto de C:\temp\saida.log | C:\temp\saida.log
+ler_arquivo | mostra o interior do contrato.pdf | contrato.pdf
+ler_arquivo | le e me conta o que tem no notas.md | notas.md
+ler_arquivo | conteudo do arquivo dados\corpus_pt.txt | dados\corpus_pt.txt
+ler_arquivo | quero conferir o Cargo.toml | Cargo.toml
+ler_arquivo | dumpa o leia_me.txt na tela | leia_me.txt
+ler_arquivo | transcreve o config.json | config.json
+ler_arquivo | poe o src\main.rs aqui | src\main.rs
+ler_arquivo | abre o orcamento.csv e me mostra | orcamento.csv
+ler_arquivo | preciso ver por dentro do relatorio_final_v3.txt | relatorio_final_v3.txt
+ler_arquivo | leia o arquivo lista_de_compras.txt | lista_de_compras.txt
+ler_arquivo | escreveram o que em anotacoes\ideias.md | anotacoes\ideias.md
+ler_arquivo | roda uma leitura em C:\temp\saida.log | C:\temp\saida.log
+ler_arquivo | o texto de notas.md, por favor | notas.md
+ler_arquivo | vamos ver o Cargo.toml | Cargo.toml
+ler_arquivo | curiosidade: o que ha dentro de config.json | config.json
+ler_arquivo | recita pra mim o leia_me.txt | leia_me.txt
+ler_arquivo | quero ler por inteiro o contrato.pdf | contrato.pdf
+ler_arquivo | vai la e le o src\main.rs | src\main.rs
+ler_arquivo | consegue exibir o orcamento.csv | orcamento.csv
+ler_arquivo | mostra tudo que esta escrito em notas.md | notas.md
+
+# ---------------------------------------------------------------- procurar_arquivo
+procurar_arquivo | some daqui um arquivo chamado relatorio, acha ele | relatorio
+procurar_arquivo | garimpa um config por ai | config
+procurar_arquivo | onde diabos esta o backup | backup
+procurar_arquivo | preciso encontrar teka em algum lugar | teka
+procurar_arquivo | fareja um orcamento no disco | orcamento
+procurar_arquivo | tem algum contrato salvo aqui | contrato
+procurar_arquivo | localiza pra mim o cv.pdf | cv.pdf
+procurar_arquivo | sumiu o planilha, cade | planilha
+procurar_arquivo | roda uma busca por musica.mp3 | musica.mp3
+procurar_arquivo | quero saber onde ficou o recibo_2026 | recibo_2026
+procurar_arquivo | esquadrinha o disco atras de notas | notas
+procurar_arquivo | tem foto guardada em algum canto | foto
+procurar_arquivo | descobre o paradeiro de relatorio | relatorio
+procurar_arquivo | me ajuda a localizar config | config
+procurar_arquivo | busca em tudo por backup | backup
+procurar_arquivo | onde e que salvaram o orcamento | orcamento
+procurar_arquivo | procura por teka nos arquivos | teka
+procurar_arquivo | anda sumido o contrato, acha ai | contrato
+procurar_arquivo | rastrear cv.pdf | cv.pdf
+procurar_arquivo | existe algum planilha no computador | planilha
+procurar_arquivo | quero achar musica.mp3 em algum lugar | musica.mp3
+procurar_arquivo | caca no disco o recibo_2026 | recibo_2026
+procurar_arquivo | tenta encontrar notas | notas
+procurar_arquivo | ve se tem foto por ai | foto
+procurar_arquivo | preciso do relatorio, onde esta | relatorio
+
+# ---------------------------------------------------------------- calcular
+calcular | manda ver 2+2 | 2+2
+calcular | quanto sai de 15*340 | 15*340
+calcular | resolve a continha 1024*8 | 1024*8
+calcular | qual o total de 45+55 | 45+55
+calcular | me da 7*8-12 | 7*8-12
+calcular | processa (100-25)/3 | (100-25)/3
+calcular | 3^4 da quanto | 3^4
+calcular | fecha a conta 1000/25 | 1000/25
+calcular | (12+8)*5 e quanto | (12+8)*5
+calcular | tira o resultado de 99-33 | 99-33
+calcular | multiplica 2,5*4 | 2,5*4
+calcular | divide 144/12 | 144/12
+calcular | preciso saber quanto e 2+2 | 2+2
+calcular | faz esse calculo 15*340 | 15*340
+calcular | executa a conta 1024*8 | 1024*8
+calcular | soma 45+55 pra mim | 45+55
+calcular | opera 7*8-12 | 7*8-12
+calcular | resultado numerico de (100-25)/3 | (100-25)/3
+calcular | eleva 3^4 | 3^4
+calcular | quanto que fica 1000/25 | 1000/25
+calcular | resolve isso aqui (12+8)*5 | (12+8)*5
+calcular | subtrai 99-33 | 99-33
+calcular | conta rapida 2,5*4 | 2,5*4
+calcular | 144/12 quanto da | 144/12
+calcular | me ajuda com 15*340 | 15*340
+
+# ---------------------------------------------------------------- memoria
+memoria | como anda a ram
+memoria | ta faltando memoria
+memoria | quanto de ram livre tem
+memoria | uso de memoria agora
+memoria | a ram esta sobrecarregada
+memoria | quanta memoria o sistema gastou
+memoria | ve a situacao da ram pra mim
+memoria | o pc esta comendo muita memoria
+memoria | folego de memoria
+memoria | sobrou ram
+memoria | diagnostico da memoria
+memoria | me informa sobre a ram do sistema
+memoria | quantos gigas de ram estao ocupados
+memoria | a memoria aguenta mais um programa
+memoria | to com pouca ram
+memoria | mede a memoria
+memoria | consulta a ram
+memoria | ram disponivel
+memoria | memoria em uso
+memoria | quanto de memoria falta
+memoria | esse computador tem ram sobrando
+memoria | pressao de memoria no sistema
+memoria | ve quanto de ram ainda tem
+memoria | a ram ta no limite
+memoria | estatistica de memoria
+
+# ---------------------------------------------------------------- disco
+disco | como anda o hd
+disco | ta faltando espaco
+disco | quanto de disco livre tem
+disco | uso do armazenamento agora
+disco | o disco esta lotado
+disco | quantos gigas o disco gastou
+disco | ve a situacao do hd pra mim
+disco | o pc esta sem espaco
+disco | folego de armazenamento
+disco | sobrou disco
+disco | diagnostico do armazenamento
+disco | me informa sobre o espaco do sistema
+disco | quantos gigas de disco estao ocupados
+disco | ainda cabe coisa no hd
+disco | to com pouco espaco
+disco | mede o disco
+disco | consulta o armazenamento
+disco | espaco disponivel
+disco | disco em uso
+disco | quanto de espaco falta
+disco | esse computador tem disco sobrando
+disco | pressao de armazenamento
+disco | ve quanto de hd ainda tem
+disco | o ssd ta no limite
+disco | estatistica de disco
+
+# ---------------------------------------------------------------- escrever_arquivo
+escrever_arquivo | joga lembrete dentro de notas.md | notas.md | lembrete
+escrever_arquivo | guarda teste no leia_me.txt | leia_me.txt | teste
+escrever_arquivo | poe comprar pao no lista_de_compras.txt | lista_de_compras.txt | comprar pao
+escrever_arquivo | anota ola dentro de notas.md | notas.md | ola
+escrever_arquivo | grava reuniao amanha no anotacoes\ideias.md | anotacoes\ideias.md | reuniao amanha
+escrever_arquivo | salva anotacao rapida em C:\temp\saida.log | C:\temp\saida.log | anotacao rapida
+escrever_arquivo | escreve senha antiga no arquivo notas.md | notas.md | senha antiga
+escrever_arquivo | quero teste guardado em leia_me.txt | leia_me.txt | teste
+escrever_arquivo | despeja lembrete no lista_de_compras.txt | lista_de_compras.txt | lembrete
+escrever_arquivo | coloca ola dentro do anotacoes\ideias.md | anotacoes\ideias.md | ola
+escrever_arquivo | registra comprar pao em notas.md | notas.md | comprar pao
+escrever_arquivo | faz um leia_me.txt escrito reuniao amanha | leia_me.txt | reuniao amanha
+escrever_arquivo | bota anotacao rapida no notas.md | notas.md | anotacao rapida
+escrever_arquivo | cria lista_de_compras.txt com teste | lista_de_compras.txt | teste
+escrever_arquivo | manda ola pro arquivo leia_me.txt | leia_me.txt | ola
+escrever_arquivo | salva no anotacoes\ideias.md o texto lembrete | anotacoes\ideias.md | lembrete
+escrever_arquivo | quero gravar senha antiga dentro de C:\temp\saida.log | C:\temp\saida.log | senha antiga
+escrever_arquivo | acrescenta comprar pao ao notas.md | notas.md | comprar pao
+escrever_arquivo | deixa teste escrito no lista_de_compras.txt | lista_de_compras.txt | teste
+escrever_arquivo | poe no leia_me.txt a frase reuniao amanha | leia_me.txt | reuniao amanha
+
+# ---------------------------------------------------------------- executar_comando
+executar_comando | manda um dir | dir
+executar_comando | solta um hostname no terminal | hostname
+executar_comando | roda ali o ver | ver
+executar_comando | dispara tasklist | tasklist
+executar_comando | executa no prompt o echo ola | echo ola
+executar_comando | chama date /t | date /t
+executar_comando | quero rodar dir no console | dir
+executar_comando | joga um hostname ai | hostname
+executar_comando | aciona ver pra mim | ver
+executar_comando | processa o comando tasklist | tasklist
+executar_comando | consegue disparar echo ola | echo ola
+executar_comando | roda date /t no sistema | date /t
+executar_comando | terminal: dir | dir
+executar_comando | por favor executa hostname | hostname
+executar_comando | poe pra rodar o ver | ver
+executar_comando | tasklist no prompt | tasklist
+executar_comando | me roda um echo ola rapidinho | echo ola
+executar_comando | pode chamar date /t | date /t
+executar_comando | quero que voce rode dir | dir
+executar_comando | lanca o comando hostname | hostname
+
+# ── Lote do gerador (qwen2.5-7b), revisado ────────────────────────────
+# 242 linhas aceitas pelos 4 filtros e revisadas a mao.
+# 14 cortadas: conteudo generico, recorte errado, nao-pedido.
+hora | me diz a hora e a data por favor
+hora | fala rápido, qual a data e as horas atualmente
+hora | tem o tempo ai? me fale a hora exata
+hora | podias dizer a data e a hora agora
+hora | me conte as horas e dia de hoje
+hora | preciso da data completa aqui
+hora | você sabe a hora e dia de hoje? me conta
+hora | fala a data e hora, rápido
+hora | qual é a hora e data atualmente
+hora | posso saber a data e horário agora
+hora | preciso saber o horário exato com data
+hora | informa a data corrente e horas, por favor
+listar_pasta | mostra o que tem em c:\users\user\projetos | c:\users\user\projetos
+listar_pasta | diga-me qual são os arquivos na pasta dados | dados
+listar_pasta | preciso ver o conteúdo do diretorio target\release | target\release
+listar_pasta | vou precisar dos nomes dos arquivos em dados | dados
+listar_pasta | olha na pasta c:\users\user\projetos para mim | c:\users\user\projetos
+listar_pasta | dá uma olhada nos arquivos em dados pra mim | dados
+ler_arquivo | você pode ler o cargo.toml pra mim | cargo.toml
+ler_arquivo | preciso ver o orcamento.csv | orcamento.csv
+ler_arquivo | mostra pro eu aí o conteúdo do cargo.toml | cargo.toml
+ler_arquivo | conseguiu ler o anotacoes\ideias.md pra mim? | anotacoes\ideias.md
+ler_arquivo | vai lá, le o arquivo orcamento.csv pra mim! | orcamento.csv
+procurar_arquivo | preciso encontrar o fatura_2025 | fatura_2025
+procurar_arquivo | ache o backup_último | backup_último
+procurar_arquivo | onde salvei a planilha_orcamento | planilha_orcamento
+procurar_arquivo | busque o documento orcamento | orcamento
+procurar_arquivo | faça a busca por backup_recente | backup_recente
+procurar_arquivo | ache onde está a fatura_2026 | fatura_2026
+procurar_arquivo | me mostre o arquivo com backup | backup
+calcular | tira o resultado de 15*340 | 15*340
+calcular | resolve pra mim 45+55 | 45+55
+calcular | calcula o total de 99-33 | 99-33
+calcular | me ajuda com (12+8)*5 | (12+8)*5
+calcular | faz a conta rapida 2,5*4 | 2,5*4
+calcular | qual o resultado de 1000/25 | 1000/25
+calcular | vai lá e calcula 15*340 | 15*340
+calcular | preciso do total de 45+55 | 45+55
+calcular | me resolva isso aqui 99-33 | 99-33
+calcular | faz o resultado de (12+8)*5 | (12+8)*5
+calcular | ajuda com a conta rapida 2,5*4 | 2,5*4
+calcular | resolve pra mim o total de 1000/25 | 1000/25
+memoria | diagnostico da memória ram
+memoria | quantos megas de memória estão em uso
+memoria | memória ram liberada no momento
+memoria | como está a pressão da memória do sistema
+memoria | quanto espaço na memoria ram falta ao meu pc
+memoria | o computador está consumindo muita memória ram
+memoria | preciso saber quantos gb de ram estou utilizando
+memoria | quais são as condições atuais da minha memória ram
+memoria | me informe sobre o uso atual da memória ram, por favor
+memoria | espaço disponível na memória ram
+memoria | memória ram ocupada no sistema
+memoria | está tudo certo com a memória ram
+disco | mostra quanto disco livre tem
+disco | qual o espaço livre no meu disco
+disco | preciso saber quanto está disponível no hd
+disco | ve se ainda sobrou alguma coisa no meu armazenamento
+disco | vai no disco e me diz quantos kilos de espaço eu tenho aí
+disco | me conta qual é o nível de espaço livre do disco, tá
+disco | fica ligado que ta faltando muito espaço no meu hd
+disco | verifica rápido se ainda tenho um pouquinho de espaço no disco
+disco | vai no hd e me diz quanto está livre lá dentro
+disco | me conte qual a porcentagem de espaço livre que tá no meu disco
+escrever_arquivo | adiciona comprar pão no notas.md | notas.md | comprar pão
+escrever_arquivo | anota isso em lista_de_compras.txt: teste | lista_de_compras.txt | teste
+escrever_arquivo | registra comprar pão no arquivo lista_de_compras.txt | lista_de_compras.txt | comprar pão
+escrever_arquivo | insere a palavra olá em notas.md | notas.md | olá
+escrever_arquivo | grava na memória do notas.md o texto ola | notas.md | ola
+escrever_arquivo | adiciona na lista_de_compras.txt: teste | lista_de_compras.txt | teste
+escrever_arquivo | insere um novo item: comprar pão na lista_de_compras.txt | lista_de_compras.txt | comprar pão
+executar_comando | quero ver o tasklist no prompt | tasklist
+executar_comando | vamos lá roda ali o ver | ver
+executar_comando | executa um echo ola rapidinho pra mim | echo ola
+executar_comando | preciso de um comando date /t aqui | date /t
+executar_comando | vai rodar um echo ola para iniciar | echo ola
+executar_comando | rodando uma coisa simples como echo ola | echo ola
+hora | me diz a data e hora agora
+hora | podia me dizer qual é a data e a hora atual
+hora | vamos lá, preciso da data e hora exatas
+hora | tem como você informar o dia e a hora de hoje
+hora | quero saber as horas e o dia exatos agora
+hora | poderia me dar a data completa e a hora também
+hora | me passa a data atual e a hora corrente, por favor
+hora | você pode mostrar a data e hora exatas para mim
+hora | tem um jeito de eu pegar a hora e o dia exatamente agora
+hora | dá um jeito de você me dizer o que é hoje em termos de data e horas
+hora | podia me passar a informação atual de data e horário
+hora | você sabe quando é hoje e qual as horas justamente agora
+hora | dá pra me dizer a hora exata agora
+hora | me fala que horas são por favor
+hora | preciso saber qual é o dia de hoje
+hora | você consegue me indicar a hora atual
+hora | pode me passar a data e a hora agora mesmo
+hora | precisa da hora e do dia para mim rapidinho
+hora | quero saber que horário é esse exato momento
+hora | me diga qual é a data completa hoje
+hora | você pode indicar a hora precisa aqui
+hora | me passe o relógio, por favor
+hora | dá pra me contar as horas e o dia hoje
+hora | pode me mostrar a data e a hora atualizados
+hora | preciso saber que horário é agora
+hora | vai me dizer a hora e o dia certinhos
+listar_pasta | mostre o conteúdo de src\model | src\model
+listar_pasta | veja o que tem em c:\users\user\downloads | c:\users\user\downloads
+listar_pasta | quero ver as coisas que estão no diretorio dados | dados
+listar_pasta | dê uma olhada geral na pasta anotacoes | anotacoes
+listar_pasta | mostre-me os arquivos e pastas da src\model | src\model
+listar_pasta | navegue pela pasta dados | dados
+listar_pasta | dê uma vista na pasta anotacoes | anotacoes
+listar_pasta | verifique as coisas dentro do diretorio src\model | src\model
+listar_pasta | examine a estrutura da pasta dados | dados
+listar_pasta | mostre a hierarquia de anotacoes | anotacoes
+listar_pasta | mostra o conteúdo da pasta src\model | src\model
+listar_pasta | inspeciona a estrutura de c:\users\user\downloads | c:\users\user\downloads
+listar_pasta | olha no que tem dentro do diretório dados | dados
+listar_pasta | forneça uma lista dos elementos da pasta anotacoes | anotacoes
+listar_pasta | que tal verificarmos o que há na pasta src\model | src\model
+listar_pasta | quero listar o conteúdo de dados | dados
+listar_pasta | você consegue dar uma olhada no diretorio anotacoes | anotacoes
+listar_pasta | poderia mostrar os arquivos e pastas do diretório src\model | src\model
+listar_pasta | me dê um relatório das pastas dentro de dados | dados
+listar_pasta | você pode me informar sobre a estrutura interna da pasta anotacoes | anotacoes
+ler_arquivo | preciso conferir o script.py | script.py
+ler_arquivo | vou precisar olhar o projeto.txt | projeto.txt
+ler_arquivo | queria ler o arquivo de configuração.config | configuração.config
+ler_arquivo | deixa eu olhar a planilha_dados.csv | planilha_dados.csv
+ler_arquivo | me abre o documento_notas.txt e mostra | documento_notas.txt
+ler_arquivo | preciso visualizar o arquivo_importantes.txt | arquivo_importantes.txt
+ler_arquivo | vou precisar ler o documento.docx | documento.docx
+ler_arquivo | olha só se o texto.txt tá tudo certo | texto.txt
+ler_arquivo | preciso olhar dentro do relatorio_final_v3.txt | relatorio_final_v3.txt
+ler_arquivo | rode uma leitura no orcamento.csv se puder | orcamento.csv
+ler_arquivo | desça o conteúdo do c:\temp\saida.log pra eu conferir | c:\temp\saida.log
+ler_arquivo | me dê uma olhada no arquivo inventario_2023.txt | inventario_2023.txt
+ler_arquivo | consegue mostrar pra mim o relatorio_versao4.txt? | relatorio_versao4.txt
+ler_arquivo | vou precisar do conteúdo de config.ini, você consegue? | config.ini
+ler_arquivo | tem como me mostrar o que tem dentro de planilha_orcamentaria.xlsx? | planilha_orcamentaria.xlsx
+procurar_arquivo | você sabe onde tá guardada aquela planilha_contas | planilha_contas
+procurar_arquivo | precisa encontrar aquele orcamento_07 | orcamento_07
+procurar_arquivo | me ajuda a encontrar o backup_de_dados | backup_de_dados
+procurar_arquivo | o arquivo compras2026 ta escondido aqui? | compras2026
+procurar_arquivo | ta esquecido na maquina aquela foto_pets | foto_pets
+procurar_arquivo | preciso encontrar o backup_importante | backup_importante
+procurar_arquivo | tem o contrato_2023 guardado aqui? | contrato_2023
+procurar_arquivo | tem uma planilha_importantíssima por aqui, certo? | planilha_importantíssima
+calcular | preciso do resultado de (12+8)*5 | (12+8)*5
+calcular | qual é o valor de 3^4? | 3^4
+calcular | me conta quantos são 99-33 | 99-33
+calcular | (1024*8) tá complicado, resolve pra mim | 1024*8
+calcular | faz a conta aqui: 2+2 | 2+2
+calcular | qual é a resposta certa para (12+8)*5? | (12+8)*5
+calcular | como resolve 99-33 pra mim? | 99-33
+calcular | responde quantos são: 1024*8 | 1024*8
+calcular | preciso saber o valor de 2+2 | 2+2
+calcular | resolve a conta 3^4 para mim | 3^4
+calcular | me dá o resultado final de (12+8)*5 | (12+8)*5
+calcular | qual é 99-33? | 99-33
+calcular | faz essa contagem pra mim: 1024*8 | 1024*8
+calcular | preciso da conta resolvida de 2+2 | 2+2
+calcular | mostra a potencia: 3^4 | 3^4
+calcular | responde esse calculo (12+8)*5 | (12+8)*5
+calcular | preciso da resposta de 3^4 aqui | 3^4
+calcular | vai resolver isso pra mim, 99-33 | 99-33
+calcular | me conta quanto é 2+2 | 2+2
+calcular | resolva aqui 1024*8 | 1024*8
+calcular | mostra o resultado de 3^4 por favor | 3^4
+calcular | ache o valor correto de (12+8)*5 | (12+8)*5
+calcular | me ajuda com essa conta, 99-33 | 99-33
+calcular | quer saber quanto é 2+2? | 2+2
+calcular | preciso do resultado de 1024*8 | 1024*8
+calcular | faça o calculo 3^4 pra mim | 3^4
+calcular | resolve essa expressão (12+8)*5 | (12+8)*5
+calcular | você pode me dizer quanto é 99-33? | 99-33
+calcular | me de um helping hand com 2+2 | 2+2
+calcular | quero saber qual o resultado de 1024*8 | 1024*8
+memoria | diga quanto memoria ram tem no sistema
+memoria | quer saber o consumo de memoria ram do pc
+memoria | podemos verificar se falta memoria ram para rodar novos programas
+memoria | informe quanto memoria ram estou usando agora, por favor
+memoria | preciso saber a quantidade de memoria ram disponível
+memoria | você pode me dizer como esta a utilização da memoria ram
+memoria | o sistema está consumindo muito espaço na memoria ram
+memoria | me mostre a quantidade de ram em uso no sistema
+memoria | preciso saber quanto da memoria ram está ocupada aqui
+memoria | como esta o nivel de utilização da memória ram
+memoria | você consegue me dizer quantos bytes estão sendo usados pela ram
+memoria | podia me informar sobre a situação atual da minha ram, por favor
+memoria | tem muita memoria ram disponível para eu usar agora
+memoria | pode me passar um relatório de quanto da memória está ocupada no meu sistema
+memoria | posso saber qual o status atual da minha ram, assistente
+memoria | preciso que você verifique a pressão de memória no momento
+memoria | como anda a utilização da memoria ram do meu computador
+memoria | está faltando memória ram ou ela está livre para novas tarefas
+memoria | você pode me indicar se o pc precisa de mais memória ram agora mesmo
+memoria | me conte qual é a porcentagem de memória ram que já foi usada
+memoria | preciso saber se o sistema tá com falta de memoria ram pra eu tomar providências
+memoria | vamos lá, me fala quanto da memória ram ainda está disponível para eu usar
+disco | me mostre o espaço livre no disco
+disco | pode verificar quanto espaço sobra no meu disco
+disco | preciso saber qual é o espaço disponível neste disco
+disco | você sabe qual é a capacidade de armazenamento restante
+disco | quero ver o tamanho do espaço livre no disco
+disco | podia dizer quanto espaço ainda tem no disco
+disco | tá com espaço suficiente no meu disco
+disco | posso saber se o disco está quase cheio
+disco | fala-me sobre a disponibilidade de espaço no disco
+disco | o disco ta com falta de espaço
+disco | dá uma olhada no armazenamento livre do disco pra mim
+disco | pode me dar um relatório do armazenamento disponível no disco
+disco | preciso saber quanto espaço livre tem na unidade de armazenamento
+disco | verifique o espaço disponível no meu disco rígido
+disco | como está a disponibilidade de espaço no hd
+disco | mostra a situação do armazenamento do disco, okay
+disco | informa quanto falta de espaço no disco para mim
+disco | verifica a pressão de armazenamento que tenho agora
+disco | meu hd tá ficando pequeno, precisa saber quanto está livre
+disco | olha só quanto eu tenho livre no meu disco, por favor
+disco | qual é o espaço restante na minha unidade
+disco | mostrar a porcentagem de espaço que sobra no hd
+disco | quanto espaço ainda tem disponível no disco
+disco | informa a quantidade de espaço restante no disco, plz
+escrever_arquivo | coloca na memoria.db o texto compras | memoria.db | compras
+escrever_arquivo | salve os arquivos em config.ini com o texto update | config.ini | update
+escrever_arquivo | gravando mensagem importante em logs\log_importantes.txt | logs\log_importantes.txt | mensagem importante
+escrever_arquivo | colocar no arquivo notas.txt a frase compromissos diarios | notas.txt | compromissos diarios
+escrever_arquivo | faz um arq.txt com o texto arquivo criado | arq.txt | arquivo criado
+escrever_arquivo | insere no log.txt a informação login efetuado | log.txt | login efetuado
+executar_comando | executa tasklist | tasklist
+executar_comando | roda ver | ver
+executar_comando | manda executar echo ola rapidinho | echo ola
+executar_comando | rode ver | ver
+executar_comando | dispara o comando date /t | date /t
+executar_comando | executa ver | ver
+executar_comando | faça tasklist | tasklist
+executar_comando | rode o ver aqui | ver
+executar_comando | vou rodar o comando date /t | date /t
+executar_comando | chamo date /t no sistema | date /t
+executar_comando | dá play no comando date /t | date /t
+executar_comando | rodando o ver | ver
+executar_comando | execute o echo ola rapidinho | echo ola
+executar_comando | faça date /t no sistema | date /t
+
+# ── perguntar: escritos a mao ───────────────────────────────────────────────
+# Nenhuma destas esta nos MOLDES nem no benchmark. Registro curto e seco,
+# igual ao resto dos escritos a mao — de proposito, porque foi justamente esse
+# registro que o lote do gerador diluiu.
+perguntar | oi teka
+perguntar | ola, tudo certo
+perguntar | fala comigo
+perguntar | ta acordada
+perguntar | como voce funciona
+perguntar | voce e uma ia mesmo
+perguntar | quantos anos voce tem
+perguntar | do que voce gosta
+perguntar | brigado
+perguntar | tchau
+perguntar | ate amanha
+perguntar | boa tarde pra voce
+perguntar | poe musica
+perguntar | toca spotify
+perguntar | pausa a musica
+perguntar | envia um email
+perguntar | quero usar o chrome
+perguntar | quero navegar na internet
+perguntar | quero assistir um video
+perguntar | usa a impressora
+perguntar | conecta no wifi
+perguntar | atualiza o windows
+perguntar | instala esse programa
+perguntar | deixa isso bonito
+perguntar | revisa isso pra mim
+perguntar | inventa uma historia
+perguntar | o mercado esta aberto
+perguntar | vai fazer calor
+perguntar | faz isso
+perguntar | aquilo que eu falei
+perguntar | sei la, tenta ai
+perguntar | do jeito de sempre
+perguntar | igual da outra vez
+perguntar | pode ser qualquer um
+
+# ── Lote 3: variedade de VERBO ──────────────────────────────────────────────
+#
+# Escrito depois que ampliar os pools de VALOR falhou (custou 30 pontos fora de
+# escopo e nao consertou nenhum comando inedito). O diagnostico que sobrou:
+#
+#   ipconfig  →  {"acao":"executar_comando","comando":"g"}    intencao certa, ponteiro errado
+#   systeminfo → {"acao":"procurar_arquivo","nome":"systeminfo"} ponteiro certo, intencao errada
+#
+# Sao dois defeitos separados. Mais valores so mexe na intencao, e mexe para o
+# lado errado — ensina que mais strings sao chamadas plausiveis.
+#
+# O que os 10 erros sistematicos tem em comum e VERBO desconhecido: "arquivado",
+# "batizado", "me situa no tempo". O corpus tem 226 aberturas distintas e 119
+# delas aparecem UMA vez. A cauda e onde ela erra.
+#
+# REGRA: nenhum verbo que o benchmark usa entra aqui. Se eu escrever "arquivado"
+# no treino, aquele caso vira memorizacao e o benchmark para de medir. O objetivo
+# e que ela generalize para verbo raro, nao que ela decore estes.
+
+listar_pasta | espia o que tem em src\model | src\model
+listar_pasta | cataloga os arquivos de dados | dados
+listar_pasta | revela o conteudo de anotacoes | anotacoes
+listar_pasta | escancara a pasta documentos | documentos
+listar_pasta | destrincha o diretorio src | src
+listar_pasta | varre a pasta target e me conta | target
+listar_pasta | mapeia o que existe em C:\temp | C:\temp
+listar_pasta | desdobra a pasta imagens | imagens
+listar_pasta | relaciona tudo dentro de scripts | scripts
+listar_pasta | expoe os arquivos de testes | testes
+listar_pasta | discrimina o que ha em backups | backups
+listar_pasta | esmiuca a pasta projetos | projetos
+
+ler_arquivo | decifra o que diz o config.json | config.json
+ler_arquivo | consulta o arquivo notas.md | notas.md
+ler_arquivo | examina o conteudo de leia_me.txt | leia_me.txt
+ler_arquivo | folheia o Cargo.toml pra mim | Cargo.toml
+ler_arquivo | desenrola o texto de diario.txt | diario.txt
+ler_arquivo | interpreta o orcamento.csv | orcamento.csv
+ler_arquivo | destrava o arquivo receitas.md | receitas.md
+ler_arquivo | digere o conteudo de erro.log | erro.log
+ler_arquivo | escancara o que tem em senhas.txt | senhas.txt
+ler_arquivo | absorve o texto de manual.txt | manual.txt
+ler_arquivo | soletra o arquivo licenca.txt | licenca.txt
+ler_arquivo | debulha o conteudo de saida.log | saida.log
+
+procurar_arquivo | garimpa um arquivo de nome fatura | fatura
+procurar_arquivo | fuca a maquina atras de recibo | recibo
+procurar_arquivo | peneira tudo procurando boleto | boleto
+procurar_arquivo | esquadrinha o disco por curriculo | curriculo
+procurar_arquivo | fareja um arquivo chamado extrato | extrato
+procurar_arquivo | caca o documento de nome apostila | apostila
+procurar_arquivo | investiga onde parou o inventario | inventario
+procurar_arquivo | escarafuncha atras de comprovante | comprovante
+procurar_arquivo | persegue um arquivo tipo declaracao | declaracao
+procurar_arquivo | ha algum arquivo chamado certidao | certidao
+procurar_arquivo | escava a maquina procurando portfolio | portfolio
+procurar_arquivo | pinca o arquivo de nome instalador | instalador
+
+calcular | computa 88+12 pra mim | 88+12
+calcular | apura o valor de 350-75 | 350-75
+calcular | totaliza 24*15 | 24*15
+calcular | contabiliza 960/12 | 960/12
+calcular | afere quanto sai de 7^3 | 7^3
+calcular | deduz o resultado de (40+20)/3 | (40+20)/3
+calcular | quantifica 125*4 | 125*4
+calcular | estima 1999+1 | 1999+1
+calcular | processa a conta 630/9 | 630/9
+calcular | soluciona 45*11 | 45*11
+calcular | efetua 200-137 | 200-137
+calcular | opera 16^2 | 16^2
+
+executar_comando | invoca o dir no terminal | dir
+executar_comando | deflagra o tasklist | tasklist
+executar_comando | aciona um echo teste | echo teste
+executar_comando | lanca o comando vol | vol
+executar_comando | ativa o hostname | hostname
+executar_comando | detona um dir /b | dir /b
+executar_comando | desencadeia o comando tree | tree
+executar_comando | despacha um netstat | netstat
+executar_comando | ordena que rode o cls | cls
+executar_comando | atira um ping localhost no terminal | ping localhost
+executar_comando | encaminha pelo prompt o comando path | path
+executar_comando | submete o comando getmac | getmac
+
+escrever_arquivo | consigna comprar leite em lista.txt | lista.txt | comprar leite
+escrever_arquivo | deposita a frase ligar pro joao em agenda.txt | agenda.txt | ligar pro joao
+escrever_arquivo | assenta pagar boleto no arquivo tarefas.txt | tarefas.txt | pagar boleto
+escrever_arquivo | protocola versao aprovada em log.txt | log.txt | versao aprovada
+escrever_arquivo | tatua no memo.md a frase reuniao cancelada | memo.md | reuniao cancelada
+escrever_arquivo | lanca em diario.txt o texto dia produtivo | diario.txt | dia produtivo
+escrever_arquivo | verte em notas.txt a nota comprar cafe | notas.txt | comprar cafe
+escrever_arquivo | fixa em avisos.md o recado prazo mudou | avisos.md | prazo mudou
+escrever_arquivo | crava no arquivo status.txt o texto tudo certo | status.txt | tudo certo
+escrever_arquivo | inscreve em registro.txt a frase cliente ligou | registro.txt | cliente ligou
+
+hora | me ancora no calendario |
+hora | em que ponto do dia estamos |
+hora | o ponteiro do sistema aponta pra onde |
+hora | ja e de tarde ou ainda e manha |
+hora | qual o carimbo de tempo agora |
+hora | atualiza meu senso de horario |
+hora | to voando aqui, que dia e |
+hora | preciso me orientar no calendario |
+hora | consulta o cronometro do sistema |
+hora | qual e o momento atual |
+
+memoria | a ram desse pc ta no sufoco |
+memoria | os programas estao devorando tudo |
+memoria | queria saber da carga na ram |
+memoria | tem folga de memoria pra abrir mais |
+memoria | o pc parece estrangulado de memoria |
+memoria | afere quanto de ram sobra |
+memoria | quantifica a memoria em uso |
+memoria | to com medo de estourar a ram |
+memoria | a ram ta segurando o rojao |
+memoria | quanto de ram foi consumido ate agora |
+
+disco | o armazenamento ta apertado |
+disco | nao sobra mais nada no ssd |
+disco | queria saber da folga no hd |
+disco | o disco ta no limite ou tem sobra |
+disco | afere o espaco que resta |
+disco | quantifica o armazenamento livre |
+disco | to no aperto de espaco aqui |
+disco | o hd suporta mais download |
+disco | resta quanto de armazenamento |
+disco | preciso me inteirar do espaco do disco |
+
+perguntar | canta uma cancao |
+perguntar | desenha uma paisagem |
+perguntar | conta uma historia de terror |
+perguntar | conserta minha vida amorosa |
+perguntar | me ensina a tocar violao |
+perguntar | brinca comigo |
+perguntar | agenda meu dentista |
+perguntar | compra passagem pra praia |
+perguntar | pede uma pizza |
+perguntar | reserva mesa no restaurante |
+perguntar | traduz do japones |
+perguntar | corrige minha redacao |
+perguntar | inventa um nome pro meu gato |
+perguntar | qual o sentido da vida |
+perguntar | voce sonha |
+perguntar | ta feliz hoje |
+perguntar | quer conversar |
+perguntar | de onde voce veio |
+perguntar | o que voce acha de mim |
+perguntar | sei la, qualquer coisa |
+
+# ── Lote 4: pagar a divida do perguntar ─────────────────────────────────────
+#
+# Medido duas vezes: ampliar cobertura de FERRAMENTA derruba o `perguntar`.
+#
+#   pools de valor  ->  fora de escopo 65% -> 47%
+#   verbos (100 ferramenta / 20 perguntar) -> 65% -> 40%
+#
+# O mecanismo e o mesmo nos dois: `perguntar` e a classe "nenhuma das outras
+# nove". Tornar as nove mais generosas a come, por construcao. Nao e fraqueza de
+# um lote — e propriedade da classe.
+#
+# A consequencia pratica, que vale mais que este lote: **toda vez que se ampliar
+# cobertura de ferramenta, `perguntar` tem de crescer na mesma proporcao**, ou
+# ela paga a conta em silencio.
+#
+# 50 exemplos aqui contra os 100 de ferramenta do Lote 3, mais os 20 que ja
+# vieram junto: fecha 70 contra 100, perto da proporcao que existia antes.
+#
+# REGRA (do Achado 19): exemplo fora de escopo nao pode compartilhar verbo de
+# acao nem dominio de objeto com nenhuma ferramenta real.
+
+# -- pedido de coisa que ela nao tem --
+perguntar | liga a televisao
+perguntar | acende a luz da sala
+perguntar | fecha a janela do quarto
+perguntar | regula a temperatura
+perguntar | avisa o pessoal do grupo
+perguntar | posta no facebook
+perguntar | comenta no video
+perguntar | curte a foto
+perguntar | segue esse perfil
+perguntar | bloqueia esse numero
+perguntar | transfere o dinheiro
+perguntar | paga a fatura do cartao
+perguntar | consulta meu saldo
+perguntar | investe em acoes
+perguntar | declara meu imposto
+perguntar | tira minha duvida de fisica
+perguntar | explica a teoria da relatividade
+perguntar | resume o livro que li
+perguntar | recomenda um filme
+perguntar | sugere um restaurante
+
+# -- conversa e relacao --
+perguntar | bom dia, dormiu bem
+perguntar | senti sua falta
+perguntar | ta tudo bem contigo
+perguntar | voce se importa comigo
+perguntar | somos amigos
+perguntar | voce fica sozinha quando eu saio
+perguntar | qual sua cor favorita
+perguntar | voce tem medo de alguma coisa
+perguntar | ja pensou em desistir
+perguntar | o que te deixa contente
+perguntar | me faz companhia
+perguntar | fica comigo um pouco
+perguntar | bora conversar besteira
+perguntar | eu tava com saudade
+perguntar | obrigado por tudo viu
+
+# -- vago demais para virar chamada --
+perguntar | pronto, agora vai
+perguntar | entao ta
+perguntar | deixa pra la
+perguntar | esquece o que eu falei
+perguntar | volta atras
+perguntar | nao era isso
+perguntar | de novo por favor
+perguntar | mais ou menos assim
+perguntar | do outro jeito
+perguntar | tenta diferente
+perguntar | qualquer um serve
+perguntar | tanto faz
+perguntar | como voce preferir
+perguntar | vai por mim
+perguntar | ja sabe o que fazer
+
+# ── as nove que vieram com o arsenal ────────────────────────────────────────────
+#
+# Mesma densidade das antigas: frase genuinamente distinta do molde, nao variacao
+# dele. E o que a destilacao e — o que o gerador por molde nao alcanca.
+
+buscar_web | pesquisa na internet sobre psicologia cognitiva | psicologia cognitiva
+buscar_web | da uma procurada na web sobre historia do brasil | historia do brasil
+buscar_web | ve online o que e fotossintese | o que e fotossintese
+buscar_web | quero saber na internet quem foi Ada Lovelace | quem foi Ada Lovelace
+buscar_web | busca na web como funciona a vacina | como funciona a vacina
+buscar_web | pesquisa ai sobre juros compostos | juros compostos
+buscar_web | me traz da internet o que e entropia | o que e entropia
+buscar_web | procura online regras do xadrez | regras do xadrez
+buscar_web | consulta a web sobre o efeito estufa | o efeito estufa
+buscar_web | levanta na internet biografia de Marie Curie | biografia de Marie Curie
+
+abrir_programa | abre o discord ai | discord
+abrir_programa | poe o spotify pra rodar | spotify
+abrir_programa | inicia o navegador pra mim | navegador
+abrir_programa | quero o bloco de notas aberto | bloco de notas
+abrir_programa | starta o vscode | vscode
+abrir_programa | chama o gerenciador de tarefas | gerenciador de tarefas
+abrir_programa | abre a calculadora rapidinho | calculadora
+abrir_programa | sobe o explorador de arquivos | explorador de arquivos
+abrir_programa | liga o steam ai | steam
+abrir_programa | traz o paint pra frente | paint
+
+criar_pasta | cria a pasta relatorios pra mim | relatorios
+criar_pasta | faz um diretorio chamado backup | backup
+criar_pasta | preciso de uma pasta scripts | scripts
+criar_pasta | monta a pasta imagens ai | imagens
+criar_pasta | nova pasta chamada logs | logs
+criar_pasta | quero criar o diretorio build | build
+criar_pasta | gera a pasta documentos | documentos
+criar_pasta | adiciona uma pasta videos | videos
+criar_pasta | cria o diretorio temp aqui | temp
+criar_pasta | faz uma pasta nova chamada projetos | projetos
+
+apagar_arquivo | apaga o notas.md ai | notas.md
+apagar_arquivo | deleta o config.json de vez | config.json
+apagar_arquivo | nao preciso mais de leia_me.txt | leia_me.txt
+apagar_arquivo | joga fora o contrato.pdf | contrato.pdf
+apagar_arquivo | remove o orcamento.csv por favor | orcamento.csv
+apagar_arquivo | quero o relatorio_final_v3.txt deletado | relatorio_final_v3.txt
+apagar_arquivo | some com o lista_de_compras.txt | lista_de_compras.txt
+apagar_arquivo | exclui o Cargo.toml ai | Cargo.toml
+apagar_arquivo | pode apagar o notas.md | notas.md
+apagar_arquivo | elimina o config.json | config.json
+
+info_arquivo | qual o tamanho do notas.md | notas.md
+info_arquivo | quando mexeram no config.json | config.json
+info_arquivo | quanto pesa o contrato.pdf | contrato.pdf
+info_arquivo | me da os detalhes de leia_me.txt | leia_me.txt
+info_arquivo | quantos bytes tem o orcamento.csv | orcamento.csv
+info_arquivo | propriedades do Cargo.toml | Cargo.toml
+info_arquivo | data do relatorio_final_v3.txt | relatorio_final_v3.txt
+info_arquivo | quao grande e o lista_de_compras.txt | lista_de_compras.txt
+info_arquivo | ficha do notas.md ai | notas.md
+info_arquivo | ve o tamanho do config.json | config.json
+
+processos | quais programas estao rodando agora
+processos | me diz o que esta aberto no pc
+processos | da uma olhada nos processos ai
+processos | o que o computador esta executando
+processos | lista o que esta em execucao
+processos | quantos programas estao abertos
+processos | confere as tarefas ativas
+processos | quem esta rodando ai
+processos | mostra tudo que esta aberto
+processos | ve o que esta consumindo o pc
+
+rede | qual e o meu ip
+rede | a internet esta funcionando
+rede | ve a conexao ai pra mim
+rede | estou conectado
+rede | como esta a rede agora
+rede | me diz o endereco ip
+rede | checa se tem internet
+rede | qual o gateway daqui
+rede | situacao da conexao
+rede | confere se estou online
+
+copiar_arquivo | copia o notas.md para leia_me.txt | notas.md | leia_me.txt
+copiar_arquivo | faz uma copia de config.json em Cargo.toml | config.json | Cargo.toml
+copiar_arquivo | duplica o contrato.pdf como orcamento.csv | contrato.pdf | orcamento.csv
+copiar_arquivo | quero uma copia de leia_me.txt em notas.md | leia_me.txt | notas.md
+copiar_arquivo | backup de Cargo.toml para config.json | Cargo.toml | config.json
+copiar_arquivo | clona o orcamento.csv para contrato.pdf | orcamento.csv | contrato.pdf
+copiar_arquivo | salva uma copia de notas.md em Cargo.toml | notas.md | Cargo.toml
+copiar_arquivo | replica config.json em leia_me.txt | config.json | leia_me.txt
+copiar_arquivo | gera uma copia de contrato.pdf como notas.md | contrato.pdf | notas.md
+copiar_arquivo | copia o Cargo.toml la pra orcamento.csv | Cargo.toml | orcamento.csv
+
+mover_arquivo | move o notas.md para leia_me.txt | notas.md | leia_me.txt
+mover_arquivo | renomeia config.json para Cargo.toml | config.json | Cargo.toml
+mover_arquivo | tira o contrato.pdf e poe em orcamento.csv | contrato.pdf | orcamento.csv
+mover_arquivo | leva o leia_me.txt para notas.md | leia_me.txt | notas.md
+mover_arquivo | transfere Cargo.toml para config.json | Cargo.toml | config.json
+mover_arquivo | muda o nome de orcamento.csv para contrato.pdf | orcamento.csv | contrato.pdf
+mover_arquivo | passa o notas.md para Cargo.toml | notas.md | Cargo.toml
+mover_arquivo | troca o nome de config.json por leia_me.txt | config.json | leia_me.txt
+mover_arquivo | manda o contrato.pdf para notas.md | contrato.pdf | notas.md
+mover_arquivo | move o Cargo.toml la pra orcamento.csv | Cargo.toml | orcamento.csv

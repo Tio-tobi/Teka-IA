@@ -1,0 +1,5 @@
+# Compila otimizado para ESTA CPU. No Ryzen 5 5500 (Zen 3) isso habilita
+# AVX2 + FMA3. Zen 3 NAO tem AVX-512 -- o microkernel alvo e YMM de 256 bits.
+# O binario deixa de ser portatil: recompile em outra maquina.
+[build]
+rustflags = ["-C", "target-cpu=native"]

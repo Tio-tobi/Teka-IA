@@ -1,0 +1,522 @@
+# Frases escritas pelo John, 2026-08-26. TEXTO BRUTO, como ele mandou.
+# Nada editado aqui. A triagem acontece em outro arquivo.
+
+## hora
+Que horas são?
+Me fala a hora aí.
+Qual é a data de hoje?
+Vê aí que horas tá agora.
+Me diz o horário atual.
+Que dia é hoje mesmo?
+Confere a data e a hora pra mim.
+Aí, sabe que horas são?
+Me passa o horário atual rapidinho.
+Consulta aí a hora e a data.
+Qual o horário agora?
+Me fala que dia estamos.
+Que horas tá marcando aí?
+Confere o relógio pra mim.
+Me diz a hora certinha.
+Qual é a data de hoje aí?
+Vê a hora atual.
+Passa o horário pra mim.
+Sabe me dizer que horas são agora?
+Consulta a data atual.
+Me fala o dia e o horário.
+Que data é hoje?
+Quanto tá marcando o relógio?
+Vê que horas são nesse momento.
+Me atualiza com a hora.
+Qual horário estamos?
+Diz aí a data de hoje.
+Confere a hora do sistema.
+Me passa data e horário.
+Que horas são exatamente agora?
+Olha a hora aí.
+Me diz qual é o dia hoje.
+Qual o horário nesse instante?
+Consulta aí a hora.
+Vê a data atual pra mim.
+Me fala o horário do sistema.
+Que dia e que horas são?
+Descobre a hora atual.
+Me informa a data e a hora.
+Dá uma conferida no horário.
+Qual é a hora agora?
+Me fala o dia certinho.
+Vê a data e o horário atual.
+Confere aí o relógio.
+Me diz a hora que tá agora.
+Qual data estamos hoje?
+Consulta o horário atual aí.
+Quero saber a hora agora.
+Me fala a data e hora do momento.
+Vê aí exatamente que horas são.
+
+## listar_pasta
+Mostra o que tem nessa pasta.
+Lista os arquivos dessa pasta aí.
+Dá uma olhada nessa pasta pra mim.
+O que tem dentro dessa pasta?
+Me mostra tudo que tem nessa pasta.
+Lista aí os arquivos e pastas.
+Vê o conteúdo dessa pasta.
+Quais arquivos estão aqui?
+Abre a lista dessa pasta pra eu ver.
+Confere o que tem dentro desse diretório.
+Lista essa pasta.
+Me mostra os arquivos daqui.
+O que tem nesse diretório?
+Vê tudo que está dentro dessa pasta.
+Mostra os arquivos dessa pasta.
+Dá um listão do que tem aqui.
+Quais são os arquivos dessa pasta?
+Me mostra as coisas que estão nesse diretório.
+Lista o conteúdo desse caminho.
+Quero ver o que tem nessa pasta.
+Confere os arquivos que estão aqui.
+Me mostra as pastas e arquivos daqui.
+Faz uma lista dessa pasta.
+Vê o que foi colocado nessa pasta.
+Mostra tudo que existe nesse diretório.
+Lista aí esse diretório.
+O que tem guardado nessa pasta?
+Me mostra o conteúdo da pasta.
+Quais itens tem aqui?
+Dá uma conferida nessa pasta.
+Lista os itens desse caminho.
+Mostra o que tem dentro dela.
+Quero saber quais arquivos estão nessa pasta.
+Vê os arquivos e subpastas aí.
+Me passa a lista dessa pasta.
+Confere o conteúdo desse diretório.
+O que tem nesse caminho?
+Mostra os itens que estão aí.
+Lista tudo que tiver nessa pasta.
+Dá uma olhada no diretório pra mim.
+Quais coisas tem dentro dessa pasta?
+Me mostra essa pasta.
+Faz uma listagem dos arquivos daqui.
+Quero ver os itens desse diretório.
+Confere o que está armazenado nessa pasta.
+Lista o conteúdo daí.
+Mostra as pastas que estão aqui também.
+Vê quais arquivos existem nesse diretório.
+Me mostra tudo dessa pasta.
+Dá um listamento completo dessa pasta.
+
+## ler_arquivo
+Lê esse arquivo pra mim.
+Me mostra o conteúdo desse arquivo.
+Abre esse arquivo aí.
+Quero ver o que tem escrito nesse arquivo.
+Dá uma lida nesse arquivo.
+Mostra o texto que tá dentro dele.
+Consegue abrir e ler esse arquivo?
+Vê o conteúdo desse arquivo rapidinho.
+Me passa o que está escrito nesse arquivo.
+Lê esse arquivo e me mostra o conteúdo.
+Abre esse arquivo e vê o que tem nele.
+Quero saber o conteúdo desse arquivo.
+Mostra o que foi escrito nesse arquivo.
+Confere esse arquivo pra mim.
+Dá uma olhada no conteúdo dele.
+Me mostra o texto desse arquivo.
+Lê isso aqui.
+Abre e lê esse negócio.
+O que tem dentro desse arquivo?
+Me diz o que está escrito aí.
+Consulta esse arquivo.
+Vê o conteúdo desse documento.
+Quero que você leia esse arquivo.
+Pega o conteúdo desse arquivo pra mim.
+Mostra tudo que está dentro dele.
+Dá uma conferida nesse arquivo.
+Abre esse documento e me mostra o texto.
+Me fala o que tem nesse arquivo.
+Lê o arquivo inteiro.
+Vê o que tem escrito nele.
+Confere o conteúdo do arquivo.
+Me passa o texto que está salvo aí.
+Abre esse arquivo rapidinho.
+Quero ver o conteúdo salvo nesse arquivo.
+Dá uma lida no documento.
+Mostra o que foi salvo nesse arquivo.
+Lê esse documento pra mim.
+O que está salvo dentro desse arquivo?
+Me mostra o conteúdo completo.
+Consulta o texto desse arquivo.
+Abre e confere esse arquivo.
+Vê o que esse arquivo contém.
+Quero saber o que tem dentro desse documento.
+Me mostra as informações desse arquivo.
+Lê o conteúdo que está salvo nele.
+Confere esse documento aí.
+Mostra tudo que foi escrito nesse arquivo.
+Dá uma olhada no arquivo e me diz o conteúdo.
+Puxa o conteúdo desse arquivo.
+Quero que você abra e leia esse arquivo.
+
+## procurar_arquivo
+Procura esse arquivo pra mim.
+Vê onde tá esse arquivo.
+Acha aí o arquivo chamado config.
+Consegue encontrar esse arquivo?
+Procura pelo nome desse arquivo.
+Dá uma busca nesse arquivo aí.
+Onde fica esse arquivo?
+Localiza esse arquivo no PC.
+Vê se existe algum arquivo com esse nome.
+Procura aí por esse arquivo em todas as pastas.
+Acha esse arquivo pra mim.
+Faz uma busca pelo arquivo.
+Descobre onde esse arquivo está.
+Vê onde eu deixei esse arquivo.
+Procura um arquivo chamado teste.txt.
+Localiza esse arquivo aí.
+Tem algum arquivo com esse nome?
+Busca esse arquivo no computador.
+Vê se consegue achar ele.
+Me ajuda a encontrar esse arquivo.
+Procura pelo nome dele.
+Onde está o arquivo config.json?
+Dá uma procurada nesse arquivo.
+Busca isso aí no PC.
+Encontra esse arquivo pra mim.
+Quero saber onde esse arquivo está.
+Procura em todas as pastas.
+Confere se esse arquivo existe.
+Acha onde esse arquivo foi parar.
+Faz uma busca por esse nome.
+Localiza o arquivo no sistema.
+Vê se tem esse arquivo por aí.
+Procura esse negócio no computador.
+Busca pelo nome do arquivo.
+Descobre o caminho desse arquivo.
+Onde foi parar esse arquivo?
+Me diz onde está esse arquivo.
+Procura esse arquivo aí rapidinho.
+Dá uma busca no sistema por esse arquivo.
+Tenta localizar esse arquivo.
+Procura qualquer arquivo com esse nome.
+Confere onde está salvo esse arquivo.
+Busca esse arquivo no disco.
+Quero encontrar um arquivo específico.
+Vê se acha esse arquivo.
+Faz uma procura por esse arquivo.
+Localiza onde ele está salvo.
+Procura esse arquivo em tudo.
+Descobre o caminho dele.
+Acha esse arquivo no computador.
+
+## calcular
+Quanto dá 25 + 37?
+Faz essa conta pra mim: 128 vezes 7.
+Calcula isso aí rapidinho.
+Quanto é 500 dividido por 8?
+Resolve essa conta aqui.
+Faz 72 menos 19.
+Me diz quanto dá essa operação.
+Calcula 15% de 300.
+Quanto fica se eu somar esses valores?
+Confere essa conta pra mim.
+Quanto é 45 vezes 23?
+Faz 100 dividido por 4.
+Resolve 72 + 18.
+Calcula 900 menos 357.
+Quanto dá essa conta?
+Faz essa matemática aí.
+Me ajuda com essa conta.
+Calcula 25% de 800.
+Quanto dá 12 ao quadrado?
+Faz 37 vezes 9.
+Resolve isso aqui pra mim.
+Quanto é 1500 dividido por 6?
+Calcula esses números.
+Soma 45, 78 e 12.
+Quanto dá 500 + 250?
+Faz a conta rapidinho.
+Calcula 10% de 450.
+Quanto é 99 menos 43?
+Resolve essa operação.
+Faz 17 vezes 14.
+Me passa o resultado dessa conta.
+Quanto fica essa soma?
+Calcula 1000 dividido por 25.
+Faz essa conta aí pra mim.
+Quanto dá 64 + 128?
+Resolve 500 - 127.
+Calcula 33 vezes 11.
+Quanto é 200% de 50?
+Me diz o resultado.
+Confere quanto dá isso.
+Faz 81 dividido por 9.
+Calcula essa operação aqui.
+Quanto é 15 vezes 15?
+Soma esses valores pra mim.
+Faz uma conta rápida: 300 - 75.
+Quanto dá 7 vezes 8?
+Resolve essa matemática.
+Calcula o resultado disso.
+Faz essa operação pra mim.
+Vê quanto dá essa conta.
+
+## memoria
+Quanta RAM tá usando?
+Vê aí quanto de memória tá sendo usada.
+Quanto de RAM tem livre?
+Confere o uso da memória do PC.
+Me mostra o consumo de RAM.
+Quanto de memória o computador tá gastando?
+Dá uma olhada na RAM aí.
+Como tá o uso da memória agora?
+Vê quanto de RAM está ocupada.
+Me diz quanto de memória RAM tá em uso.
+Quanto de memória tá sendo usada agora?
+Confere a RAM do computador.
+Me fala o uso da memória.
+Quanto de RAM sobrou?
+Vê se a memória tá muito ocupada.
+Quanto o PC tá usando de RAM?
+Mostra o consumo de memória.
+Me diz quanta memória está livre.
+Como tá a RAM agora?
+Confere quanto de RAM está ocupada.
+Vê a memória disponível.
+Quanto de memória o sistema está usando?
+Dá uma conferida na RAM.
+Me mostra quanto de RAM tem disponível.
+O computador tá usando muita memória?
+Quanto de RAM está em uso?
+Consulta a memória do sistema.
+Vê quanto de memória ainda tem.
+Me passa o uso atual da RAM.
+Quanto de memória está sobrando?
+Confere o consumo de RAM aí.
+Me diz como tá a memória.
+Quanto o sistema tá gastando de RAM?
+Vê a quantidade de RAM livre.
+Mostra a memória usada e disponível.
+Dá uma olhada no uso da memória.
+Quanto de RAM tá ocupada nesse momento?
+Consulta o uso da memória do PC.
+Me informa a memória disponível.
+A RAM tá cheia?
+Quanto de memória está sendo utilizada?
+Vê o quanto de RAM o computador possui disponível.
+Mostra quanto da RAM está ocupada.
+Como está a utilização da memória?
+Me fala quanto de RAM está livre.
+Confere a memória agora.
+Quero saber o uso de RAM.
+Vê quanta memória o sistema está consumindo.
+Me mostra os dados da memória.
+Consulta aí quanto de RAM tá sendo usada.
+
+## disco
+Quanto espaço tem no disco?
+Vê quanto espaço livre tem aí.
+Quanto ainda tem de armazenamento?
+Confere o espaço disponível no disco.
+Quanto de espaço sobrou?
+Me mostra quanto espaço livre tem.
+Dá uma olhada no armazenamento.
+Quanto espaço tem disponível no HD?
+Vê se o disco tá cheio.
+Me diz quanto armazenamento ainda está livre.
+Quanto espaço livre tem no computador?
+Confere o armazenamento do PC.
+Quanto ainda cabe no disco?
+Me fala o espaço disponível.
+Vê quanto de armazenamento sobrou.
+O disco tá cheio?
+Quanto de espaço tem livre?
+Consulta o armazenamento do sistema.
+Me mostra o espaço que ainda tenho.
+Quanto espaço está disponível no HD?
+Dá uma conferida no disco.
+Quanto espaço livre sobrou?
+Vê como tá o armazenamento.
+Me diz quanto espaço tem no disco.
+Quanto ainda tem de espaço?
+Confere se ainda tem espaço no disco.
+Mostra o armazenamento disponível.
+Quanto de disco está livre?
+Vê quanto espaço o PC ainda tem.
+Me passa o espaço livre do disco.
+Quanto armazenamento está disponível?
+Consulta o espaço do disco.
+Tem bastante espaço livre aí?
+Quanto espaço sobrou no HD?
+Confere o espaço disponível.
+Dá uma olhada no disco pra mim.
+Quanto de armazenamento ainda resta?
+Me mostra quanto tem de espaço livre.
+O armazenamento tá quase cheio?
+Vê quanto ainda posso armazenar.
+Quanto espaço disponível existe no disco?
+Me fala quanto de disco está ocupado.
+Confere quanto espaço resta.
+Quero saber quanto armazenamento tenho livre.
+Mostra o estado do armazenamento.
+Vê o espaço disponível no computador.
+Quanto espaço livre tem nesse disco?
+Consulta quanto armazenamento sobrou.
+Me informa o espaço livre.
+Dá uma conferida em quanto espaço ainda tem.
+
+## escrever_arquivo
+Escreve isso num arquivo pra mim.
+Cria um arquivo com esse texto.
+Salva esse texto em um arquivo.
+Coloca essa informação naquele arquivo.
+Grava isso no arquivo.
+Cria um arquivo chamado teste.txt e escreve isso dentro.
+Salva essa mensagem num arquivo aí.
+Escreve esse conteúdo no arquivo.
+Quero que você coloque esse texto dentro de um arquivo.
+Cria o arquivo e salva esse texto nele.
+Faz um arquivo com esse conteúdo.
+Salva isso em um arquivo.
+Escreve esse texto naquele arquivo.
+Cria um arquivo novo pra isso.
+Coloca esse texto em anotacoes.txt.
+Grava essas informações no arquivo.
+Salva isso aí num arquivo de texto.
+Cria o arquivo e coloca esse conteúdo nele.
+Escreve isso dentro do arquivo.
+Guarda esse texto em um arquivo.
+Faz um arquivo chamado teste.txt.
+Salva essa informação pra mim.
+Escreve o conteúdo nesse arquivo.
+Cria um arquivo com essa mensagem.
+Coloca isso no arquivo e salva.
+Grava esse texto no computador.
+Salva o que eu mandei em um arquivo.
+Cria esse arquivo pra mim.
+Escreve essa mensagem em um arquivo.
+Quero salvar esse texto.
+Coloca esse conteúdo naquele arquivo.
+Faz um arquivo contendo esse texto.
+Guarda isso num arquivo aí.
+Escreve essas informações no arquivo.
+Salva o texto que eu te passei.
+Cria um arquivo de texto com isso.
+Registra isso nesse arquivo.
+Joga esse conteúdo dentro do arquivo.
+Salva isso em dados.txt.
+Cria config.txt e coloca esse texto nele.
+Grava essa informação num arquivo.
+Escreve o que eu mandei no arquivo.
+Faz esse texto virar um arquivo.
+Guarda essa mensagem em um arquivo.
+Salva esse conteúdo aí.
+Cria um arquivo e escreve tudo isso dentro.
+Coloca esse texto no arquivo indicado.
+Registra esse conteúdo no arquivo.
+Faz a gravação desse texto no arquivo.
+Quero que esse conteúdo seja salvo em um arquivo.
+
+## executar_comando
+Executa esse comando aí.
+Roda isso no terminal.
+Manda esse comando pro sistema.
+Executa ipconfig.
+Abre o terminal e roda esse comando.
+Consegue rodar esse comando pra mim?
+Faz esse comando aí no PC.
+Executa isso pelo sistema.
+Roda esse negócio aqui.
+Digita esse comando no terminal e executa.
+Executa esse comando.
+Roda isso aí.
+Manda esse comando no terminal.
+Faz o sistema executar isso.
+Roda esse comando pra mim.
+Executa isso no computador.
+Abre um terminal e executa.
+Coloca esse comando pra rodar.
+Faz isso pelo terminal.
+Executa essa linha de comando.
+Roda esse negócio no sistema.
+Digita isso no terminal.
+Manda executar esse comando.
+Pode rodar esse comando?
+Faz esse comando funcionar aí.
+Executa isso no console.
+Roda esse comando no PC.
+Coloca esse comando pra executar.
+Faz a execução desse comando.
+Executa essa instrução no sistema.
+Joga esse comando no terminal e roda.
+Abre o console e executa isso.
+Faz o terminal rodar esse comando.
+Roda essa linha aqui.
+Executa isso agora.
+Manda rodar esse comando aí.
+Digita e executa isso.
+Usa o terminal pra rodar esse comando.
+Faz isso pelo prompt.
+Executa o comando que eu mandei.
+Roda o comando pra mim rapidão.
+Coloca isso pra rodar no sistema.
+Faz esse comando ser executado.
+Executa essa parada aí.
+Roda isso no console.
+Manda esse comando pro terminal.
+Pode executar isso no computador?
+Faz o sistema rodar esse comando.
+Executa essa ordem no terminal.
+Roda esse comando aí rapidinho.
+
+## perguntar
+Não entendi isso.
+Como eu faço isso?
+Não sei o que fazer aqui.
+Pode me explicar o que você precisa?
+Não entendi o que você quis dizer.
+O que exatamente você quer que eu faça?
+Não consegui entender o pedido.
+Isso eu não sei como fazer.
+Pode explicar melhor?
+Não sei qual ferramenta devo usar pra isso.
+Hein?
+Não entendi.
+Pode repetir?
+Que que você quer dizer?
+Explica isso melhor.
+Não saquei o que você quer.
+O que eu tenho que fazer?
+Como assim?
+Não ficou claro pra mim.
+Pode esclarecer?
+Não sei o que você quer que eu faça.
+Qual é a ação que você quer?
+Não consegui entender sua solicitação.
+Me explica melhor isso aí.
+O que você quis dizer com isso?
+Não faço ideia do que você está pedindo.
+Pode falar de outro jeito?
+Não entendi o pedido.
+O que exatamente é pra fazer?
+Explica direito pra mim.
+Não sei como interpretar isso.
+Pode especificar melhor?
+Não entendi o que devo fazer.
+Qual é o objetivo disso?
+Pode explicar o que você quer?
+Não consegui sacar.
+Como você quer que eu faça isso?
+Não sei qual ação executar.
+Pode dar mais detalhes?
+Não entendi essa parte.
+O que você está querendo fazer?
+Preciso que você explique melhor.
+Não sei o que fazer com isso.
+Pode reformular?
+Não ficou claro o que você pediu.
+Me diz melhor o que você quer.
+Não sei qual ferramenta usar.
+Pode esclarecer esse pedido?
+Não entendi o que você espera que eu faça.
+Explica melhor o que você quer que eu faça.

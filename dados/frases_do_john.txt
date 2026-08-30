@@ -1,0 +1,119 @@
+# Frases escritas pelo John — a RÉGUA INDEPENDENTE.
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# POR QUE ESTE ARQUIVO EXISTE
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Hoje quem escreve os dados de treino da Teka sou eu (Claude), e quem escreve
+# o benchmark que a julga também sou eu. Isso é o mesmo sujeito fazendo a prova
+# e o gabarito.
+#
+# Já custou caro duas vezes: cada vez que o benchmark cresceu, a nota caiu.
+#
+#     24 frases  →  92%
+#     59 frases  →  83%
+#    150 frases  →  71%
+#
+# A Teka não piorou. A régua é que estava lisonjeando, porque as frases dela
+# saíam da mesma cabeça que escreveu o treino. Frases escritas por OUTRA pessoa
+# quebram isso — é o único jeito de saber se ela entende português ou só entende
+# o meu jeito de escrever português.
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# COMO PREENCHER
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Uma frase por linha, embaixo da seção certa.
+#
+# Quando o pedido tem um alvo (nome de arquivo, pasta, conta, comando), repete
+# ele depois de uma barra `|`. Isso é para eu saber o que era o certo sem ter
+# que adivinhar — adivinhar já quebrou três ferramentas uma vez.
+#
+#     abre o diario.txt pra mim | diario.txt
+#     └── a frase, do teu jeito                └── só o alvo
+#
+# Nas seções sem alvo (hora, memoria, disco, perguntar) é só a frase.
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# AS TRÊS REGRAS QUE FAZEM ISTO VALER
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# 1. ESCREVE DO TEU JEITO. Gíria, abreviação, erro de digitação, frase torta,
+#    sem acento, sem pontuação. Se tu falaria "vê ai quanto de ram ta indo",
+#    escreve exatamente isso. Frase bem-comportada não testa nada — o valor
+#    deste arquivo está em ser diferente do que eu escreveria.
+#
+# 2. NÃO OLHA `dados/frases_teste.txt` NEM `dados/exemplos_teka.txt`.
+#    Se tu ler os meus, tu vai escrever parecido sem perceber, e o arquivo perde
+#    a serventia inteira.
+#
+# 3. USA VERBOS DIFERENTES ENTRE SI. Dez frases começando com "mostra" testam
+#    uma palavra dez vezes. É exatamente aí que ela quebra hoje: ela conhece
+#    ~30 jeitos de pedir cada coisa, e erra no 31º.
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# QUANTAS
+# ═══════════════════════════════════════════════════════════════════════════
+#
+#   10 por seção (100)  ideal — enxerga diferença de ~8 pontos
+#    5 por seção  (50)  já serve — enxerga só diferença grande
+#    o que der           qualquer coisa é melhor que zero
+#
+# Preenche o que der e me avisa. Estas frases NUNCA entram no treino: existem
+# só para julgar, e há teste automático que garante isso.
+
+
+## hora
+# Pedir a data, o dia, o horário. Sem alvo.
+que horas sao agora
+
+
+## listar_pasta
+# Ver o que tem dentro de uma pasta. Alvo = a pasta.
+da uma olhada na pasta Downloads | Downloads
+
+
+## ler_arquivo
+# Ver o conteúdo de um arquivo. Alvo = o arquivo.
+me mostra o que ta escrito no leia_me.txt | leia_me.txt
+
+
+## procurar_arquivo
+# Achar um arquivo pelo nome, sem saber onde está. Alvo = o trecho do nome.
+sumiu um negocio chamado orcamento aqui | orcamento
+
+
+## calcular
+# Uma conta. Alvo = a conta.
+quanto da 340 vezes 12 | 340*12
+
+
+## memoria
+# Quanta RAM está em uso. Sem alvo.
+ta comendo muita ram isso ai
+
+
+## disco
+# Quanto espaço livre no disco. Sem alvo.
+quanto sobrou de espaco no pc
+
+
+## escrever_arquivo
+# Gravar um texto num arquivo. Alvo = o arquivo | o texto.
+anota comprar pao no lista.txt | lista.txt | comprar pao
+
+
+## executar_comando
+# Rodar um comando do sistema. Alvo = o comando.
+roda um tasklist ai pra mim | tasklist
+
+
+## perguntar
+# Aqui é o contrário: coisas que ela NÃO deve tentar fazer.
+# Três famílias — conversa, coisa que ela não tem, e pedido vago demais.
+#
+# Cuidado com uma armadilha real: não use o verbo de uma ferramenta que existe.
+# "escreve um poema" colide com escrever_arquivo, "pesquisa no google" colide
+# com procurar_arquivo. Isso já causou 8 recusas falsas em 59 pedidos válidos.
+# Sem alvo.
+bom dia teka, tudo certo
