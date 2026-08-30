@@ -472,9 +472,21 @@ fn ajuda() {
          GERAL\n  \
            --threads <n>              padrao: todos os cores logicos\n  \
            -h, --help\n\n\
+         No REPL: /buscar procura na web o ultimo pedido que ela NAO entendeu,\n\
+         mostra o resultado e guarda como fato em semantica.bin.\n\
          A memoria fica em memoria.bin, no diretorio atual, e sobrevive a reinicio.\n\
          Por padrao tudo roda em SANDBOX: escrever e executar nao fazem nada.\n"
     );
+}
+
+/// Dias desde a epoca, fracionarios. E o relogio que a memoria semantica usa para
+/// meia-vida e esquecimento — ela nao chama o sistema por conta propria, quem decide
+/// que horas sao e quem a usa.
+fn agora_em_dias() -> f64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs_f64() / 86_400.0)
+        .unwrap_or(0.0)
 }
 
 /// Responde um pedido e grava o episodio.
@@ -497,6 +509,9 @@ fn responder(
     // `Some((pedido, indice))` quando o turno anterior foi uma abstencao: o pedido
     // que ela nao entendeu e onde o episodio dele esta na memoria.
     pendente: &mut Option<(String, usize)>,
+    // O que ela SABE, separado do que ela FEZ. Alimentada por `/buscar`.
+    sem: &mut teka::memory::semantica::MemoriaSemantica,
+    agora: f64,
 ) {
     ctx.avancar();
     // Com temperatura > 0 ela AMOSTRA em vez de pegar a melhor. Fica desligado por
@@ -665,7 +680,7 @@ fn responder(
                 vec![],
                 if ok { Resultado::Executou } else { Resultado::Falhou },
                 Feedback::Nenhum,
-                assinatura,
+                assinatura.clone(),
             );
 
             // Abstencao ARMA a licao: o proximo turno, se resolver, ensina este.
@@ -674,7 +689,25 @@ fn responder(
             // de assunto logo depois de ela nao entender, e a ligacao sair errada;
             // por isso ela ANUNCIA o que aprendeu e ha `/desaprender`.
             *pendente = if abstem(&c) {
-                println!("    (me explique o que eu deveria fazer, e eu aprendo)");
+                // Antes de desistir, ela consulta o que JA consultou um dia. Este e
+                // o unico ponto em que a memoria semantica devolve valor: sem ele,
+                // gravar fato seria escrever num arquivo que ninguem le.
+                //
+                // O limiar de 0,80 e alto de proposito. Fato lembrado e mostrado
+                // como resposta; devolver o fato errado com confianca e pior que
+                // dizer "nao sei", que e o que ela ja fazia de graca.
+                let lembrados = sem.lembrar(&assinatura, 2, agora);
+                let bom = lembrados.iter().find(|(_, s)| *s >= 0.80);
+                match bom {
+                    Some((texto, escore)) => {
+                        println!("  → do que eu ja consultei ({escore:.2}): {texto}");
+                        println!("    (se nao servir, /buscar procura de novo)");
+                    }
+                    None => {
+                        println!("    (me explique o que eu deveria fazer, e eu aprendo)");
+                        println!("    (ou /buscar, que eu procuro na web e guardo)");
+                    }
+                }
                 Some((pedido.to_string(), mem.len() - 1))
             } else {
                 None
@@ -954,6 +987,28 @@ fn rodar_agente(args: &Args) {
     } else {
         MemoriaEpisodica::carregar(&caminho_memoria).unwrap_or_else(|_| MemoriaEpisodica::nova())
     };
+    // A semantica anda em arquivo separado da episodica de proposito: episodio sai
+    // de cada turno e envelhece rapido; fato sai do que ela consultou e deve
+    // sobreviver a uma limpeza de episodios.
+    let caminho_semantica = PathBuf::from("semantica.bin");
+    let mut semantica = if args.sem_memoria {
+        teka::memory::semantica::MemoriaSemantica::nova(0)
+    } else {
+        teka::memory::semantica::MemoriaSemantica::carregar(&caminho_semantica)
+            .unwrap_or_else(|_| teka::memory::semantica::MemoriaSemantica::nova(0))
+    };
+    if !semantica.fatos.is_empty() {
+        let pendentes = semantica.precisa_reindexar().len();
+        println!(
+            "  sabe: {} fatos{}",
+            semantica.fatos.len(),
+            if pendentes > 0 {
+                format!(" ({pendentes} precisam reindexar — o modelo mudou)")
+            } else {
+                String::new()
+            }
+        );
+    }
     if !memoria.is_empty() {
         println!(
             "  memoria: {} episodios ({} ensinaveis)",
@@ -974,6 +1029,9 @@ fn rodar_agente(args: &Args) {
         }
         // Ctrl-C nao chega aqui, mas encerrar limpo salva a memoria.
         let _ = memoria.salvar(&caminho_memoria);
+        if !semantica.fatos.is_empty() {
+            let _ = semantica.salvar(&caminho_semantica);
+        }
         return;
     }
 
@@ -988,6 +1046,8 @@ fn rodar_agente(args: &Args) {
             &ag, &ops, &patcher, &mut exec, p, 0.0, &mut rng_repl, &mut memoria, &mut cache,
             &mut contexto,
             &mut licao_pendente,
+            &mut semantica,
+            agora_em_dias(),
         );
         return;
     }
@@ -1227,6 +1287,50 @@ fn rodar_agente(args: &Args) {
             }
             continue;
         }
+        if pedido == "/buscar" {
+            // A opcao 1 do desenho: ela NUNCA busca sozinha.
+            //
+            // A Teka roda 100% local; buscar manda o texto do pedido para fora da
+            // maquina. Automatizar isso na duvida trocaria uma propriedade do
+            // projeto por conveniencia, sem o dono decidir. Entao a abstencao
+            // PROPOE e este comando executa — e so o que ela nao entendeu, nunca
+            // texto arbitrario.
+            let Some((consulta, _)) = licao_pendente.clone() else {
+                println!("  nao ha pedido pendente para procurar.");
+                continue;
+            };
+            let Some(fi) = ag.registro.indice("buscar_web") else {
+                println!("  buscar_web nao esta no registro.");
+                continue;
+            };
+            let chamada = teka::tools::Chamada {
+                ferramenta: fi,
+                args: vec![("consulta".to_string(), consulta.clone())],
+            };
+            match exec.executar(&ag.registro, &chamada) {
+                Ok(texto) => {
+                    println!("  → {texto}");
+                    // Guarda o que achou. A procedencia fica gravada como
+                    // `Ferramenta("buscar_web")`, e nao como `Usuario`: o peso da
+                    // fonte e o que impede a memoria de tratar o que a web disse com
+                    // a mesma confianca do que voce disse.
+                    let agora = agora_em_dias();
+                    let i = semantica.gravar(&texto, agora);
+                    semantica.fatos[i].fonte =
+                        teka::memory::semantica::Fonte::Ferramenta("buscar_web".into());
+                    // Indexa pela assinatura do PEDIDO, nao do resultado: o que vai
+                    // ser perguntado de novo e a pergunta, e e por ela que o
+                    // `lembrar` procura.
+                    let _ = ag.responder(&ops, &patcher, &consulta, &mut cache);
+                    let assinatura = ag.assinatura(&cache);
+                    semantica.indexar(i, assinatura);
+                    println!("    [guardei] pergunte de novo e eu respondo sem buscar.");
+                }
+                Err(e) => println!("  nao consegui buscar: {e}"),
+            }
+            continue;
+        }
+
         if pedido == "/memoria" {
             let com_desfecho = memoria
                 .episodios
@@ -1289,11 +1393,19 @@ fn rodar_agente(args: &Args) {
             &ag, &ops, &patcher, &mut exec, pedido, t, &mut rng_repl, &mut memoria, &mut cache,
             &mut contexto,
             &mut licao_pendente,
+            &mut semantica,
+            agora_em_dias(),
         );
     }
 
     if args.sem_memoria {
         return;
+    }
+    if !semantica.fatos.is_empty() {
+        match semantica.salvar(&caminho_semantica) {
+            Ok(n) => println!("\n  sabe: {n} fatos em {}", caminho_semantica.display()),
+            Err(e) => eprintln!("\n  falha ao salvar o que ela sabe: {e}"),
+        }
     }
     match memoria.salvar(&caminho_memoria) {
         Ok(n) => println!("\n  memoria salva: {n} episodios em {}", caminho_memoria.display()),

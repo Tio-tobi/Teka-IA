@@ -8,9 +8,14 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Result, Write};
 use std::path::Path;
 
+use super::semantica::{Camada, Conceito, Fato, Fonte, MemoriaSemantica};
 use super::{Episodio, Feedback, MemoriaEpisodica, Resultado};
 
 const MAGICO: &[u8; 8] = b"TEKAM001";
+/// Marca da memoria SEMANTICA. Formato proprio e separado: os dois arquivos tem
+/// ciclos de vida diferentes — episodios saem de cada turno, fatos saem do que ela
+/// consultou e devem sobreviver a uma limpeza de episodios.
+const MAGICO_SEM: &[u8; 8] = b"TEKAS001";
 
 fn w_u32<W: Write>(w: &mut W, v: usize) -> Result<()> {
     w.write_all(&(v as u32).to_le_bytes())
@@ -21,6 +26,27 @@ fn w_u64<W: Write>(w: &mut W, v: u64) -> Result<()> {
 fn w_txt<W: Write>(w: &mut W, s: &str) -> Result<()> {
     w_u32(w, s.len())?;
     w.write_all(s.as_bytes())
+}
+fn w_f32<W: Write>(w: &mut W, v: f32) -> Result<()> {
+    w.write_all(&v.to_le_bytes())
+}
+fn w_f64<W: Write>(w: &mut W, v: f64) -> Result<()> {
+    w.write_all(&v.to_le_bytes())
+}
+fn r_f32<R: Read>(r: &mut R) -> Result<f32> {
+    let mut b = [0u8; 4];
+    r.read_exact(&mut b)?;
+    Ok(f32::from_le_bytes(b))
+}
+fn r_f64<R: Read>(r: &mut R) -> Result<f64> {
+    let mut b = [0u8; 8];
+    r.read_exact(&mut b)?;
+    Ok(f64::from_le_bytes(b))
+}
+fn r_u8<R: Read>(r: &mut R) -> Result<u8> {
+    let mut b = [0u8; 1];
+    r.read_exact(&mut b)?;
+    Ok(b[0])
 }
 fn r_u32<R: Read>(r: &mut R) -> Result<usize> {
     let mut b = [0u8; 4];
@@ -161,6 +187,150 @@ impl MemoriaEpisodica {
     }
 }
 
+
+impl MemoriaSemantica {
+    /// Grava fatos e grafo. O TEXTO e a fonte da verdade, e por isso vai sempre;
+    /// a assinatura vai junto so para evitar reindexar tudo na abertura, e e
+    /// descartavel — `precisa_reindexar` a refaz quando o modelo muda.
+    pub fn salvar(&self, caminho: &Path) -> Result<usize> {
+        let mut w = BufWriter::new(File::create(caminho)?);
+        w.write_all(MAGICO_SEM)?;
+        w_u64(&mut w, self.marca_atual)?;
+
+        w_u32(&mut w, self.fatos.len())?;
+        for f in &self.fatos {
+            w_txt(&mut w, &f.texto)?;
+            w_u32(&mut w, f.assinatura.len())?;
+            for v in &f.assinatura {
+                w_f32(&mut w, *v)?;
+            }
+            w_u64(&mut w, f.marca)?;
+            w.write_all(&[f.camada.codigo()])?;
+            w_u32(&mut w, f.confirmacoes as usize)?;
+            w_u32(&mut w, f.acessos as usize)?;
+            w_f64(&mut w, f.criado_em)?;
+            w_f64(&mut w, f.ultimo_acesso_em)?;
+            w_f32(&mut w, f.importancia)?;
+            w.write_all(&[f.fonte.codigo()])?;
+            // Ferramenta e Importado carregam de ONDE veio. Perder isso apagaria a
+            // diferenca entre "o dono disse" e "a web disse", que e a diferenca que
+            // `Fonte::peso` usa para nao deixar a memoria se autoconvencer.
+            match &f.fonte {
+                Fonte::Ferramenta(q) | Fonte::Importado(q) => w_txt(&mut w, q)?,
+                _ => w_txt(&mut w, "")?,
+            }
+            // `superado_por` como usize+1, zero = None.
+            w_u32(&mut w, f.superado_por.map(|i| i + 1).unwrap_or(0))?;
+            w_u32(&mut w, f.conceitos.len())?;
+            for c in &f.conceitos {
+                w_u32(&mut w, *c)?;
+            }
+        }
+
+        w_u32(&mut w, self.conceitos.len())?;
+        for c in &self.conceitos {
+            w_txt(&mut w, &c.nome)?;
+            w_u32(&mut w, c.fatos.len())?;
+            for i in &c.fatos {
+                w_u32(&mut w, *i)?;
+            }
+            w_u32(&mut w, c.vizinhos.len())?;
+            for i in &c.vizinhos {
+                w_u32(&mut w, *i)?;
+            }
+        }
+        w.flush()?;
+        Ok(self.fatos.len())
+    }
+
+    pub fn carregar(caminho: &Path) -> Result<Self> {
+        let mut r = BufReader::new(File::open(caminho)?);
+        let mut magico = [0u8; 8];
+        r.read_exact(&mut magico)?;
+        if &magico != MAGICO_SEM {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "nao e uma memoria semantica da Teka",
+            ));
+        }
+        let marca_atual = r_u64(&mut r)?;
+
+        let n = r_u32(&mut r)?;
+        let mut fatos = Vec::with_capacity(n);
+        for _ in 0..n {
+            let texto = r_txt(&mut r)?;
+            let na = r_u32(&mut r)?;
+            let mut assinatura = Vec::with_capacity(na);
+            for _ in 0..na {
+                assinatura.push(r_f32(&mut r)?);
+            }
+            let marca = r_u64(&mut r)?;
+            let camada = Camada::de_codigo(r_u8(&mut r)?);
+            let confirmacoes = r_u32(&mut r)? as u32;
+            let acessos = r_u32(&mut r)? as u32;
+            let criado_em = r_f64(&mut r)?;
+            let ultimo_acesso_em = r_f64(&mut r)?;
+            let importancia = r_f32(&mut r)?;
+            let cod_fonte = r_u8(&mut r)?;
+            let de_onde = r_txt(&mut r)?;
+            let fonte = match cod_fonte {
+                1 => Fonte::Ferramenta(de_onde),
+                2 => Fonte::Importado(de_onde),
+                3 => Fonte::Inferido,
+                _ => Fonte::Usuario,
+            };
+            let sp = r_u32(&mut r)?;
+            let superado_por = if sp == 0 { None } else { Some(sp - 1) };
+            let nc = r_u32(&mut r)?;
+            let mut conceitos = Vec::with_capacity(nc);
+            for _ in 0..nc {
+                conceitos.push(r_u32(&mut r)?);
+            }
+            fatos.push(Fato {
+                texto,
+                assinatura,
+                marca,
+                camada,
+                confirmacoes,
+                acessos,
+                criado_em,
+                ultimo_acesso_em,
+                importancia,
+                fonte,
+                superado_por,
+                conceitos,
+            });
+        }
+
+        let nc = r_u32(&mut r)?;
+        let mut conceitos = Vec::with_capacity(nc);
+        for _ in 0..nc {
+            let nome = r_txt(&mut r)?;
+            let nf = r_u32(&mut r)?;
+            let mut fs = Vec::with_capacity(nf);
+            for _ in 0..nf {
+                fs.push(r_u32(&mut r)?);
+            }
+            let nv = r_u32(&mut r)?;
+            let mut vz = Vec::with_capacity(nv);
+            for _ in 0..nv {
+                vz.push(r_u32(&mut r)?);
+            }
+            conceitos.push(Conceito {
+                nome,
+                fatos: fs,
+                vizinhos: vz,
+            });
+        }
+
+        Ok(Self {
+            fatos,
+            conceitos,
+            marca_atual,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -219,6 +389,51 @@ mod tests {
         let mut volta = MemoriaEpisodica::carregar(&caminho).unwrap();
         let id = volta.gravar("novo", 0, vec![], Resultado::Executou, Feedback::Aprovado, vec![1.0]);
         assert_eq!(id, 5, "o novo episodio nasceu com `quando` repetido");
+        let _ = std::fs::remove_file(&caminho);
+    }
+
+    #[test]
+    fn a_memoria_semantica_volta_igual() {
+        use crate::memory::semantica::{Fonte, MemoriaSemantica};
+
+        let mut m = MemoriaSemantica::nova(4242);
+        let a = m.gravar(r"o projeto fica em C:\Projetos", 0.0);
+        m.indexar(a, vec![0.1, -0.5, 0.25]);
+        let b = m.gravar("fotofobia: reduzir brilho e usar tema escuro", 1.0);
+        m.indexar(b, vec![0.9, 0.0, -0.3]);
+        // A procedencia e o que separa "o dono disse" de "a web disse", e e o que o
+        // peso da fonte usa para a memoria nao se autoconvencer. Tem de sobreviver.
+        m.fatos[b].fonte = Fonte::Ferramenta("buscar_web".into());
+        m.fatos[b].importancia = 0.75;
+        m.ligar(b, "acessibilidade");
+
+        let caminho = std::env::temp_dir().join("teka_semantica_teste.bin");
+        assert_eq!(m.salvar(&caminho).unwrap(), 2);
+        let volta = MemoriaSemantica::carregar(&caminho).unwrap();
+
+        assert_eq!(volta.marca_atual, 4242);
+        assert_eq!(volta.fatos.len(), 2);
+        assert_eq!(volta.fatos[a].texto, m.fatos[a].texto);
+        assert_eq!(volta.fatos[a].assinatura, m.fatos[a].assinatura);
+        assert_eq!(volta.fatos[b].importancia, 0.75);
+        match &volta.fatos[b].fonte {
+            Fonte::Ferramenta(q) => assert_eq!(q, "buscar_web"),
+            outro => panic!("a procedencia se perdeu: {outro:?}"),
+        }
+        assert_eq!(volta.conceitos.len(), 1);
+        assert_eq!(volta.conceitos[0].nome, "acessibilidade");
+        assert_eq!(volta.fatos[b].conceitos, m.fatos[b].conceitos);
+        let _ = std::fs::remove_file(&caminho);
+    }
+
+    #[test]
+    fn arquivo_de_outro_tipo_e_recusado() {
+        // Marca errada tem de falhar alto. Ler uma memoria episodica como semantica
+        // devolveria fatos de lixo em vez de erro.
+        use crate::memory::semantica::MemoriaSemantica;
+        let caminho = std::env::temp_dir().join("teka_marca_errada.bin");
+        std::fs::write(&caminho, b"TEKAM001qualquercoisa").unwrap();
+        assert!(MemoriaSemantica::carregar(&caminho).is_err());
         let _ = std::fs::remove_file(&caminho);
     }
 }

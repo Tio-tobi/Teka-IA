@@ -334,7 +334,12 @@ pub fn extrair_extratos(json: &str) -> Vec<String> {
 /// como `Unidade de alocação` — que a API depois não encontra, porque o título
 /// não existe com aquela sequência literal. Meia decodificação é pior que nenhuma:
 /// falha silenciosa em vez de erro.
-fn desescapar_unicode(s: &str) -> String {
+/// Decodifica `\uXXXX` para o caractere de verdade.
+///
+/// Publica porque a busca web (`tools::prim`) precisa da mesma decodificacao: a
+/// API da DuckDuckGo devolve JSON escapado, e sem isto todo acento em portugues
+/// chegava ao usuario como `\u00e9` cru — o que e quase todo o texto.
+pub fn desescapar_unicode(s: &str) -> String {
     let b = s.as_bytes();
     let mut saida = String::with_capacity(s.len());
     let mut i = 0;

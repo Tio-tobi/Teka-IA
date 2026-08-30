@@ -51,11 +51,24 @@ pub enum Veredito {
     Repetir(String),
     /// Começou e não se sabe se terminou. Falha fechada.
     Incerto,
+    /// Tentou e a **própria ferramenta** relatou erro.
+    ///
+    /// Distinto de [`Self::Incerto`] de propósito. `Incerto` é "começou e sumiu" —
+    /// uma queda no meio, onde não se sabe o que ficou feito. Isto aqui é a
+    /// ferramenta tendo rodado e dito que não deu: o efeito não está no mundo, e
+    /// bloquear para sempre seria transformar uma falha comum (rede fora, arquivo
+    /// inexistente, consulta sem resultado) em travamento permanente.
+    ///
+    /// Repetir é permitido, mas o erro anterior vai junto — quem repete merece saber
+    /// que já falhou antes e por quê.
+    FalhouAntes(String),
 }
 
 #[derive(Clone, Debug)]
 struct Entrada {
     concluida: bool,
+    /// A tentativa anterior terminou em erro relatado pela ferramenta.
+    falhou: bool,
     recibo: String,
 }
 
@@ -88,14 +101,26 @@ impl Diario {
                     "iniciado" => {
                         entradas.entry(chave.to_string()).or_insert(Entrada {
                             concluida: false,
+                            falhou: false,
                             recibo: String::new(),
                         });
+                    }
+                    "falhou" => {
+                        entradas.insert(
+                            chave.to_string(),
+                            Entrada {
+                                concluida: false,
+                                falhou: true,
+                                recibo: recibo.to_string(),
+                            },
+                        );
                     }
                     "concluido" => {
                         entradas.insert(
                             chave.to_string(),
                             Entrada {
                                 concluida: true,
+                                falhou: false,
                                 recibo: desescapar(recibo),
                             },
                         );
@@ -138,8 +163,24 @@ impl Diario {
         match self.entradas.get(chave) {
             None => Veredito::Executar,
             Some(e) if e.concluida => Veredito::Repetir(e.recibo.clone()),
+            Some(e) if e.falhou => Veredito::FalhouAntes(e.recibo.clone()),
             Some(_) => Veredito::Incerto,
         }
+    }
+
+    /// Marca que a ferramenta rodou e relatou erro. Chamar quando `executar` devolve
+    /// `Err` — sem isto a entrada fica `Incerto` e a operação trava para sempre.
+    pub fn falhar(&mut self, chave: &str, erro: &str) -> std::io::Result<()> {
+        self.gravar("falhou", chave, erro)?;
+        self.entradas.insert(
+            chave.to_string(),
+            Entrada {
+                concluida: false,
+                falhou: true,
+                recibo: erro.to_string(),
+            },
+        );
+        Ok(())
     }
 
     /// Marca o início e **sincroniza**. Chamar ANTES de executar.
@@ -152,6 +193,7 @@ impl Diario {
             chave.to_string(),
             Entrada {
                 concluida: false,
+                falhou: false,
                 recibo: String::new(),
             },
         );
@@ -165,6 +207,7 @@ impl Diario {
             chave.to_string(),
             Entrada {
                 concluida: true,
+                falhou: false,
                 recibo: recibo.to_string(),
             },
         );
@@ -303,5 +346,41 @@ mod tests {
         let d = Diario::abrir(&p).unwrap();
         assert_eq!(d.consultar(&k), Veredito::Incerto);
         std::fs::remove_file(&p).ok();
+    }
+
+    #[test]
+    fn falha_nao_trava_para_sempre() {
+        // O defeito que isto tranca: `concluir` so era chamado no ramo Ok, entao uma
+        // ferramenta que devolvia Err deixava a entrada como `Incerto` — e `Incerto`
+        // BLOQUEIA. Qualquer falha comum (rede fora, consulta sem resultado) tornava
+        // aquela operacao permanentemente irrepetivel, e o unico recurso do dono era
+        // editar o log a mao. Foi assim que uma busca web ficou travada de verdade.
+        let caminho = std::env::temp_dir().join("teka_diario_falha.log");
+        let _ = std::fs::remove_file(&caminho);
+        let mut d = Diario::abrir(&caminho).unwrap();
+        let chave = Diario::chave("buscar_web", &[("consulta".into(), "xyz".into())]);
+
+        assert!(matches!(d.consultar(&chave), Veredito::Executar));
+        d.iniciar(&chave).unwrap();
+        assert!(matches!(d.consultar(&chave), Veredito::Incerto));
+
+        d.falhar(&chave, "nada encontrado").unwrap();
+        match d.consultar(&chave) {
+            Veredito::FalhouAntes(e) => assert_eq!(e, "nada encontrado"),
+            outro => panic!("depois de falhar deveria permitir repetir, veio {outro:?}"),
+        }
+
+        // E sobrevive a reabertura: o estado esta no arquivo, nao so na memoria.
+        let d2 = Diario::abrir(&caminho).unwrap();
+        assert!(matches!(d2.consultar(&chave), Veredito::FalhouAntes(_)));
+
+        // Concluir depois de falhar volta a valer: a falha nao e permanente.
+        let mut d3 = Diario::abrir(&caminho).unwrap();
+        d3.concluir(&chave, "achei").unwrap();
+        match d3.consultar(&chave) {
+            Veredito::Repetir(r) => assert_eq!(r, "achei"),
+            outro => panic!("concluir depois de falhar deveria valer, veio {outro:?}"),
+        }
+        let _ = std::fs::remove_file(&caminho);
     }
 }

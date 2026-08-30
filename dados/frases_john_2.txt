@@ -1,0 +1,60 @@
+# Régua limpa nº 2 — escrita pelo John em 2026-08-30, DEPOIS dos 54 moldes indiretos.
+#
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │  NUNCA adicione estas frases a MOLDES em src/learn/dados.rs.              │
+# │                                                                           │
+# │  Esta régua existe por um motivo específico: eu descobri a lacuna dos     │
+# │  pedidos indiretos OLHANDO o frases_teste.txt, e depois escrevi moldes    │
+# │  contra o que vi. Mesmo sem copiar nenhuma frase, isso infla o            │
+# │  frases_teste.txt para as famílias memoria/hora/disco/processos.          │
+# │  Estas 15 frases o John escreveu sem ver os moldes que eu escrevi.        │
+# └───────────────────────────────────────────────────────────────────────────┘
+#
+# Formato: ferramenta | frase | argumento
+#
+# Os rótulos abaixo são a MINHA leitura, não a do John — as linhas marcadas
+# "# CONFERIR" são as que eu não tenho certeza.
+#
+# Nota: as frases começam com "teka,"/"teca,"/"Teka," de propósito. Ela não tem
+# palavra-de-gatilho por projeto, então o nome é ruído que ela precisa ignorar —
+# e "teca" testa se ela tolera o erro de digitação.
+
+# --- lentidão sem nomear memória ou ram ---
+memoria | teka, to sentindo o pc muito lento, você pode dar uma olhada para mim? |
+memoria | teca, percebeu que o pc ficou lento ou meio travado? dá uma olhada para mim ai. |
+
+# --- data sem nomear hora, data ou calendário ---
+hora | teca, não faço a mínima ideia de que dia da semana é hoje, me fala ai. |
+hora | Que período exato do ano e tempo estamos? |
+
+# --- espaço, do direto ao indireto ---
+disco | teka, quanto de espaço livre eu possuo? |
+disco | Teka, cabe mais coisa no meu armazenamento? |
+disco | Teka, meu PC ta sem espaço? verifica pra mim. |
+disco | Será que ainda tem espaço em meu armazenamento local? |
+
+# --- procurar arquivo ---
+procurar_arquivo | teca, sabe aonde está o main.py da nyxara? | main.py
+procurar_arquivo | teka, busca cada arquivo com a extensao.jpg | .jpg
+
+# --- NÃO EXISTE FERRAMENTA PARA ISTO ---
+#
+# Estas quatro são as mais valiosas da régua, e não por acaso: elas medem se ela
+# sabe RECUSAR. Nenhuma das 19 primitivas lê tela azul, mede temperatura de GPU
+# ou constrói um site. A resposta certa é `perguntar` — e responder qualquer outra
+# coisa aqui é pior do que não responder, porque seria agir errado com confiança.
+perguntar | teka, meu PC a dando tela azul vc pode verificar oq é |
+perguntar | Essa bomba está com a GPU muito quente. |
+perguntar | Crie um site de comunicação interna para conversar entre os menbros da minha fábrica |
+
+# Anáfora sem antecedente: "este arquivo" não aponta para nada. Com uma gaveta de
+# contexto preenchida a resposta certa seria procurar_arquivo; sozinha, é perguntar.
+perguntar | teka, Caça este arquivo pra mim. |
+
+# --- ALÉM DO MODELO DE ARGUMENTO ATUAL ---
+#
+# Três restrições numa frase só: pasta, tipo de arquivo e janela de tempo. O ponteiro
+# dela copia UM span; não há como devolver as três. Deixo rotulado como
+# procurar_arquivo porque a intenção está certa, mas o argumento vai falhar por
+# projeto, não por treino. # CONFERIR
+procurar_arquivo | Procure na minha pasta de download o meu mapa de minecraft que está em um arquivo zipado, deve estar em um periodo de menos de 30 dias | mapa de minecraft

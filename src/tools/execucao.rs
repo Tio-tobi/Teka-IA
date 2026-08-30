@@ -146,16 +146,42 @@ impl Executor {
                  correspondente do diario.",
                 f.nome
             )),
+            // Falhou antes: deixa repetir, mas conta o que houve. Bloquear aqui
+            // transformaria rede fora ou consulta sem resultado em travamento
+            // permanente, e o unico recurso do dono seria editar o log a mao.
+            Veredito::FalhouAntes(erro) => {
+                eprintln!("    (a tentativa anterior falhou: {erro})");
+                self.diario
+                    .iniciar(&chave)
+                    .map_err(|e| format!("nao consegui registrar no diario: {e}"))?;
+                let saida = reg.executar(c, &pol);
+                match &saida {
+                    Ok(texto) => {
+                        let _ = self.diario.concluir(&chave, texto);
+                    }
+                    Err(e) => {
+                        let _ = self.diario.falhar(&chave, e);
+                    }
+                }
+                saida
+            }
             Veredito::Executar => {
                 // A ordem é a garantia: registrar e sincronizar ANTES de agir.
                 self.diario
                     .iniciar(&chave)
                     .map_err(|e| format!("nao consegui registrar no diario: {e}"))?;
                 let saida = reg.executar(c, &pol);
-                if let Ok(texto) = &saida {
-                    // Falha em concluir não invalida o efeito, que já aconteceu; só
-                    // deixa a entrada como `Incerto`, que é o lado seguro.
-                    let _ = self.diario.concluir(&chave, texto);
+                match &saida {
+                    // Falha em GRAVAR nao invalida o efeito, que ja aconteceu; so
+                    // deixa a entrada como `Incerto`, que e o lado seguro.
+                    Ok(texto) => {
+                        let _ = self.diario.concluir(&chave, texto);
+                    }
+                    // A OPERACAO falhou: o efeito nao esta no mundo. Registrar isso
+                    // e o que separa "falhou, tente de novo" de "travou para sempre".
+                    Err(e) => {
+                        let _ = self.diario.falhar(&chave, e);
+                    }
                 }
                 saida
             }

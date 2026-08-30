@@ -296,7 +296,11 @@ fn buscar_web(consulta: &str) -> Result<String, String> {
             }
             fim += 1;
         }
-        let t = resto[..fim].replace("\\/", "/").replace("\\n", " ");
+        // A API devolve JSON escapado. Sem desescapar o unicode, todo acento
+        // chega como `\u00e9` cru — e em portugues isso e quase todo texto.
+        let t = crate::coletor::fonte::desescapar_unicode(&resto[..fim])
+            .replace("\\/", "/")
+            .replace("\\n", " ");
         if t.trim().is_empty() { None } else { Some(t) }
     };
 
