@@ -43,6 +43,12 @@ pub struct Executor {
     diario: Diario,
     oficina: Option<Oficina>,
     politica: Politica,
+    /// Pergunta antes de executar acao com efeito.
+    ///
+    /// Desligado por padrao porque o benchmark, o `--pedido` e o ambiente de treino
+    /// nao tem ninguem para responder — e uma confirmacao sem gente do outro lado
+    /// trava tudo. O REPL liga.
+    confirmar: bool,
 }
 
 impl Executor {
@@ -51,7 +57,52 @@ impl Executor {
             diario: Diario::abrir(caminho_diario.as_ref().to_path_buf())?,
             oficina: None,
             politica,
+            confirmar: false,
         })
+    }
+
+    /// Liga a confirmacao. Chamar so onde ha gente para responder.
+    pub fn com_confirmacao(mut self, sim: bool) -> Self {
+        self.confirmar = sim;
+        self
+    }
+
+    /// Pergunta, e devolve `false` se a pessoa recusou.
+    ///
+    /// Falha FECHADA: se a entrada acabou (pipe, EOF, terminal fechado), a resposta e
+    /// nao. O contrario — assumir "sim" quando ninguem respondeu — seria transformar
+    /// um script sem terminal em consentimento.
+    fn pedir_permissao(&self, nome: &str, c: &Chamada) -> bool {
+        use std::io::{BufRead, IsTerminal, Write};
+
+        // SEM TERMINAL, SEM PERGUNTA — e sem permissao.
+        //
+        // Isto nao e detalhe: `read_line` num cano ABERTO e vazio nao devolve EOF,
+        // ele BLOQUEIA. Um servico, um cron ou um `cargo test` ficariam pendurados
+        // para sempre esperando uma resposta que nunca vem. Foi assim que o teste
+        // desta funcao travou e mostrou o defeito.
+        //
+        // Recusar e a leitura certa: se nao ha terminal, nao ha ninguem para
+        // autorizar, e agir seria transformar ausencia de gente em consentimento.
+        if !io::stdin().is_terminal() {
+            eprintln!("    {nome}: recusado — acao com efeito exige confirmacao, e nao ha terminal");
+            return false;
+        }
+        let args: Vec<String> = c
+            .args
+            .iter()
+            .map(|(k, v)| format!("{k}={v:?}"))
+            .collect();
+        print!("    {nome} {} — faz? [s/N] ", args.join(" "));
+        let _ = io::stdout().flush();
+        let mut linha = String::new();
+        match io::stdin().lock().read_line(&mut linha) {
+            Ok(0) | Err(_) => false,
+            Ok(_) => {
+                let r = linha.trim().to_lowercase();
+                r == "s" || r == "sim" || r == "y"
+            }
+        }
     }
 
     pub fn politica(&self) -> &Politica {
@@ -131,6 +182,14 @@ impl Executor {
         // Sem efeito no mundo, ou dentro da oficina (que é reversível): direto.
         if !f.prim.efeito_colateral() || self.oficina.is_some() {
             return reg.executar(c, &pol);
+        }
+
+        // Daqui para baixo a acao deixa marca. As outras guardas do projeto —
+        // sandbox, raiz, oficina, diario — sao todas tudo-ou-nada: passado o
+        // `--real`, ela agia sem perguntar. Esta e a unica que dá a chance de dizer
+        // nao no caso concreto, olhando o argumento que ela escolheu.
+        if self.confirmar && !self.pedir_permissao(&f.nome, c) {
+            return Err("nao autorizado".into());
         }
 
         let chave = Diario::chave(&f.nome, &c.args);
@@ -350,5 +409,47 @@ mod tests {
         );
         assert!(r.is_err(), "denylist tem de valer dentro da oficina tambem");
         fs::remove_dir_all(&base).ok();
+    }
+
+    #[test]
+    fn sem_ninguem_para_responder_nao_e_consentimento() {
+        // A confirmacao falha FECHADA. Em `cargo test` a entrada padrao nao e
+        // terminal, entao `read_line` devolve EOF — e EOF tem de virar "nao".
+        //
+        // O contrario seria o pior tipo de defeito de seguranca: um script sem
+        // terminal, um servico, um cron, todos passariam a apagar sem que ninguem
+        // tivesse dito sim uma vez.
+        let base = temporaria("confirma_eof");
+        let reg = Registro::padrao();
+        let alvo = base.join("nao_apague.txt");
+        std::fs::write(&alvo, b"fica").unwrap();
+
+        let pol = Politica {
+            modo: Modo::Real,
+            raiz: Some(base.clone()),
+            ..Default::default()
+        };
+        let mut ex = Executor::novo(base.join("d.log"), pol)
+            .unwrap()
+            .com_confirmacao(true);
+        let c = chamada(&reg, "apagar_arquivo", &[("caminho", "nao_apague.txt")]);
+        let r = ex.executar(&reg, &c);
+
+        assert!(r.is_err(), "sem resposta deveria recusar, veio {r:?}");
+        assert!(alvo.exists(), "o arquivo foi apagado sem ninguem autorizar");
+    }
+
+    #[test]
+    fn ferramenta_sem_efeito_nao_pergunta() {
+        // Se `hora` pedisse confirmacao, a pessoa aprenderia a apertar "s" sem ler —
+        // que e como toda confirmacao morre. Aqui isso e testado, nao prometido: com
+        // a confirmacao LIGADA e sem ninguem para responder, `hora` tem de passar.
+        let base = temporaria("confirma_sem_efeito");
+        let reg = Registro::padrao();
+        let mut ex = Executor::novo(base.join("d.log"), Politica::default())
+            .unwrap()
+            .com_confirmacao(true);
+        let c = chamada(&reg, "hora", &[]);
+        assert!(ex.executar(&reg, &c).is_ok(), "hora nao deveria pedir permissao");
     }
 }

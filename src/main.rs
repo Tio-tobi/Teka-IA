@@ -227,6 +227,7 @@ struct Args {
     aleatorio: usize,
     todas: usize,
     pausa: u64,
+    sem_confirmar: bool,
     patcher: String,
     patcher_pedido: bool,
     ngrama: Option<PathBuf>,
@@ -288,6 +289,7 @@ fn parse_args() -> Args {
         aleatorio: 0,
         todas: 0,
         pausa: 1_000,
+        sem_confirmar: false,
         patcher: "entropia".into(),
         patcher_pedido: false,
         ngrama: Some(PathBuf::from("dados/ngrama.bin")),
@@ -329,6 +331,7 @@ fn parse_args() -> Args {
             "--aleatorio" => a.aleatorio = prox().parse().unwrap_or(a.aleatorio),
             "--todas" => a.todas = prox().parse().unwrap_or(a.todas),
             "--pausa" => a.pausa = prox().parse().unwrap_or(a.pausa),
+            "--sem-confirmar" => a.sem_confirmar = true,
             "--patcher" => {
                 a.patcher = prox();
                 a.patcher_pedido = true;
@@ -964,13 +967,21 @@ fn rodar_agente(args: &Args) {
         .clone()
         .unwrap_or_else(|| PathBuf::from("."))
         .join(".teka-diario.log");
+    // Confirmacao LIGADA aqui, que e o unico lugar com gente para responder. O
+    // benchmark, o `--pedido` e o ambiente de treino constroem o executor sem ela —
+    // uma pergunta sem ninguem do outro lado travaria tudo.
+    //
+    // `--sem-confirmar` desliga. Quem passa essa flag esta dizendo que sabe.
     let mut exec = match Executor::novo(&caminho_diario, pol) {
-        Ok(e) => e,
+        Ok(e) => e.com_confirmacao(!args.sem_confirmar),
         Err(e) => {
             eprintln!("  nao consegui abrir o diario em {}: {e}", caminho_diario.display());
             std::process::exit(1);
         }
     };
+    if !args.sem_confirmar && args.raiz_real.is_some() {
+        println!("  confirmacao ligada: ela pergunta antes de escrever, mover, apagar ou executar");
+    }
     if exec.quantas_no_diario() > 0 {
         println!(
             "  diario: {} execucoes ja registradas ({})",
