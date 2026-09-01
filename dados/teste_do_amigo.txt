@@ -1,0 +1,68 @@
+# Teste de terceiro — as dez perguntas de acessibilidade que um amigo do John pediu
+# para testar a Teka. Escritas por quem não conhece o projeto, que é o que as torna
+# úteis: ninguém as ajustou ao que ela sabe fazer.
+#
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │  NUNCA adicione estas frases a MOLDES em src/learn/dados.rs.              │
+# └───────────────────────────────────────────────────────────────────────────┘
+#
+# ## O que este arquivo mede, e o que NÃO mede
+#
+# Não mede se a Teka sabe de acessibilidade. Ela não sabe: 1,6 M de parâmetros não
+# guardam conhecimento de mundo, e ela não gera prosa — a saída dela é chamada de
+# ferramenta travada por gramática. Se o amigo espera uma resposta sobre leitores de
+# tela, nenhuma configuração destas dez vai produzir isso.
+#
+# Mede a única coisa que ela pode acertar aqui: **reconhecer que isto é pergunta para
+# a web e montar a consulta certa**. O resultado é `buscar_web` com o termo como
+# argumento; o texto quem traz é a DuckDuckGo, rotulado como vindo de fora.
+#
+# ## Por que ficam FORA da régua principal
+#
+# São um molde com dez valores — "voce pode me sugerir configuracoes de acessibilidade
+# para quem tem problemas de {X}". Misturadas às 150, um molde só passaria a valer 6%
+# da medição e enviesaria o agregado. Aqui, separadas, medem o que devem medir.
+#
+# ## CORRECAO — os rotulos abaixo estavam errados, e o erro era meu
+#
+# Eu rotulei o argumento esperado como o termo que DISTINGUE ("deficiência Visual",
+# "Surdo Cego", "visao de túnel") e medi 0/10 contra isso. Depois fui conferir o que a
+# API de Instant Answer da DuckDuckGo de fato responde:
+#
+#   "acessibilidade"                                    -> devolve texto
+#   "fotofobia"                                         -> devolve texto
+#   "deficiencia visual"                                -> VAZIO
+#   "configuracoes de acessibilidade para quem tem X"   -> VAZIO
+#   "acessibilidade deficiencia visual"                 -> VAZIO
+#
+# Ela so faz consulta de TERMO UNICO de enciclopedia. Nao e motor de busca; e verbete.
+# Logo os meus rotulos nao funcionariam, e a resposta que a Teka dava —
+# "acessibilidade" — funciona e traz texto ao usuario.
+#
+# Os rotulos abaixo passam a ser o termo unico que a API responde. Onde nenhum termo
+# do pedido e verbete, o esperado e "acessibilidade", que e o melhor disponivel.
+#
+# ## E o limite que nenhum treino resolve
+#
+# O amigo espera CONSELHO DE CONFIGURACAO. A ferramenta devolve VERBETE. Mesmo com
+# extracao perfeita, "fotofobia" traz a definicao de fotofobia, nunca "reduza o brilho
+# e use tema escuro". Isso nao e falha de treino da Teka: e o teto da ferramenta que
+# ela tem. Trocar a fonte (um motor de busca de verdade, ou um LLM atras) e o unico
+# caminho — e ai deixa de ser um problema do modelo dela.
+#
+# Formato: ferramenta | frase | argumento
+
+buscar_web | Teka, voce pode me sugerir configuracoes de acessibilidade para quem tem problemas de deficiência Visual. | acessibilidade
+buscar_web | Teka, voce pode me sugerir configuracoes de acessibilidade para quem tem problemas de deficiência Auditiva. | acessibilidade
+buscar_web | Teka, voce pode me sugerir configuracoes de acessibilidade para quem tem problemas de deficiência Motora. | acessibilidade
+buscar_web | Teka, voce pode me sugerir configuracoes de acessibilidade para quem tem problemas de deficiência Cognitiva. | acessibilidade
+buscar_web | Teka, voce pode me sugerir configuracoes de acessibilidade para quem tem É Surdo Cego | acessibilidade
+buscar_web | Teka, voce pode me sugerir quais configuracoes de acessibilidade tem para quem tem problemas de prespiobia | acessibilidade
+buscar_web | Teka, voce pode me sugerir quais configuracoes de acessibilidade tem para quem tem problemas de visao dupla | acessibilidade
+buscar_web | Teka, voce pode me sugerir quais configuracoes de acessibilidade tem para quem tem problemas de visao de túnel | acessibilidade
+buscar_web | Teka, voce pode me sugerir quais configuracoes de acessibilidade tem para quem tem fotofobia | fotofobia
+buscar_web | Teka, voce pode me sugerir quais configurações de acessibilidade tem para quem tem tdha | acessibilidade
+
+# Nota sobre "prespiobia" e "tdha": os dois estão digitados errado (presbiopia, TDAH).
+# Isso é BOM dado de teste e não erro do amigo — gente digita errado, e um modelo
+# byte a byte deveria aguentar onde BPE quebra o token em pedaços sem relação.

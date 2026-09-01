@@ -40,7 +40,11 @@ pub struct CfgSup {
 impl Default for CfgSup {
     fn default() -> Self {
         Self {
-            seq: 64,
+            // 64 nao comporta pedido verboso: as dez frases que um amigo do John
+            // escreveu para testa-la tinham mediana de 106 bytes, e ela acertava o
+            // argumento em ZERO delas. Sem a janela maior, os exemplos longos que o
+            // gerador agora produz seriam truncados no proprio treino.
+            seq: 128,
             batch: 16,
             lr: 1e-3,
             clip: 1.0,

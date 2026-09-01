@@ -1171,6 +1171,49 @@ const PREFIXOS: &[&str] = &[
     "rapidinho", "cara", "pf", "ó", "escuta", "hum", "so", "vamos la",
 ];
 
+/// Enchimentos LONGOS na frente.
+///
+/// Existem para a **cauda** de comprimento, nao para a mediana — por isso ficam num
+/// poco separado, aplicado com [`PROB_ENCHIMENTO_LONGO`], em vez de entrarem no
+/// [`PREFIXOS`] comum. Pedido curto e o caso comum e deve continuar dominando.
+///
+/// Medido: sem estes, o gerador produzia mediana de 37 bytes e uma frase de 86+
+/// bytes a cada vinte mil. As dez perguntas que um amigo do John escreveu para
+/// testa-la tinham mediana 106, e ela acertava a ferramenta em 9 de 10 e o argumento
+/// em ZERO — o ponteiro nunca vira entrada daquele tamanho.
+const PREFIXOS_LONGOS: &[&str] = &[
+    "voce pode me dizer",
+    "eu queria saber se voce consegue",
+    "sera que da pra voce",
+    "me faz um favor e",
+    "se nao for muito incomodo",
+    "estou precisando que voce",
+    "antes de mais nada eu queria",
+    "olha so eu queria pedir uma coisa",
+    "desculpa incomodar mas voce pode",
+    "se voce tiver um tempinho ai",
+    "queria muito que voce conseguisse",
+    "to aqui pensando e resolvi pedir",
+];
+
+/// Enchimentos LONGOS no fim. Ver [`PREFIXOS_LONGOS`].
+const SUFIXOS_LONGOS: &[&str] = &[
+    "quando puder sem pressa nenhuma",
+    "se voce conseguir claro",
+    "e me avisa quando terminar",
+    "obrigado desde ja pela ajuda",
+    "se nao der tudo bem tambem",
+    "eu agradeco muito de verdade",
+    "mas so se nao atrapalhar nada",
+    "que eu fico te devendo essa",
+];
+
+/// Com que frequencia um pedido ganha enchimento longo.
+///
+/// Baixa de proposito. Cauda, nao mediana: subir isto encheria o treino de frase
+/// verbosa e ensinaria o modelo que pedido normal e comprido, que e falso.
+pub const PROB_ENCHIMENTO_LONGO: f64 = 0.15;
+
 /// Enchimentos no fim.
 const SUFIXOS: &[&str] = &[
     "", "", "", "", "por favor", "pra mim", "ai", "rapidinho", "obrigado", "vai",
@@ -1590,7 +1633,14 @@ pub fn gerar<P: Patcher + ?Sized>(
         let mut args = Vec::new();
         // O prefixo entra ANTES de qualquer span ser calculado, entao os offsets
         // ja saem certos.
-        let pref = escolher(PREFIXOS, rng);
+        // Enchimento longo entra pelo mesmo lugar do curto: ANTES de qualquer span
+        // ser calculado, entao os offsets ja saem certos apesar do prefixo grande.
+        let longo = rng.uniform01() < PROB_ENCHIMENTO_LONGO;
+        let pref = if longo {
+            escolher(PREFIXOS_LONGOS, rng)
+        } else {
+            escolher(PREFIXOS, rng)
+        };
         if !pref.is_empty() {
             pedido.push_str(pref);
             pedido.push(' ');
@@ -1609,7 +1659,14 @@ pub fn gerar<P: Patcher + ?Sized>(
             resto = &resto[fim + 1..];
         }
         pedido.push_str(resto);
-        let suf = escolher(SUFIXOS, rng);
+        // Casado com o prefixo: quando o pedido ja vem verboso na frente, o fim
+        // tambem costuma vir. Sortear os dois de forma independente produziria
+        // frase meio-longa, que e a forma que ninguem escreve.
+        let suf = if longo {
+            escolher(SUFIXOS_LONGOS, rng)
+        } else {
+            escolher(SUFIXOS, rng)
+        };
         if !suf.is_empty() {
             pedido.push(' ');
             pedido.push_str(suf);
