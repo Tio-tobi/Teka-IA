@@ -537,6 +537,49 @@ const MOLDES: &[Molde] = &[
             "tenta de novo",
             "continua",
             "e agora",
+            "voce merece um carinho hoje",
+            "vem ca me da um beijo",
+            "sinto sua falta viu",
+            "me da um colo agora",
+            "voce me faz falta",
+            "queria te conhecer pessoalmente",
+            "e ai como voce ta hoje",
+            "tudo certo por ai",
+            "voce dormiu bem",
+            "como foi seu fim de semana",
+            "ta tudo tranquilo contigo",
+            "voce anda cansada",
+            "musica suave cairia bem agora",
+            "to a fim de um rock",
+            "quero uma musica calma",
+            "que banda voce curte",
+            "seria bom uma radio tocando",
+            "tenho vontade de um cafe agora",
+            "quero uma pizza agora",
+            "que tal um lanche",
+            "to com fome de alguma coisa boa",
+            "deve estar quente na sua cidade",
+            "vai chover no fim de semana",
+            "ta frio ai na sua regiao",
+            "que temperatura faz hoje na rua",
+            "voce e uma pessoa de verdade",
+            "quem te ensinou a falar",
+            "voce tem sentimentos mesmo",
+            "o que voce acha de mim",
+            "voce fica triste as vezes",
+            "voce sonha",
+            "bora jogar alguma coisa",
+            "me conta uma historia",
+            "vamos brincar de adivinhacao",
+            "qual seu filme preferido",
+            "o preco de um carro novo ta salgado",
+            "quem venceu a eleicao",
+            "como esta o dolar hoje",
+            "a china e enorme de gente",
+            "aquele negocio de ontem, lembra",
+            "voce lembra o que eu falei",
+            "aquilo que a gente combinou",
+            "sabe o que eu quero",
         ],
     },
     Molde {
@@ -1906,17 +1949,29 @@ mod tests {
             .iter()
             .map(|f| f.replace("{0}", "@").replace("{1}", "@"))
             .collect();
-        for c in &casos {
-            let esqueleto = match &c.argumento {
-                Some(a) => c.pedido.replace(a.as_str(), "@"),
-                None => c.pedido.clone(),
-            };
-            assert!(
-                !moldes.contains(&esqueleto),
-                "a frase de teste {:?} virou template — o benchmark deixou de medir generalizacao",
-                c.pedido
-            );
-        }
+        // Junta TODAS antes de falhar. Com `assert!` dentro do laço, o teste
+        // estourava na primeira e escondia as outras — e quem conserta uma, roda de
+        // novo, descobre a segunda, e assim por diante. Aconteceu: das três frases
+        // que eu vazei de uma vez, o teste mostrou uma só.
+        let vazadas: Vec<&str> = casos
+            .iter()
+            .filter(|c| {
+                let esqueleto = match &c.argumento {
+                    Some(a) => c.pedido.replace(a.as_str(), "@"),
+                    None => c.pedido.clone(),
+                };
+                moldes.contains(&esqueleto)
+            })
+            .map(|c| c.pedido.as_str())
+            .collect();
+        assert!(
+            vazadas.is_empty(),
+            "{} frase(s) de teste viraram template — o benchmark deixou de medir              generalizacao:
+  {}",
+            vazadas.len(),
+            vazadas.join("
+  ")
+        );
         let reg = Registro::padrao();
         for c in &casos {
             assert!(
