@@ -19,7 +19,7 @@ A seção "O que já foi tentado e não vale repetir" é a mais valiosa dele.
 ## 1. Onde ela está
 
 ```
-benchmark de 150     ~114 ± 4      (11 sementes; falta a 12ª)
+benchmark de 150     114,58 ± 3,55  (12 sementes, FECHADO — 7 a 18)
 argumento condicional  ~92%        (quando a ferramenta sai certa)
 ferramentas             19         11 sem efeito, 7 com efeito local, 1 para fora
 parâmetros            1,6 M
@@ -66,28 +66,35 @@ rótulos que eu mesmo escrevi e que não funcionariam na API. O erro era meu.
 
 ## 3. O que fazer, em ordem
 
-### 3.1 Fechar o que está aberto (~1h)
+### 3.1 ~~Fechar o benchmark~~ FEITO em 2026-09-02
 
-**Semente 18.** Onze estão prontas; a décima segunda foi interrompida.
+Doze sementes (7 a 18) — o maior `n` que este projeto já usou:
 
-```bash
-./teka_exp.exe agente --epocas 12 --exemplos 16000 --semente 18 --threads 10 \
-  --saida teka_f_s18.bin --benchmark > f_s18.log 2>&1
+```
+117, 116, 116, 117, 106, 114, 116, 116, 112, 110, 118, 117
+
+media 114,58   sd 3,55   min 106   max 118
+contra o braco de entropia (110,17):   +4,42   t = 1,79   p ~ 0,11
 ```
 
-Aí sim: média, desvio e pareado contra o braço de entropia (`105,113,111,116,114,102`).
+**Não passa da barra, nem com doze sementes.** O que os números sustentam é mais
+modesto e ainda assim útil: o piso subiu (1 de 12 abaixo de 110, contra 2 de 6) e a
+variância caiu de 5,49 para 3,55 — o mesmo código entregando modelos mais parecidos.
 
-**O elo que nunca foi testado.** O corpus foi colhido apostando em
+E a ressalva: a comparação empacota **quatro** mudanças — moldes indiretos, CONSULTAS
+30→77, frases longas e janela 64→128. É "a semana" contra "antes", não teste de
+variável isolada. Não dá para dizer qual delas rendeu.
+
+**O elo que ainda não foi testado.** O corpus foi colhido apostando em
 `mais texto → n-grama melhor → mais acurácia`. O primeiro elo está medido (ordem 6 de
 21,4% para 7,5% de "não sei"). O **segundo nunca foi**, e a evidência anterior é
-desfavorável (−0,17). Gerar o n-grama do corpus completo e refazer com 6 sementes:
+desfavorável (−0,17):
 
 ```bash
 teka ngrama --texto dados/corpus_misto10.txt --ordem 6 --bits 22 --saida dados/ngrama.bin
 ```
 
-Se der zero de novo, **encerrar o patch por entropia como linha de pesquisa** e
-guardar o n-grama só pelo que ele já entrega na sonda dirigida.
+Se der zero de novo, **encerrar o patch por entropia como linha de pesquisa**.
 
 ### 3.2 O gargalo atual é ESCOLHER a ferramenta (dias)
 
