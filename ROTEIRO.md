@@ -6,6 +6,14 @@ benchmark, ganhou confirmação antes de agir e uma interface no navegador.
 Este arquivo existe para uma coisa: **não repetir experimento que já foi medido**.
 A seção "O que já foi tentado e não vale repetir" é a mais valiosa dele.
 
+**A ordem está fixada e não é negociável no meio do caminho:**
+
+```
+1. Teka boa sozinha          o trabalho de agora
+2. Fusão COMPLETA com o Harness    todas as ferramentas, treino em Docker
+3. Nyxara, POR ÚLTIMO        memória e emoções, quando a Teka estiver lapidada
+```
+
 ---
 
 ## 1. Onde ela está
@@ -142,6 +150,69 @@ Estimativa, já corrigida pelo meu otimismo medido de ~1,5x: **20 a 40 sessões*
 ponte é trabalho conhecido; o imprevisível é recuperar a acurácia depois de o registro
 crescer de 19 para ~32 ferramentas. Precedente que dimensiona: 10→19 derrubou de 108,3
 para 107,0 e só voltou a 112,7 depois do conserto dos poços.
+
+
+### 3.6 A Nyxara — POR ÚLTIMO, e a razão não é técnica
+
+**Esta é a última coisa a ser feita. Depois da fusão com o Harness, depois da Teka
+lapidada.** Decidido pelo John em 2026-09-02.
+
+A razão que ele deu: os arquivos da Nyxara são meses de trabalho, feitos com cuidado,
+sem descansar direito. Não se refazem. Fundir coisa insubstituível num sistema que
+ainda está mudando é apostar o que não dá para repor.
+
+Isso não é sentimentalismo atrapalhando a engenharia — é a engenharia certa, e gera
+uma exigência concreta:
+
+> **O importador LÊ a Nyxara e nunca escreve nela.** Nenhuma migração no lugar,
+> nenhum "converte e substitui". Os arquivos dela ficam intactos e continuam
+> funcionando sozinhos depois. Se a importação der errado, o custo é uma tarde da
+> Teka, não a Nyxara.
+
+#### O que já está pronto do lado da Teka
+
+A memória semântica **foi desenhada para receber a dela**, e está escrito no código:
+
+```
+Conceito + RELACIONADO_A    veio do grafo da Nyxara
+superado_por                veio do SUPERSEDED_BY dela
+Fonte::Importado(String)    "a migração da Nyxara cai aqui"
+```
+
+Falta o importador: ler o formato dela, escrever o da Teka. **1 a 2 sessões.**
+
+#### As emoções são OUTRA coisa, e por isso somam
+
+Não se fundem com o `afeto.rs`; empilham.
+
+```
+afeto.rs (Teka)          valência, excitação, curiosidade, satisfação,
+                         frustração, tédio — alimentado por surpresa e recompensa.
+                         Modula temperatura, exploração e taxa de aprendizado.
+                         → é sobre como ela APRENDE
+
+emoção (Nyxara)          detecção de sinal social no texto do usuário
+                         → intensidade, valência, arousal e DIRETIVAS
+                         ("lisonjeada", "calorosa"), com retorno decrescente
+                         → é sobre a RELAÇÃO, e sobre como ela FALA
+```
+
+**E é por isso que tem de vir depois da fusão com o Harness**, não por esforço: a
+emoção da Nyxara produz *diretiva de prosa*, e a Teka não tem prosa — a saída dela é
+chamada de ferramenta travada por gramática. Antes do LLM entrar no laço, a diretiva
+não tem para onde ir.
+
+Porte das emoções: **2 a 4 sessões** (regex e regra pura, sem LLM).
+
+#### O estado final que isto desenha
+
+```
+Teka      decide, rápida e local          24 MB, ~103 ms
+Harness   executa e LÊ o resultado        as ferramentas e o LLM
+Nyxara    a memória e o jeito de falar    meses de trabalho, preservados
+```
+
+Três coisas que o John fez, cada uma boa numa parte diferente.
 
 ---
 
