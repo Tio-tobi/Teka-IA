@@ -132,9 +132,16 @@ Não vira um binário só: Rust sem dependência contra monorepo Node com 36 dev
 Vira uma pasta, dois processos, protocolo por stdio. Já existe
 `Teka+DeepseekHerness/` esperando.
 
-Primeiro passo quando chegar a hora: ponte só com as ferramentas **de leitura** do
-Harness (`grep`, `glob`, `read`, `lsp`), medir a acurácia dela nelas, e só então abrir
-as de escrita dentro do Docker.
+**O ALVO É A FUSÃO COMPLETA.** Decidido pelo John em 2026-09-02, depois de eu propor
+parar na versão mínima. Todas as ferramentas do Harness, incluindo as de escrita, com
+treino pesado em Docker. A ponte só-leitura (`grep`, `glob`, `read`, `lsp`) é **etapa
+do caminho, não destino** — serve para medir a acurácia dela comandando ferramenta
+alheia sem risco nenhum.
+
+Estimativa, já corrigida pelo meu otimismo medido de ~1,5x: **20 a 40 sessões**. A
+ponte é trabalho conhecido; o imprevisível é recuperar a acurácia depois de o registro
+crescer de 19 para ~32 ferramentas. Precedente que dimensiona: 10→19 derrubou de 108,3
+para 107,0 e só voltou a 112,7 depois do conserto dos poços.
 
 ---
 
