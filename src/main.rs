@@ -229,7 +229,6 @@ struct Args {
     pausa: u64,
     sem_confirmar: bool,
     patcher: String,
-    patcher_pedido: bool,
     ngrama: Option<PathBuf>,
     limiar: f32,
     ordem: usize,
@@ -290,9 +289,8 @@ fn parse_args() -> Args {
         todas: 0,
         pausa: 1_000,
         sem_confirmar: false,
-        patcher: "entropia".into(),
-        patcher_pedido: false,
-        ngrama: Some(PathBuf::from("dados/ngrama.bin")),
+        patcher: "por_palavra".into(),
+        ngrama: None,
         limiar: 5.5,
         ordem: 4,
         bits_tabela: 17,
@@ -332,10 +330,7 @@ fn parse_args() -> Args {
             "--todas" => a.todas = prox().parse().unwrap_or(a.todas),
             "--pausa" => a.pausa = prox().parse().unwrap_or(a.pausa),
             "--sem-confirmar" => a.sem_confirmar = true,
-            "--patcher" => {
-                a.patcher = prox();
-                a.patcher_pedido = true;
-            }
+            "--patcher" => a.patcher = prox(),
             "--ngrama" => a.ngrama = Some(PathBuf::from(prox())),
             "--limiar" => a.limiar = prox().parse().unwrap_or(a.limiar),
             "--ordem" => a.ordem = prox().parse().unwrap_or(a.ordem),
@@ -449,7 +444,7 @@ fn ajuda() {
            --aleatorio <n>            titulos sorteados pela API (largura de registro)\n  \
            --todas <n>                enumera o acervo, com cursor que continua entre rodadas\n  \
            --pausa <ms>               intervalo base entre pedidos ao coletar\n  \
-           --patcher <por_palavra|entropia>  qual patcher usar (padrao: entropia)\n  \
+           --patcher <por_palavra|entropia>  qual patcher usar (padrao: por_palavra)\n  \
            --ngrama <arquivo>         tabela de entropia (exigida por --patcher entropia)\n  \
            --limiar <bits>            entropia acima da qual abre patch novo\n  \
            --cerebro <arquivo>        parte de um tronco ja treinado em portugues\n  \
@@ -1513,7 +1508,17 @@ fn resolver_preset(nome: &str) -> Config {
 }
 
 /// Coleta corpus de portugues moderno. **Ferramenta offline.**
-/// Monta o patcher escolhido na linha de comando.
+/// Monta o patcher escolhido na linha de comando. **Padrao: `por_palavra`.**
+///
+/// A entropia saiu do padrao em 2026-09-03, com doze sementes pareadas medidas:
+/// 114,58 contra 110,67, delta +3,92, t = 2,06 (p ~ 0,064), 9 de 12 a favor. E o
+/// efeito mais forte que uma mudanca de arquitetura ja deu aqui — e mesmo assim nao
+/// paga o custo: +45% de patches na inferencia, +80% de tempo de TREINO, 16 MB de
+/// tabela. O roteiro tem dezenas de sessoes pela frente e cada experimento 80% mais
+/// lento e imposto composto sobre o trabalho de dados, que rende mais.
+///
+/// Continua disponivel por `--patcher entropia --ngrama <arq>`, e vale para quem
+/// priorize acuracia sobre relogio.
 ///
 /// A escolha e em tempo de EXECUCAO de proposito: a comparacao entre `por_palavra` e
 /// `por_entropia` tem de ser a mesma execucao com uma flag trocada. Recompilar entre
@@ -1541,25 +1546,10 @@ fn montar_patcher(args: &Args) -> Box<dyn Patcher> {
             );
             Box::new(PorEntropia { fonte: ng, max: 8, min: 2, limiar: args.limiar })
         }
-        // Faltar a tabela significa coisas opostas nos dois casos, e tratar os dois
-        // igual estragaria um deles.
-        //
-        // PEDIDO explicitamente: falha. Cair calado no `por_palavra` produziria uma
-        // medicao que parece testar entropia e nao testa — o pior tipo de resultado,
-        // porque parece dado e e ruido.
-        //
-        // PADRAO: avisa alto e segue no `por_palavra`. Uma copia recem-clonada nao
-        // tem a tabela de 16 MB, e morrer na largada por causa de um arquivo gerado
-        // seria hostil. O aviso e alto porque o modelo TREINADO com entropia lido com
-        // `por_palavra` responde pior — quem vir isso precisa saber por que.
-        Err(e) if !args.patcher_pedido => {
-            eprintln!("  AVISO: sem {} ({e})", caminho.display());
-            eprintln!("  seguindo com por_palavra. Um modelo treinado com entropia vai");
-            eprintln!("  responder PIOR assim. Para gerar a tabela:");
-            eprintln!("    teka ngrama --texto dados/corpus_misto.txt --ordem 5 \\");
-            eprintln!("      --bits 22 --saida dados/ngrama.bin");
-            Box::new(PorPalavra::default())
-        }
+        // Falha, e nao cai calado no `por_palavra`. Cair calado produziria uma
+        // medicao que PARECE testar entropia e nao testa — o pior tipo de resultado,
+        // porque parece dado e e ruido. E agora que a entropia so entra por flag
+        // explicita, quem pediu quer aquilo e nao outra coisa.
         Err(e) => {
             eprintln!("  nao consegui carregar {}: {e}", caminho.display());
             std::process::exit(1);
