@@ -247,6 +247,7 @@ Três coisas que o John fez, cada uma boa numa parte diferente.
 | Viés de abstenção varrido | não fecha a lacuna | 6 × 11 valores |
 | Viés de fronteira no ponteiro fino | 94,3% → 88,4% | removido |
 | Aprender da própria atividade (`ambiente`) | sem efeito | 3 × 1.200 |
+| Fora-de-escopo 23 -> 66 | +2,08 no benchmark (t=1,43), -0,67 na sonda (t=-0,89) | 12 pares |
 
 **O padrão é inequívoco: arquitetura não moveu nada, dado moveu tudo.** Antes de
 propor mudança estrutural, ter uma medição que aponte para ela — como a de restrição
