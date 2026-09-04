@@ -347,11 +347,89 @@ Não adianta extrair melhor um argumento para a ferramenta errada.
 `procurar_arquivo`.
 
 **Reordenação vinda de 4.1.** A maior família de erro não é nenhuma dessas três — é
-`perguntar`, sozinha responsável por ~56% dos erros, nas duas direções. E 4.1 mostrou
-que **dobrar o poço não a move**. Ou seja: para esta classe, o método que funcionou
-três vezes já não funciona, e insistir nele é gastar noite por delta nulo. O que 4.2
-precisa investigar primeiro é *por que* a fronteira de `perguntar` é porosa —
-provavelmente um limite de forma, não de volume — antes de escrever mais uma frase.
+`perguntar`, envolvida em 238 dos 447 erros (53%), nas duas direções. Ver 4.2.1.
+
+---
+
+#### 4.2.1 Por que a fronteira do `perguntar` é porosa — investigado em 2026-09-04
+
+Três hipóteses testadas sobre os 447 erros das 12 sementes. Duas morreram.
+
+| hipótese | medida | veredito |
+|---|---|---|
+| Colisão com o vocabulário das ferramentas | r = +0,117; 4,86 contra 4,19 falhas | **morta** |
+| Poço não cobre a região (similaridade com o vizinho mais próximo) | r = −0,277; 3,54 contra 5,07 | fraca, direção certa |
+| **Verbo de ação compartilhado com ferramenta real** | **7,00 contra 3,37 falhas, p ≈ 0,0096** | **viva** |
+
+**A hipótese que sobreviveu.** Uma frase de abstenção cujo verbo de ação também
+aparece nos moldes de alguma ferramenta real falha **duas vezes mais**:
+
+```
+com verbo de ferramenta real   n= 8   7,00 falhas de 12   cria explica manda faz monta resolve leva
+sem                            n=19   3,37 falhas de 12
+permutacao (200 mil sorteios)  p = 0,0096
+```
+
+Isso é exatamente o que o comentário dentro de `dados.rs` já previa desde uma correção
+anterior: *"o modelo não aprendeu «isto está fora»; aprendeu «manda = fora»"*.
+
+**A direção inversa confirma o mesmo mecanismo, espelhado.** 16 frases de 122
+concentram **80% das 116 abstenções indevidas**, e se dividem em dois grupos:
+
+```
+verbo raro para a ferramenta          frase figurada de consulta de estado
+reune tudo que se chame logo    10    esse pc ta engasgando de tanto programa   7
+seleciona os arquivos de nome…  10    a maquina esta pesada de novo             7
+resgata um arquivo chamado…      8    to sem nocao de tempo hoje                6
+cade o documento de nome…        3    falta muito pro fim do dia                6
+                                      o hd ta perto de encher                   5
+```
+
+**A conclusão.** `perguntar` não é aprendida como um conceito — é aprendida como **o
+complemento das superfícies dos moldes**. Verbo familiar ⇒ ferramenta; verbo estranho
+ou frase conversacional ⇒ abstenção. Ela não decide se o pedido *cabe numa capacidade
+que ela tem*; decide se o pedido *se parece com o que ela viu*.
+
+Daí por que 23 → 66 não podia funcionar: **o complemento de 19 ferramentas é
+ilimitado**, e nenhum número de exemplos fora-de-escopo o cobre. Pior, há uma trava
+estrutural — a regra escrita no próprio arquivo proíbe que exemplo fora-de-escopo
+compartilhe verbo com ferramenta real (senão mata o pedido legítimo, o que já custou
+8 abstenções falsas em 59). Ou seja: **o poço está proibido de cobrir justamente a
+região onde as falhas vivem.**
+
+**O que isso implica para 4.2.** Parar de escrever frase de abstenção. As duas saídas
+que restam atacam a mesma causa pelos dois lados:
+
+1. **Alargar os poços das ferramentas REAIS** em variedade de verbo e de frase
+   figurada. Reduz as duas direções de erro ao mesmo tempo, e é o método já provado.
+2. **Dar um sinal de capacidade** em vez de superfície — algo que compare o pedido com
+   o que o registro sabe fazer, não com o que o gerador escreveu.
+
+**Ressalva de método.** A heurística de "verbo de ação" foi escolhida por mim olhando
+para estes mesmos dados, então o p ≈ 0,01 é otimista. Antes de virar plano, confirmar
+numa régua independente (`dados/frases_john_2.txt`, `dados/teste_do_amigo.txt`) ou numa
+sonda nova escrita para isso.
+
+#### 4.2.2 Uma régua vazada, achada no caminho
+
+A frase `"e ai, como voce ta hoje"` do benchmark estava no poço de treino como
+`"e ai como voce ta hoje"` — **diferença de uma vírgula**. O teste
+`o_benchmark_nao_vazou_para_o_gerador` comparava string exata e deixou passar.
+
+Ela foi a maior "melhora" do experimento 4.1: **12 falhas viraram 2**. Descontando-a:
+
+```
+                          com a vazada        sem a vazada
+sonda dirigida            -0,67  (t=-0,89)    +0,17  (t=+0,23)
+benchmark de 150          +2,08  (t=+1,43)    +1,25  (t=+0,85)
+```
+
+Na sonda dirigida — o instrumento que decidia — **o efeito inteiro era o vazamento**,
+e sem ele o sinal muda de lado. Corrigido nos dois lugares: a frase saiu do poço, e o
+teste passou a normalizar (minúsculas, só alfanumérico ASCII, espaço colapsado) antes
+de comparar. Uma varredura do benchmark inteiro contra os 660 moldes achou **esta e
+mais nenhuma** duplicata; 40 pares ficam entre 0,70 e 0,87 de similaridade, que é
+reformulação legítima do mesmo fenômeno.
 
 **Método** — o mesmo que funcionou três vezes seguidas, e que **não é arquitetura**:
 

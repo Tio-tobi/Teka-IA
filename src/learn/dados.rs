@@ -543,7 +543,11 @@ const MOLDES: &[Molde] = &[
             "me da um colo agora",
             "voce me faz falta",
             "queria te conhecer pessoalmente",
-            "e ai como voce ta hoje",
+            // NAO reintroduzir "e ai como voce ta hoje": e a frase
+            // "e ai, como voce ta hoje" do benchmark, com uma virgula a menos.
+            // Vazou aqui em 2026-09-02 e so foi vista em 04-09. O fenomeno
+            // (saudacao + "como voce esta") ja esta coberto pelas quatro frases
+            // vizinhas; nao precisa desta.
             "tudo certo por ai",
             "voce dormiu bem",
             "como foi seu fim de semana",
@@ -1771,6 +1775,29 @@ pub fn frases_molde() -> Vec<&'static str> {
     MOLDES.iter().flat_map(|m| m.frases.iter().copied()).collect()
 }
 
+/// Achata uma frase para comparar vazamento: só letras e dígitos ASCII, minúsculos,
+/// separados por um espaço.
+///
+/// Deliberadamente grosseira. Um caractere acentuado vira separador em vez de virar
+/// a letra sem acento, o que junta mais frases do que o estritamente correto — e
+/// para uma trava de segurança errar juntando é o lado certo: o custo é um alarme
+/// falso que alguém lê, contra um vazamento que ninguém vê.
+///
+/// Existe porque a comparação exata deixou passar uma vírgula. Ver
+/// `o_benchmark_nao_vazou_para_o_gerador`.
+pub fn normalizar_para_vazamento(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        let c = c.to_ascii_lowercase();
+        if c.is_ascii_alphanumeric() || c == '@' {
+            out.push(c);
+        } else if !out.ends_with(' ') {
+            out.push(' ');
+        }
+    }
+    out.trim().to_string()
+}
+
 /// Divide por EXEMPLO. Mede memorizacao, nao generalizacao — ver [`dividir_por_frase`].
 pub fn dividir(mut exs: Vec<Exemplo>, fracao_val: f64) -> (Vec<Exemplo>, Vec<Exemplo>) {
     let n_val = ((exs.len() as f64) * fracao_val) as usize;
@@ -1945,9 +1972,18 @@ mod tests {
 
         // Compara pelo esqueleto: a frase do benchmark com o argumento trocado por
         // {0}, do mesmo jeito que um molde a escreveria.
+        //
+        // NORMALIZADO desde 2026-09-04, e o motivo custou um experimento inteiro:
+        // "e ai, como voce ta hoje" (benchmark) e "e ai como voce ta hoje" (molde)
+        // sao a mesma frase, e a comparacao exata deixou passar. Ela foi a maior
+        // "melhora" do experimento dos 66 fora-de-escopo — 12 falhas viraram 2 — e
+        // a melhora era memorizacao de regua. Sem ela, a sonda dirigida sai de
+        // -0,67 para +0,17: o efeito inteiro era o vazamento.
+        //
+        // Uma virgula nao pode ser a diferenca entre "esta no gerador" e "nao esta".
         let moldes: std::collections::HashSet<String> = frases_molde()
             .iter()
-            .map(|f| f.replace("{0}", "@").replace("{1}", "@"))
+            .map(|f| normalizar_para_vazamento(&f.replace("{0}", "@").replace("{1}", "@")))
             .collect();
         // Junta TODAS antes de falhar. Com `assert!` dentro do laço, o teste
         // estourava na primeira e escondia as outras — e quem conserta uma, roda de
@@ -1960,7 +1996,7 @@ mod tests {
                     Some(a) => c.pedido.replace(a.as_str(), "@"),
                     None => c.pedido.clone(),
                 };
-                moldes.contains(&esqueleto)
+                moldes.contains(&normalizar_para_vazamento(&esqueleto))
             })
             .map(|c| c.pedido.as_str())
             .collect();
