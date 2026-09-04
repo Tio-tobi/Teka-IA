@@ -186,7 +186,18 @@ fn o_agente_aprende_a_escolher_ferramenta_e_argumento() {
     let (treino, val) = dividir_por_frase(exs, 4);
 
     let cfg = CfgSup {
-        seq: 64,
+        // A JANELA DO TREINO DE VERDADE, herdada em vez de copiada.
+        //
+        // Ficou em 64 quando o treino real subiu para 128, e o custo foi silencioso
+        // e enorme: `montar_lote` descartava o LOTE inteiro se um único exemplo
+        // passasse de `seq - 1`, e com 15,6% de exemplos longos num lote de 16 isso
+        // eram 93,4% dos lotes. Este teste treinava com 6,6% dos dados e ficava em
+        // 17,9% de intenção contra 11,1% de chute cego — vermelho por meses, sem que
+        // ninguém rodasse a suíte inteira para ver.
+        //
+        // Escrever `..Default::default()` para a janela é o conserto que não
+        // reabre: se o treino real mudar de novo, este teste vai junto.
+        seq: CfgSup::default().seq,
         batch: 16,
         lr: 1.5e-3,
         // MESMO numero do treino de verdade, e nao menos.

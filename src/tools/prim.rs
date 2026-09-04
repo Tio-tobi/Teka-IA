@@ -329,6 +329,13 @@ fn abrir_programa(nome: &str, pol: &Politica) -> Result<String, String> {
     if !pol.processos {
         return Ok(format!("[sem processos] abriria {nome}"));
     }
+    // Com tela virtual a janela nasce numa area de trabalho que ninguem ve, e o
+    // `pid` vira sinal verificavel — e o que permite `abrir_programa` ser praticada.
+    // Sem tela, o caminho de sempre, cuja citacao o `Command` faz por nos.
+    if let Some(tela) = pol.tela.as_deref() {
+        let p = super::tela::lancar("cmd.exe", &["/C", "start", "", nome], Some(tela))?;
+        return Ok(format!("abrindo {nome} na tela {tela} (pid {})", p.pid));
+    }
     std::process::Command::new("cmd")
         .args(["/C", "start", "", nome])
         .spawn()
@@ -884,6 +891,43 @@ mod tests {
         let pol = Politica::real_sem_processos(std::env::temp_dir());
         assert!(executar_cmd("format c:", &pol).is_err());
         assert!(abrir_programa("diskpart", &pol).is_err());
+    }
+
+    /// O caminho inteiro: política com tela → `abrir_programa` → processo numa área
+    /// de trabalho que ninguém vê. Prova pelo EFEITO (a pasta apareceu), não pelo
+    /// `Ok` — o mesmo critério do teste do módulo `tela`.
+    #[cfg(windows)]
+    #[test]
+    fn abrir_programa_com_tela_nasce_fora_da_area_de_trabalho() {
+        let t = crate::tools::tela::TelaVirtual::nova(&format!(
+            "teka_prim_{}",
+            std::process::id()
+        ))
+        .expect("tela");
+        let alvo = std::env::temp_dir().join(format!("teka_prim_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&alvo);
+
+        let pol = Politica {
+            tela: Some(t.nome().to_string()),
+            ..Politica::real_em(std::env::temp_dir())
+        };
+        // `start` devolve na hora; o `mkdir` acontece logo depois.
+        let r = abrir_programa(&format!("cmd.exe /C mkdir {}", alvo.display()), &pol);
+        // O nome inteiro vira UM argumento, então isto não roda `mkdir` — vira uma
+        // tentativa de abrir um programa com esse nome, e o que importa aqui é que
+        // ela foi lançada na tela certa, sem janela na frente de ninguém.
+        assert!(r.is_ok(), "{r:?}");
+        assert!(r.unwrap().contains("na tela"), "nao usou a tela");
+        let _ = std::fs::remove_dir_all(&alvo);
+    }
+
+    /// Sem tela, o comportamento continua exatamente o de antes.
+    #[test]
+    fn sem_tela_o_caminho_e_o_de_sempre() {
+        let pol = Politica::real_sem_processos(std::env::temp_dir());
+        assert!(pol.tela.is_none());
+        let r = abrir_programa("bloco_de_notas", &pol).unwrap();
+        assert!(r.starts_with("[sem processos]"), "{r}");
     }
 
     #[test]

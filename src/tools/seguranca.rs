@@ -6,7 +6,12 @@
 //!    a ferramenta devolve a descrição do que *faria*. É assim que a Teka vai
 //!    propor ferramentas novas na fase 5 sem poder quebrar nada.
 //! 2. **Denylist.** Padrões destrutivos são recusados mesmo em modo real.
-//! 3. **Raiz permitida.** Escrita e execução ficam confinadas a uma pasta.
+//! 3. **Raiz permitida.** A **escrita** fica confinada a uma pasta. Execução não:
+//!    lançar processo não é operação de caminho, e essa linha dizia o contrário
+//!    até 2026-09-04, quando um modelo não treinado provou a diferença abrindo
+//!    dezenas de janelas. Quem controla processo é `Politica::processos`.
+//! 4. **Tela virtual.** Quando há uma, o processo nasce numa área de trabalho que
+//!    ninguém vê. Resolve interferência, não risco — ver `crate::tools::tela`.
 //!
 //! A denylist é herdada em espírito do `atuador.py` da nila_mind. Ela é uma rede,
 //! não uma prova: o que garante segurança de verdade é o modo sandbox ser o padrão
@@ -104,6 +109,17 @@ pub struct Politica {
     /// campo existe. Só [`Politica::real_em`] liga, porque ela representa o
     /// usuário tendo pedido `--real` de viva voz.
     pub processos: bool,
+    /// Nome da área de trabalho onde os processos nascem. `None` = a do usuário.
+    ///
+    /// Guarda o **nome**, não o handle, e de propósito: o handle é quem mantém a
+    /// área viva ([`crate::tools::tela::TelaVirtual`]) e pertence a quem abriu o
+    /// laço; o nome é a única coisa que o `CreateProcessW` precisa. Assim a
+    /// `Politica` continua sendo dado simples, que dá para clonar e imprimir.
+    ///
+    /// Isto **não é uma fronteira de segurança** — o processo roda com o mesmo
+    /// token do usuário. Resolve a interferência (janela na cara de quem está
+    /// usando o PC), não o risco.
+    pub tela: Option<String>,
 }
 
 impl Default for Politica {
@@ -113,6 +129,7 @@ impl Default for Politica {
             raiz: None,
             max_leitura: 256 * 1024,
             processos: false,
+            tela: None,
         }
     }
 }
@@ -132,6 +149,19 @@ impl Politica {
     pub fn real_sem_processos(raiz: impl Into<PathBuf>) -> Self {
         Self {
             processos: false,
+            ..Self::real_em(raiz)
+        }
+    }
+
+    /// Processos permitidos, mas nascendo numa área de trabalho separada.
+    ///
+    /// **Não use isto para soltar o laço de prática.** A tela esconde a janela; ela
+    /// não impede um `executar_comando` fora da lista negra de agir com o token do
+    /// usuário. O caminho certo, quando `abrir_programa` virar tarefa verificável em
+    /// `ambiente::dinamico`, é liberar **só** `abrir_programa` — não os dois.
+    pub fn real_em_tela(raiz: impl Into<PathBuf>, tela: impl Into<String>) -> Self {
+        Self {
+            tela: Some(tela.into()),
             ..Self::real_em(raiz)
         }
     }

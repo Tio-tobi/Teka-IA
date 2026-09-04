@@ -17,6 +17,7 @@ pub mod diario;
 pub mod execucao;
 pub mod oficina;
 pub mod seguranca;
+pub mod tela;
 
 pub use prim::Primitiva;
 pub use seguranca::{Modo, Politica};
