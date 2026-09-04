@@ -325,6 +325,10 @@ fn abrir_programa(nome: &str, pol: &Politica) -> Result<String, String> {
     if pol.modo == Modo::Sandbox {
         return Ok(format!("[sandbox] abriria {nome}"));
     }
+    // A raiz nao alcanca isto: nao ha caminho para confinar. Ver `Politica::processos`.
+    if !pol.processos {
+        return Ok(format!("[sem processos] abriria {nome}"));
+    }
     std::process::Command::new("cmd")
         .args(["/C", "start", "", nome])
         .spawn()
@@ -574,12 +578,28 @@ fn executar_cmd(cmd: &str, pol: &Politica) -> Result<String, String> {
     if pol.modo == Modo::Sandbox {
         return Ok(format!("[sandbox] executaria: {cmd}"));
     }
-    let saida = if cfg!(windows) {
-        std::process::Command::new("cmd").args(["/C", cmd]).output()
-    } else {
-        std::process::Command::new("sh").args(["-c", cmd]).output()
+    // A raiz nao alcanca isto: nao ha caminho para confinar. Ver `Politica::processos`.
+    if !pol.processos {
+        return Ok(format!("[sem processos] executaria: {cmd}"));
     }
-    .map_err(|e| e.to_string())?;
+    // Roda DENTRO da raiz quando ela existe. A lista negra e a primeira guarda, mas
+    // um comando inocente com caminho relativo nao tem por que agir na pasta em que
+    // o binario por acaso foi lancado.
+    let mut c = if cfg!(windows) {
+        let mut c = std::process::Command::new("cmd");
+        c.args(["/C", cmd]);
+        c
+    } else {
+        let mut c = std::process::Command::new("sh");
+        c.args(["-c", cmd]);
+        c
+    };
+    if let Some(r) = &pol.raiz {
+        if r.is_dir() {
+            c.current_dir(r);
+        }
+    }
+    let saida = c.output().map_err(|e| e.to_string())?;
 
     let mut s = String::from_utf8_lossy(&saida.stdout).into_owned();
     if !saida.stderr.is_empty() {
@@ -820,6 +840,50 @@ mod tests {
         let pol = Politica::real_em(std::env::temp_dir());
         assert!(executar_cmd("del /s C:\\", &pol).is_err());
         assert!(executar_cmd("shutdown -s", &pol).is_err());
+    }
+
+    /// A raiz confina caminho. Ela nunca confinou processo — e por meses ninguem
+    /// notou, porque o laco de pratica so era exercitado com o modelo escolhendo
+    /// arquivo. Em 2026-09-04 um modelo NAO TREINADO, sorteando ferramenta dentro
+    /// do `cargo test`, abriu dezenas de janelas do Windows na area de trabalho.
+    #[test]
+    fn modo_real_sem_processos_nao_lanca_nada() {
+        let pol = Politica::real_sem_processos(std::env::temp_dir());
+        assert_eq!(pol.modo, Modo::Real, "o teste precisa do modo real para valer");
+
+        let r = abrir_programa("carinho", &pol).unwrap();
+        assert!(r.starts_with("[sem processos]"), "abriu de verdade: {r}");
+
+        let r = executar_cmd("echo nao_deveria_rodar", &pol).unwrap();
+        assert!(r.starts_with("[sem processos]"), "rodou de verdade: {r}");
+    }
+
+    /// Quem constroi politica com `..Default::default()` tem de receber o lado
+    /// seguro sem saber que o campo existe. So `real_em` liga, porque ela
+    /// representa o usuario tendo pedido `--real`.
+    #[test]
+    fn o_padrao_de_processos_e_o_lado_seguro() {
+        assert!(!Politica::default().processos);
+        assert!(!Politica::real_sem_processos(std::env::temp_dir()).processos);
+        assert!(Politica::real_em(std::env::temp_dir()).processos);
+
+        // O caso que importa: a construcao por atualizacao de struct, que e como o
+        // laco de pratica escrevia a dele.
+        let p = Politica {
+            modo: Modo::Real,
+            raiz: Some(std::env::temp_dir()),
+            ..Default::default()
+        };
+        assert!(!p.processos, "struct update tem de herdar o lado seguro");
+    }
+
+    /// A lista negra continua sendo a PRIMEIRA guarda: um comando destrutivo tem de
+    /// dar erro, nao um "[sem processos]" educado que esconderia a intencao.
+    #[test]
+    fn a_lista_negra_vem_antes_do_corte_de_processos() {
+        let pol = Politica::real_sem_processos(std::env::temp_dir());
+        assert!(executar_cmd("format c:", &pol).is_err());
+        assert!(abrir_programa("diskpart", &pol).is_err());
     }
 
     #[test]

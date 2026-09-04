@@ -81,10 +81,29 @@ impl std::fmt::Display for Recusa {
 #[derive(Clone, Debug)]
 pub struct Politica {
     pub modo: Modo,
-    /// Escrita e execução ficam confinadas aqui. `None` = nenhuma escrita permitida.
+    /// **Escrita** fica confinada aqui. `None` = nenhuma escrita permitida.
+    ///
+    /// Note o que esta linha NÃO diz. A raiz confina caminho, e só. Ela não tem
+    /// como confinar `abrir_programa` nem `executar_comando`, porque lançar um
+    /// processo não é uma operação de caminho: `cmd /C start "" bloco_de_notas` não
+    /// tem um caminho para checar. Quem controla isso é [`Politica::processos`].
     pub raiz: Option<PathBuf>,
     /// Teto de bytes lidos de um arquivo, pra um `ler_arquivo` não engolir a RAM.
     pub max_leitura: usize,
+    /// Pode lançar processo — `abrir_programa` e `executar_comando`?
+    ///
+    /// Existe porque a raiz não dá conta. Em 2026-09-04 o laço de prática rodava
+    /// com `Modo::Real` confinado a uma pasta temporária, e mesmo assim um modelo
+    /// **não treinado** escolhendo por sorteio abriu dezenas de janelas do Windows
+    /// na área de trabalho do John — `carinho`, `nenhuma`, `pra eu` — e podia ter
+    /// rodado qualquer comando fora da lista negra, na pasta do repositório. A
+    /// pasta estava confinada; o processo nunca esteve.
+    ///
+    /// **O padrão é `false`**, e é de propósito: quem constrói uma política com
+    /// `..Default::default()` recebe o lado seguro sem precisar saber que este
+    /// campo existe. Só [`Politica::real_em`] liga, porque ela representa o
+    /// usuário tendo pedido `--real` de viva voz.
+    pub processos: bool,
 }
 
 impl Default for Politica {
@@ -93,6 +112,7 @@ impl Default for Politica {
             modo: Modo::Sandbox,
             raiz: None,
             max_leitura: 256 * 1024,
+            processos: false,
         }
     }
 }
@@ -102,7 +122,17 @@ impl Politica {
         Self {
             modo: Modo::Real,
             raiz: Some(raiz.into()),
+            processos: true,
             ..Default::default()
+        }
+    }
+
+    /// A mesma coisa, mas sem poder lançar processo: para o laço de prática, onde
+    /// quem escolhe a ferramenta é um modelo explorando por sorteio.
+    pub fn real_sem_processos(raiz: impl Into<PathBuf>) -> Self {
+        Self {
+            processos: false,
+            ..Self::real_em(raiz)
         }
     }
 

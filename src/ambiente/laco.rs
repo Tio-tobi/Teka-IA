@@ -47,7 +47,7 @@ use crate::model::agente::{Agente, AgenteCache};
 use crate::model::patcher::Patcher;
 use crate::rng::Rng;
 use crate::tools::execucao::Executor;
-use crate::tools::seguranca::{Modo, Politica};
+use crate::tools::seguranca::Politica;
 
 pub struct CfgLaco {
     /// Tentativas antes de cada rodada de treino.
@@ -107,13 +107,16 @@ pub fn praticar(
     rng: &mut Rng,
 ) -> std::io::Result<Rodada> {
     let mundo = MundoDinamico::novo(raiz)?;
-    // Real, mas confinado à pasta do mundo. As guardas de `seguranca` continuam
-    // valendo por cima: a pasta é conveniência, não é a proteção.
-    let pol = Politica {
-        modo: Modo::Real,
-        raiz: Some(mundo.raiz().to_path_buf()),
-        ..Default::default()
-    };
+    // Real, confinado à pasta do mundo, e SEM poder lançar processo.
+    //
+    // Quem escolhe a ferramenta aqui é um modelo explorando com temperatura — nos
+    // testes, um modelo não treinado, ou seja, sorteio pouco disfarçado. Enquanto
+    // isso valia só para arquivo, a pasta continha o estrago. Não valia: em
+    // 2026-09-04 este laço abriu dezenas de janelas do Windows na área de trabalho
+    // do John (`carinho`, `nenhuma`, `pra eu`) e podia ter rodado qualquer comando
+    // fora da lista negra. Lançar processo não é operação de caminho, então a raiz
+    // nunca teve como confiná-lo. Ver `Politica::processos`.
+    let pol = Politica::real_sem_processos(mundo.raiz().to_path_buf());
     let mut exec = Executor::novo(mundo.raiz().join(".diario.log"), pol)?;
     let mut cache = AgenteCache::new();
     let mut r = Rodada::default();
