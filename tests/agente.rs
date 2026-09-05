@@ -1,4 +1,21 @@
 //! Testes do agente (fase 2): cabecas de decisao, gramatica e ponta a ponta.
+//!
+//! # RODE COM `--release`
+//!
+//! ```text
+//! cargo test --release --test agente
+//! ```
+//!
+//! `o_agente_aprende_a_escolher_ferramenta_e_argumento` TREINA um modelo de verdade.
+//! Em release leva ~9,5 min; em debug, medido em 2026-09-05, passou de 3h30 sem
+//! terminar e a projecao era ~6h. Rust sem otimizacao e uma a duas ordens de
+//! grandeza mais lento em codigo numerico, e `cargo test` compila em debug por
+//! padrao.
+//!
+//! Isto nao e detalhe de conforto: e a causa provavel de este teste ter ficado
+//! VERMELHO POR MESES sem ninguem notar. Ninguem roda uma suite de seis horas, entao
+//! ninguem via o que ela dizia — e o que ela dizia era que a janela de treino estava
+//! descartando 93% dos lotes.
 
 use teka::backend::{Paralelo, Scalar};
 use teka::learn::dados::{dividir_por_frase, gerar, ler_casos_teste};
@@ -180,7 +197,10 @@ fn o_agente_aprende_a_escolher_ferramenta_e_argumento() {
     let ops = Paralelo::auto();
 
     let mut r = Rng::new(77);
-    let exs = gerar(&ag.registro, &patcher, 6000, &mut r);
+    // 14.000, e NAO 6.000. Ver o bloco de limiares mais abaixo: com 6.000 este
+    // teste media um regime pobre demais para os proprios criterios fazerem
+    // sentido, e a saida facil era baixar os criterios.
+    let exs = gerar(&ag.registro, &patcher, 14000, &mut r);
     // Divisao por FRASE, nao por exemplo. Com divisao por exemplo este teste dava
     // 100% em tudo e nao provava nada: os dois lados saem das mesmas ~57 frases.
     let (treino, val) = dividir_por_frase(exs, 4);
@@ -238,11 +258,45 @@ fn o_agente_aprende_a_escolher_ferramenta_e_argumento() {
         depois.acuracia_total() * 100.0
     );
     // Limiares de GENERALIZACAO, nao de memorizacao (chute cego na intencao: 11,1%).
-    // Ficam abaixo do medido de propriedade -- o teste roda menos epocas que o
-    // treino de verdade, e existe pra pegar REGRESSAO, nao pra cravar o recorde.
+    // Existem pra pegar REGRESSAO, nao pra cravar recorde.
+    //
+    // ESTES NUMEROS NAO MUDARAM, e a historia de 2026-09-05 e por que quase mudaram.
+    //
+    // Consertada a janela, o teste ainda falhava: intencao 67,7%, argumento 87,9%,
+    // benchmark 84/150. Baixar os limiares era o caminho obvio e teria funcionado —
+    // e teria deixado a regua permanentemente frouxa, escondendo a proxima
+    // regressao de verdade. Duas medicoes mostraram que o errado nao era o criterio:
+    //
+    // 1. NAO era falta de treino. Sonda de 18 epocas:
+    //
+    //        epoca 12   intencao 67,7%   argumento 87,9%   perda 4,538
+    //        epoca 14            67,1%             87,2%         5,866
+    //        epoca 16            71,1%             90,1%         6,541
+    //        epoca 18            66,1%             85,4%         7,544
+    //
+    //    A perda de validacao sobe sem parar e a intencao empaca entre 66 e 71.
+    //    Mais epoca so compra sobreajuste. **Nao repetir.**
+    //
+    // 2. ERA VOLUME DE DADO. O `gerar` estava em 6.000 (4.411 de treino) contra os
+    //    16.000 da producao, e a degradacao era UNIFORME entre as classes — nao
+    //    concentrada numa quebrada. `ler_arquivo` errava 8 de 14 aqui e e quase
+    //    perfeita em producao; o argumento condicional seguia saudavel em 92,9%.
+    //    Isso e assinatura de dado faltando, nao de defeito.
+    //
+    //        gerar   6.000 -> 4.411 de treino   intencao 67,7%   benchmark 84/150
+    //        gerar  14.000 -> 10.301           intencao 79,3%   benchmark 99/150
+    //        producao 16.000                   intencao 81,9%   benchmark 108-117
+    //
+    // Com 14.000 o teste volta para a faixa que os limiares sempre descreveram, e o
+    // benchmark cai nos 97-98 que o comentario la embaixo documenta. Custa os ~10
+    // min virarem ~24. Vale: teste que roda em regime irreal mede o regime irreal.
+    //
+    // **NAO baixe o `gerar` para acelerar.** Foi assim que este teste passou meses
+    // vermelho sem ninguem entender por que.
     assert!(
         depois.acuracia_intencao() > 0.75,
-        "intencao em frases ineditas ficou em {:.1}% (chute cego: 11,1%)",
+        "intencao em frases ineditas ficou em {:.1}% (chute cego: 11,1%; \
+         a janela quebrada dava 17,9%)",
         depois.acuracia_intencao() * 100.0
     );
     assert!(

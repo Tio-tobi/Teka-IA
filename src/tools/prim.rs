@@ -333,7 +333,12 @@ fn abrir_programa(nome: &str, pol: &Politica) -> Result<String, String> {
     // `pid` vira sinal verificavel — e o que permite `abrir_programa` ser praticada.
     // Sem tela, o caminho de sempre, cuja citacao o `Command` faz por nos.
     if let Some(tela) = pol.tela.as_deref() {
-        let p = super::tela::lancar("cmd.exe", &["/C", "start", "", nome], Some(tela))?;
+        let p = super::tela::lancar(
+            "cmd.exe",
+            &["/C", "start", "", nome],
+            Some(tela),
+            pol.raiz.as_deref(),
+        )?;
         return Ok(format!("abrindo {nome} na tela {tela} (pid {})", p.pid));
     }
     std::process::Command::new("cmd")

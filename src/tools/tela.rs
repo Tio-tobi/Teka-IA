@@ -265,8 +265,20 @@ impl Drop for Lancado {
 /// Recebe programa e argumentos **separados**, como `Command::args`, e monta a linha
 /// aqui — é o que impede que um argumento vire comando. `tela: None` usa a área de
 /// trabalho de quem chamou, que é o comportamento de sempre.
+///
+/// `dir` é o diretório de trabalho do processo. Passar `None` faz ele herdar o de
+/// quem chamou, que é **a pasta de onde o binário foi lançado** — quase nunca o que
+/// se quer quando existe uma raiz confinada. É o mesmo descasamento que já mordeu
+/// este projeto uma vez em [`crate::tools::seguranca::Politica::resolver_leitura`]:
+/// escrever ia para a raiz e ler procurava em outro lugar, e `ler_arquivo` deu zero
+/// acertos em dez rodadas com a ferramenta e o argumento certos.
 #[cfg(windows)]
-pub fn lancar(programa: &str, args: &[&str], tela: Option<&str>) -> Result<Lancado, String> {
+pub fn lancar(
+    programa: &str,
+    args: &[&str],
+    tela: Option<&str>,
+    dir: Option<&std::path::Path>,
+) -> Result<Lancado, String> {
     let mut linha = citar(programa)?;
     for a in args {
         linha.push(' ');
@@ -275,6 +287,7 @@ pub fn lancar(programa: &str, args: &[&str], tela: Option<&str>) -> Result<Lanca
     // `CreateProcessW` pode ESCREVER nesta string — o contrato exige buffer mutável.
     let mut linha_w = win::wide(&linha);
     let mut nome_w = tela.map(win::wide);
+    let dir_w = dir.map(|d| win::wide(&d.display().to_string()));
 
     let si = win::StartupInfoW {
         desktop: nome_w.as_mut().map_or(std::ptr::null_mut(), |v| v.as_mut_ptr()),
@@ -291,7 +304,7 @@ pub fn lancar(programa: &str, args: &[&str], tela: Option<&str>) -> Result<Lanca
             0,
             win::CREATE_NO_WINDOW,
             std::ptr::null(),
-            std::ptr::null(),
+            dir_w.as_ref().map_or(std::ptr::null(), |v| v.as_ptr()),
             &si,
             &mut pi,
         )
@@ -304,7 +317,12 @@ pub fn lancar(programa: &str, args: &[&str], tela: Option<&str>) -> Result<Lanca
 }
 
 #[cfg(not(windows))]
-pub fn lancar(_programa: &str, _args: &[&str], _tela: Option<&str>) -> Result<Lancado, String> {
+pub fn lancar(
+    _programa: &str,
+    _args: &[&str],
+    _tela: Option<&str>,
+    _dir: Option<&std::path::Path>,
+) -> Result<Lancado, String> {
     Err("tela virtual so existe no Windows".into())
 }
 
@@ -346,6 +364,7 @@ mod tests {
             "cmd.exe",
             &["/C", "mkdir", &alvo.display().to_string()],
             Some(t.nome()),
+            None,
         )
         .expect("lancar");
         assert!(p.pid != 0, "pid zero");
@@ -361,10 +380,34 @@ mod tests {
         let t = TelaVirtual::nova(&nome("inj")).expect("tela");
         for ruim in ["a & del b", "x\"y", "a | b", "%USERPROFILE%", "c:\\pasta\\"] {
             assert!(
-                lancar("cmd.exe", &["/C", "echo", ruim], Some(t.nome())).is_err(),
+                lancar("cmd.exe", &["/C", "echo", ruim], Some(t.nome()), None).is_err(),
                 "deixou passar: {ruim}"
             );
         }
+    }
+
+    /// O processo nasce NA PASTA que a política manda, não na de quem lançou.
+    ///
+    /// Prova com caminho relativo: `mkdir marca` só cai no lugar certo se o
+    /// `lpCurrentDirectory` tiver chegado. Passar `None` aqui faria a pasta aparecer
+    /// no diretório do binário de teste — que é exatamente o descasamento que já
+    /// custou dez rodadas de `ler_arquivo` a zero neste projeto.
+    #[test]
+    fn o_processo_nasce_na_pasta_pedida() {
+        let t = TelaVirtual::nova(&nome("dir")).expect("tela");
+        let casa = std::env::temp_dir().join(format!("teka_dir_{}", std::process::id()));
+        std::fs::create_dir_all(&casa).expect("casa");
+
+        let p = lancar("cmd.exe", &["/C", "mkdir", "marca"], Some(t.nome()), Some(&casa))
+            .expect("lancar");
+        p.esperar(10_000).expect("o processo nao terminou em 10s");
+
+        assert!(
+            casa.join("marca").is_dir(),
+            "o processo nao rodou em {} — o diretorio de trabalho nao chegou",
+            casa.display()
+        );
+        let _ = std::fs::remove_dir_all(&casa);
     }
 
     /// Argumento com espaço precisa de aspas; `/C` não pode ganhar aspas, senão o
