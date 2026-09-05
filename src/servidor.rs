@@ -43,12 +43,14 @@
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{Ipv4Addr, SocketAddrV4, TcpListener, TcpStream};
+use std::time::{Duration, Instant};
 
 use crate::backend::Paralelo;
 use crate::model::agente::{Agente, AgenteCache};
 use crate::model::patcher::Patcher;
 use crate::memory::MemoriaEpisodica;
 use crate::tools::execucao::Executor;
+use crate::tools::{Chamada, Registro};
 
 /// Teto de bytes por linha de pedido. Sem isto, um cliente que nunca manda `\n`
 /// cresce o buffer até a memória acabar.
@@ -95,6 +97,14 @@ const PAGINA: &str = r##"<!doctype html><meta charset="utf-8">
  input{flex:1;padding:.6rem;font:inherit;border:1px solid;border-radius:.4rem;
    background:transparent;color:inherit}
  button{padding:.6rem 1rem;font:inherit;border-radius:.4rem;cursor:pointer}
+ .c{border:1px solid #b80;border-radius:.5rem;padding:.7rem .9rem;display:flex;
+    flex-direction:column;gap:.6rem}
+ .c b{font-weight:600}
+ .c code{font-family:ui-monospace,Consolas,monospace;font-size:13px;
+    word-break:break-word;opacity:.85}
+ .c div{display:flex;gap:.5rem;align-items:center}
+ .c .nao{opacity:.7}
+ .c small{opacity:.6;margin-left:auto}
 </style>
 <h1>Teka — residente</h1>
 <div id=log></div>
@@ -104,6 +114,43 @@ const log=document.getElementById('log'), f=document.getElementById('f'), q=docu
 const t=new URLSearchParams(location.search).get('t')||'';
 function linha(txt,cls){const d=document.createElement('div');d.className=cls;d.textContent=txt;log.append(d);
   window.scrollTo(0,document.body.scrollHeight);}
+
+// O "faz?". A pagina NAO decide nada: ela mostra a chamada exata que a Teka montou
+// e devolve o `id` que veio junto. Quem autoriza e quem clica.
+function perguntar(c){
+  const cx=document.createElement('div'); cx.className='c';
+  const tit=document.createElement('b'); tit.textContent='fazer isto?';
+  const cod=document.createElement('code'); cod.textContent=c.chamada;
+  const bar=document.createElement('div');
+  const sim=document.createElement('button'); sim.textContent='sim, faz';
+  const nao=document.createElement('button'); nao.textContent='nao'; nao.className='nao';
+  const rel=document.createElement('small');
+  bar.append(sim,nao,rel); cx.append(tit,cod,bar); log.append(cx);
+  window.scrollTo(0,document.body.scrollHeight);
+
+  // O relogio nao e enfeite: o servidor recusa depois do prazo, e ver isso na tela
+  // evita clicar num botao que ja nao vale.
+  let resta=c.segundos|0;
+  const tique=setInterval(()=>{
+    resta--; rel.textContent=resta>0?(resta+'s'):'expirou';
+    if(resta<=0){ clearInterval(tique); sim.disabled=nao.disabled=true; }
+  },1000);
+  rel.textContent=resta+'s';
+
+  const responder=async v=>{
+    clearInterval(tique); sim.disabled=nao.disabled=true; rel.textContent='';
+    try{
+      const r=await fetch('/confirmar?t='+encodeURIComponent(t),{method:'POST',
+        body:'id='+encodeURIComponent(c.id)+'&resposta='+v});
+      const j=await r.json();
+      linha(j.erro?('erro: '+j.erro):(j.recusado?'nao fiz.':(j.saida||'(sem resposta)')),
+            j.erro?'r e':'r');
+    }catch(err){ linha('nao consegui responder: '+err,'r e'); }
+  };
+  sim.onclick=()=>responder('sim');
+  nao.onclick=()=>responder('nao');
+}
+
 f.onsubmit=async e=>{
   e.preventDefault();
   const texto=q.value.trim(); if(!texto) return;
@@ -111,10 +158,39 @@ f.onsubmit=async e=>{
   try{
     const r=await fetch('/pedido?t='+encodeURIComponent(t),{method:'POST',body:texto});
     const j=await r.json();
+    if(j.confirmar){ perguntar(j.confirmar); return; }
     linha(j.erro?('erro: '+j.erro):(j.saida||j.decidiu||'(sem resposta)'), j.erro?'r e':'r');
   }catch(err){ linha('nao consegui falar com ela: '+err,'r e'); }
 };
 </script>"##;
+
+/// Uma ação que parou para pedir permissão, esperando resposta pela página.
+///
+/// ## Por que dois passos e não uma espera
+///
+/// O servidor é **sequencial**: um `for` sobre `incoming()`, com `&mut Executor`.
+/// Bloquear dentro do handler esperando o "sim" travaria o processo inteiro — a
+/// própria resposta nunca seria aceita, porque não há quem aceite a conexão. Então
+/// `/pedido` **não executa nada**: devolve a chamada com um `id` e sai. A execução
+/// só acontece em `/confirmar`, que é uma segunda requisição.
+///
+/// Isso saiu melhor que a espera bloqueante que eu tinha imaginado. A permissão
+/// deixa de ser um instante e passa a ser um objeto com identidade, o que permite:
+/// ser de uso único, ter validade, e valer para **esta** chamada e nenhuma outra.
+struct Pendente {
+    /// Aleatório, e é ele que amarra a resposta à ação. Sem isso, um "sim" dado a
+    /// `criar_pasta` autorizaria o `apagar_arquivo` que chegasse logo depois.
+    id: String,
+    pedido: String,
+    chamada: Chamada,
+    nascido: Instant,
+}
+
+/// Quanto tempo um "faz?" fica de pé.
+///
+/// Curto de propósito. Uma pergunta que envelhece na tela e é respondida meia hora
+/// depois foi respondida sem contexto — quem clica não lembra mais o que pediu.
+const VALIDADE_CONFIRMACAO: Duration = Duration::from_secs(120);
 
 /// Token aleatorio por execucao.
 ///
@@ -174,10 +250,14 @@ pub fn servir(
     println!("  (o endereco muda a cada execucao, de proposito)\n");
 
     let mut cache = AgenteCache::new();
+    // UMA pendencia por vez, e de proposito: ver `Pendente`.
+    let mut pendente: Option<Pendente> = None;
     for fluxo in ouvinte.incoming() {
         match fluxo {
             Ok(f) => {
-                if let Err(e) = atender(f, ag, ops, patcher, exec, mem, cfg, &mut cache, &token) {
+                if let Err(e) = atender(
+                    f, ag, ops, patcher, exec, mem, cfg, &mut cache, &mut pendente, &token,
+                ) {
                     eprintln!("  cliente caiu: {e}");
                 }
             }
@@ -201,6 +281,7 @@ fn atender_http(
     mem: &mut MemoriaEpisodica,
     cfg: &CfgServidor,
     cache: &mut AgenteCache<f32>,
+    pendente: &mut Option<Pendente>,
     token: &str,
 ) -> std::io::Result<()> {
     let mut campos = requisicao.split_whitespace();
@@ -259,8 +340,37 @@ fn atender_http(
         let json = if pedido.is_empty() {
             "{\"erro\":\"pedido vazio\"}".to_string()
         } else {
-            responder_uma(ag, ops, patcher, exec, mem, cfg, cache, pedido)
+            responder_uma(ag, ops, patcher, exec, mem, cfg, cache, pendente, pedido)
         };
+        write!(
+            escrita,
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\n\
+             Content-Length: {}\r\nConnection: close\r\n\r\n{json}",
+            json.len()
+        )?;
+        return escrita.flush();
+    }
+
+    // A resposta ao "faz?". Executa a acao guardada — e SO ela.
+    if metodo == "POST" && caminho == "/confirmar" {
+        let n = tamanho.min(MAX_LINHA);
+        let mut corpo = vec![0u8; n];
+        leitura.read_exact(&mut corpo)?;
+        let corpo = String::from_utf8_lossy(&corpo);
+        let campo = |k: &str| -> String {
+            corpo
+                .split('&')
+                .find_map(|p| p.strip_prefix(k))
+                .unwrap_or("")
+                .to_string()
+        };
+        let json = responder_confirmacao(
+            &ag.registro,
+            exec,
+            pendente,
+            &campo("id="),
+            campo("resposta=") == "sim",
+        );
         write!(
             escrita,
             "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\n\
@@ -280,6 +390,51 @@ fn atender_http(
     escrita.flush()
 }
 
+/// Decide o "faz?" — e é aqui que moram as quatro travas da confirmação.
+///
+/// Cada uma existe por um jeito diferente de um "sim" acabar no lugar errado:
+///
+/// 1. **Só a pendência atual.** Se não há nada esperando, um "sim" não inventa uma
+///    ação. Um botão clicado duas vezes não executa duas vezes.
+/// 2. **O `id` tem de bater.** É o que amarra a resposta a ESTA chamada. Sem isso,
+///    um "sim" dado a `criar_pasta` autorizaria o `apagar_arquivo` seguinte.
+/// 3. **Validade.** Pergunta velha é pergunta respondida sem contexto.
+/// 4. **Uso único.** A pendência é consumida antes de executar, sempre — inclusive
+///    quando a resposta é "não" e quando o `id` bate mas o tempo passou.
+///
+/// A trava 4 é `take()` no início e não no fim de propósito: se a execução entrar em
+/// pânico no meio, a pendência já saiu, e um retry não reexecuta às cegas.
+fn responder_confirmacao(
+    reg: &Registro,
+    exec: &mut Executor,
+    pendente: &mut Option<Pendente>,
+    id: &str,
+    autorizou: bool,
+) -> String {
+    let Some(p) = pendente.take() else {
+        return "{\"erro\":\"nao ha nada esperando confirmacao\"}".to_string();
+    };
+    if p.id != id {
+        return "{\"erro\":\"essa resposta nao e desta acao\"}".to_string();
+    }
+    if p.nascido.elapsed() > VALIDADE_CONFIRMACAO {
+        return "{\"erro\":\"a pergunta expirou; peca de novo\"}".to_string();
+    }
+    if !autorizou {
+        return format!(
+            "{{\"recusado\":true,\"pedido\":\"{}\"}}",
+            escapar(&p.pedido)
+        );
+    }
+    // Autorizado, e só agora executa. Todas as outras guardas continuam de pé:
+    // sandbox, lista negra, raiz, diário. A permissão pulou a PERGUNTA, não elas.
+    let saida = exec.executar_com_permissao(reg, &p.chamada, true);
+    match saida {
+        Ok(s) => format!("{{\"saida\":\"{}\",\"executou\":true}}", escapar(&s)),
+        Err(e) => format!("{{\"erro\":\"{}\"}}", escapar(&e)),
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn atender(
     fluxo: TcpStream,
@@ -290,6 +445,7 @@ fn atender(
     mem: &mut MemoriaEpisodica,
     cfg: &CfgServidor,
     cache: &mut AgenteCache<f32>,
+    pendente: &mut Option<Pendente>,
     token: &str,
 ) -> std::io::Result<()> {
     let mut escrita = fluxo.try_clone()?;
@@ -304,13 +460,14 @@ fn atender(
     }
     if primeira.starts_with("GET ") || primeira.starts_with("POST ") {
         return atender_http(
-            &primeira, &mut leitura, &mut escrita, ag, ops, patcher, exec, mem, cfg, cache, token,
+            &primeira, &mut leitura, &mut escrita, ag, ops, patcher, exec, mem, cfg, cache,
+            pendente, token,
         );
     }
 
     let restante = primeira.trim();
     if !restante.is_empty() && restante.len() <= MAX_LINHA {
-        let r = responder_uma(ag, ops, patcher, exec, mem, cfg, cache, restante);
+        let r = responder_uma(ag, ops, patcher, exec, mem, cfg, cache, pendente, restante);
         writeln!(escrita, "{r}")?;
         escrita.flush()?;
     }
@@ -326,7 +483,7 @@ fn atender(
             continue;
         }
 
-        let resposta = responder_uma(ag, ops, patcher, exec, mem, cfg, cache, pedido);
+        let resposta = responder_uma(ag, ops, patcher, exec, mem, cfg, cache, pendente, pedido);
         writeln!(escrita, "{resposta}")?;
         escrita.flush()?;
     }
@@ -342,6 +499,7 @@ fn responder_uma(
     mem: &mut MemoriaEpisodica,
     cfg: &CfgServidor,
     cache: &mut AgenteCache<f32>,
+    pendente: &mut Option<Pendente>,
     pedido: &str,
 ) -> String {
     let (chamada, conf) = match ag.responder_com_confianca(ops, patcher, pedido, cache) {
@@ -357,6 +515,29 @@ fn responder_uma(
             "{{\"decidiu\":\"{}\",\"margem\":{:.3},\"executou\":false}}",
             escapar(&texto),
             conf.margem()
+        );
+    }
+
+    // Ação com efeito, e ninguém no terminal para responder. Guarda e pergunta pela
+    // página, em vez de recusar — que era o que acontecia antes: sem terminal,
+    // `read_line` num cano aberto BLOQUEIA, então a guarda negava por construção e
+    // as oito ferramentas que agem eram inalcançáveis pelo navegador.
+    if exec.precisa_confirmar(&ag.registro, &chamada) {
+        let id = token_novo();
+        // Substituir a pendência anterior INVALIDA ela, e isso é o comportamento
+        // certo: duas perguntas abertas ao mesmo tempo é como um "sim" acaba no
+        // alvo errado.
+        *pendente = Some(Pendente {
+            id: id.clone(),
+            pedido: pedido.to_string(),
+            chamada: chamada.clone(),
+            nascido: Instant::now(),
+        });
+        return format!(
+            "{{\"confirmar\":{{\"id\":\"{}\",\"chamada\":\"{}\",\"segundos\":{}}}}}",
+            escapar(&id),
+            escapar(&texto),
+            VALIDADE_CONFIRMACAO.as_secs()
         );
     }
 
@@ -407,6 +588,111 @@ fn escapar(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Executor real, em pasta temporária, com confirmação ligada.
+    fn cenario_confirmacao() -> (Registro, Executor, std::path::PathBuf) {
+        let base = std::env::temp_dir().join(format!(
+            "teka_conf_{}_{}",
+            std::process::id(),
+            token_novo()
+        ));
+        std::fs::create_dir_all(&base).unwrap();
+        let pol = crate::tools::seguranca::Politica::real_em(base.clone());
+        let exec = Executor::novo(base.join("d.log"), pol)
+            .unwrap()
+            .com_confirmacao(true);
+        (Registro::padrao(), exec, base)
+    }
+
+    fn chamada_com_efeito(reg: &Registro) -> Chamada {
+        let i = reg.indice("criar_pasta").unwrap();
+        Chamada {
+            ferramenta: i,
+            args: vec![("caminho".into(), "nova".into())],
+        }
+    }
+
+    fn pendencia(reg: &Registro, id: &str, idade: Duration) -> Option<Pendente> {
+        Some(Pendente {
+            id: id.to_string(),
+            pedido: "cria a pasta nova".into(),
+            chamada: chamada_com_efeito(reg),
+            nascido: Instant::now() - idade,
+        })
+    }
+
+    /// Sem nada esperando, um "sim" nao inventa uma acao.
+    #[test]
+    fn sim_sem_pendencia_nao_faz_nada() {
+        let (reg, mut exec, base) = cenario_confirmacao();
+        let mut p: Option<Pendente> = None;
+        let r = responder_confirmacao(&reg, &mut exec, &mut p, "qualquer", true);
+        assert!(r.contains("nao ha nada esperando"), "{r}");
+        assert!(!base.join("nova").exists(), "criou a pasta sem pendencia");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    /// **A trava que importa mais.** Um "sim" dado a uma acao nao pode autorizar
+    /// outra. Sem o `id`, bastaria responder rapido para pegar a acao errada.
+    #[test]
+    fn sim_com_id_errado_nao_executa() {
+        let (reg, mut exec, base) = cenario_confirmacao();
+        let mut p = pendencia(&reg, "id_certo", Duration::from_secs(0));
+        let r = responder_confirmacao(&reg, &mut exec, &mut p, "id_errado", true);
+        assert!(r.contains("nao e desta acao"), "{r}");
+        assert!(!base.join("nova").exists(), "executou com id errado");
+        assert!(p.is_none(), "a pendencia tem de ser consumida mesmo assim");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    /// Pergunta velha e pergunta respondida sem contexto.
+    #[test]
+    fn pendencia_expirada_nao_executa() {
+        let (reg, mut exec, base) = cenario_confirmacao();
+        let mut p = pendencia(&reg, "id", VALIDADE_CONFIRMACAO + Duration::from_secs(1));
+        let r = responder_confirmacao(&reg, &mut exec, &mut p, "id", true);
+        assert!(r.contains("expirou"), "{r}");
+        assert!(!base.join("nova").exists(), "executou depois do prazo");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    /// "Nao" nao faz, e ainda assim queima a pendencia.
+    #[test]
+    fn nao_recusa_e_consome() {
+        let (reg, mut exec, base) = cenario_confirmacao();
+        let mut p = pendencia(&reg, "id", Duration::from_secs(0));
+        let r = responder_confirmacao(&reg, &mut exec, &mut p, "id", false);
+        assert!(r.contains("recusado"), "{r}");
+        assert!(!base.join("nova").exists(), "fez mesmo com 'nao'");
+        assert!(p.is_none(), "a pendencia tem de sumir depois do 'nao'");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    /// O caminho feliz, e o de uso unico: o segundo "sim" nao repete o efeito.
+    #[test]
+    fn sim_executa_uma_vez_so() {
+        let (reg, mut exec, base) = cenario_confirmacao();
+        let mut p = pendencia(&reg, "id", Duration::from_secs(0));
+
+        let r = responder_confirmacao(&reg, &mut exec, &mut p, "id", true);
+        assert!(r.contains("\"executou\":true"), "{r}");
+        assert!(base.join("nova").is_dir(), "o 'sim' nao criou a pasta: {r}");
+        assert!(p.is_none(), "a pendencia tem de ser de uso unico");
+
+        // Clicar de novo nao pode reexecutar.
+        let r2 = responder_confirmacao(&reg, &mut exec, &mut p, "id", true);
+        assert!(r2.contains("nao ha nada esperando"), "{r2}");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    /// A pagina precisa saber perguntar, senao as oito ferramentas continuam
+    /// inalcancaveis pelo navegador — que era o estado antes do 4.3.
+    #[test]
+    fn a_pagina_sabe_perguntar() {
+        for marca in ["/confirmar?t=", "j.confirmar", "sim, faz", "c.segundos"] {
+            assert!(PAGINA.contains(marca), "a pagina nao tem {marca:?}");
+        }
+    }
 
     #[test]
     fn o_padrao_e_observar_nao_agir() {

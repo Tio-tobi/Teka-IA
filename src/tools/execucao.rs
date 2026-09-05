@@ -171,8 +171,44 @@ impl Executor {
         }
     }
 
+    /// Esta chamada vai parar para pedir permissão?
+    ///
+    /// Espelha exatamente a condição de [`Executor::executar`] — e existe porque
+    /// quem não tem terminal precisa saber disso **antes** de executar, para poder
+    /// perguntar por outro canal. Ver [`crate::servidor`].
+    ///
+    /// Se as duas condições saírem de sincronia, o servidor passa a mostrar um
+    /// "faz?" para uma ação que executaria direto, ou pior, executa direto uma que
+    /// deveria perguntar. O teste `precisa_confirmar_espelha_o_executar` prende as
+    /// duas juntas.
+    pub fn precisa_confirmar(&self, reg: &Registro, c: &Chamada) -> bool {
+        let Some(f) = reg.ferramentas.get(c.ferramenta) else {
+            return false;
+        };
+        self.confirmar && f.prim.efeito_colateral() && self.oficina.is_none()
+    }
+
     /// Executa uma chamada, com as guardas que ela merecer.
     pub fn executar(&mut self, reg: &Registro, c: &Chamada) -> Result<String, String> {
+        self.executar_com_permissao(reg, c, false)
+    }
+
+    /// A mesma coisa, mas quem chama pode afirmar que a permissão **já foi dada**.
+    ///
+    /// `ja_autorizado` só é verdade quando um humano respondeu "sim" a esta chamada
+    /// específica, identificada, por um canal que não é o terminal. É assim que a
+    /// interface web consegue agir sem que `IsTerminal` seja afrouxado.
+    ///
+    /// **O que isto NÃO afrouxa:** sandbox, lista negra, raiz, diário e oficina
+    /// continuam todos valendo depois daqui. A permissão pula a pergunta, não as
+    /// guardas — quem responde "sim" para `apagar_arquivo` fora da raiz continua
+    /// recebendo uma recusa.
+    pub fn executar_com_permissao(
+        &mut self,
+        reg: &Registro,
+        c: &Chamada,
+        ja_autorizado: bool,
+    ) -> Result<String, String> {
         let f = reg
             .ferramentas
             .get(c.ferramenta)
@@ -188,7 +224,7 @@ impl Executor {
         // sandbox, raiz, oficina, diario — sao todas tudo-ou-nada: passado o
         // `--real`, ela agia sem perguntar. Esta e a unica que dá a chance de dizer
         // nao no caso concreto, olhando o argumento que ela escolheu.
-        if self.confirmar && !self.pedir_permissao(&f.nome, c) {
+        if self.confirmar && !ja_autorizado && !self.pedir_permissao(&f.nome, c) {
             return Err("nao autorizado".into());
         }
 
@@ -408,6 +444,76 @@ mod tests {
             &chamada(&reg, "executar_comando", &[("comando", "format c:")]),
         );
         assert!(r.is_err(), "denylist tem de valer dentro da oficina tambem");
+        fs::remove_dir_all(&base).ok();
+    }
+
+    /// `precisa_confirmar` e `executar` têm de concordar sobre o que pede permissão.
+    ///
+    /// Se saírem de sincronia, o servidor mostra um "faz?" para algo que executaria
+    /// direto — ou, muito pior, executa direto algo que deveria perguntar. Percorre
+    /// o registro inteiro em vez de amostrar: é barato e não deixa ferramenta nova
+    /// entrar sem passar por aqui.
+    #[test]
+    fn precisa_confirmar_espelha_o_executar() {
+        let reg = Registro::padrao();
+        let base = temporaria("espelho");
+        let pol = Politica {
+            modo: Modo::Real,
+            raiz: Some(base.clone()),
+            ..Default::default()
+        };
+        let ex = Executor::novo(base.join("d.log"), pol)
+            .unwrap()
+            .com_confirmacao(true);
+
+        for (i, f) in reg.ferramentas.iter().enumerate() {
+            let c = Chamada { ferramenta: i, args: Vec::new() };
+            assert_eq!(
+                ex.precisa_confirmar(&reg, &c),
+                f.prim.efeito_colateral(),
+                "{}: precisa_confirmar discorda do efeito colateral",
+                f.nome
+            );
+        }
+
+        // Com a confirmacao desligada, ninguem pergunta nada.
+        let sem = Executor::novo(base.join("d2.log"), Politica::default())
+            .unwrap()
+            .com_confirmacao(false);
+        for i in 0..reg.n() {
+            let c = Chamada { ferramenta: i, args: Vec::new() };
+            assert!(!sem.precisa_confirmar(&reg, &c));
+        }
+        fs::remove_dir_all(&base).ok();
+    }
+
+    /// A permissao pula a PERGUNTA, nao as guardas.
+    ///
+    /// Um "sim" na pagina nao pode virar passe livre: sandbox, lista negra e raiz
+    /// continuam valendo depois dele.
+    #[test]
+    fn autorizado_nao_fura_as_outras_guardas() {
+        let reg = Registro::padrao();
+        let base = temporaria("autorizado");
+        let pol = Politica {
+            modo: Modo::Real,
+            raiz: Some(base.clone()),
+            ..Default::default()
+        };
+        let mut ex = Executor::novo(base.join("d.log"), pol)
+            .unwrap()
+            .com_confirmacao(true);
+
+        // Fora da raiz, mesmo autorizado.
+        let fuga = chamada(&reg, "escrever_arquivo", &[("caminho", "..\\..\\fuga.txt"), ("texto", "x")]);
+        assert!(ex.executar_com_permissao(&reg, &fuga, true).is_err(), "escapou da raiz");
+
+        // Na lista negra, mesmo autorizado.
+        let destrutivo = chamada(&reg, "executar_comando", &[("comando", "format c:")]);
+        assert!(
+            ex.executar_com_permissao(&reg, &destrutivo, true).is_err(),
+            "a lista negra parou de valer com autorizacao"
+        );
         fs::remove_dir_all(&base).ok();
     }
 

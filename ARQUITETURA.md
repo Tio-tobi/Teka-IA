@@ -241,7 +241,7 @@ Não são estilo. São o que separa medição de ilusão, e todas custaram caro.
 |---|---|---|---|---|
 | 4.1 | ~~Poços de fora-de-escopo (23 → 66)~~ | dados | — | **FECHADO: sem efeito medível** |
 | 4.2 | Escolha de ferramenta: `abrir_programa`, `executar_comando`, `procurar_arquivo` | dados | dias | próximo |
-| 4.3 | Canal de confirmação na interface web | código | dias | pronto para começar |
+| 4.3 | ~~Canal de confirmação na interface web~~ | código | — | **FEITO em 2026-09-05** |
 | 4.4 | Argumento de restrição múltipla | **arquitetura** | semanas | só com medição na mão |
 | 4.5 | Fusão COMPLETA com o DeepSeek-Harness | integração | 20–40 sessões | depois de 4.2 |
 | 4.6 | Importação da Nyxara | integração | — | **por último, sempre** |
@@ -451,7 +451,7 @@ O princípio por trás dos três: **poço estreito ensina os itens, não a forma
 
 ---
 
-### 4.3 Canal de confirmação na interface web
+### 4.3 ~~Canal de confirmação~~ — FEITO em 2026-09-05
 
 **Estado atual.** A interface web nasce somente-leitura *por construção*:
 `IsTerminal` é falso, logo não há como confirmar, logo as 8 ferramentas que agem
@@ -466,12 +466,48 @@ que a resposta não possa ser reaproveitada para autorizar outra ação.
 **Por que vale.** É o trabalho menor da lista e é o que **libera as 8 ferramentas
 restantes fora do terminal** — ou seja, o maior ganho de utilidade por hora gasta.
 
-**Requisitos de segurança que não podem ser afrouxados:**
+**COMO FICOU: dois passos, não uma espera.**
 
-- o `bind` continua `127.0.0.1` fixo no código
-- o token continua por execução
-- a confirmação vale para **um** pedido, identificado; nunca para uma sessão
-- negar continua sendo o padrão em qualquer caminho ambíguo
+O servidor é sequencial — um `for` sobre `incoming()`, com `&mut Executor`. Bloquear
+dentro do handler esperando o "sim" travaria o processo inteiro: a própria resposta
+nunca seria aceita, porque não há quem aceite a conexão. Então:
+
+```
+POST /pedido     decide, GUARDA a chamada, devolve {id, chamada, segundos}
+                 e nao executa nada
+POST /confirmar  id + sim/nao  ->  executa, e so entao
+```
+
+Isso saiu melhor que a espera que eu tinha desenhado. A permissão deixa de ser um
+instante e vira **um objeto com identidade** — o que permite ser de uso único, ter
+validade, e valer para aquela chamada e nenhuma outra.
+
+**As quatro travas, e o que cada uma impede:**
+
+| trava | o buraco que fecha |
+|---|---|
+| só a pendência atual | um "sim" sem pergunta não inventa ação |
+| o `id` tem de bater | um "sim" dado a `criar_pasta` autorizar o `apagar_arquivo` seguinte |
+| validade de 120 s | pergunta velha respondida sem contexto |
+| uso único (`take()` antes de executar) | clicar duas vezes executar duas vezes |
+
+**Verificado contra o servidor de pé, e a prova é o efeito, não a resposta:**
+
+```
+A  id errado     -> recusa      pasta `documentos` NAO criada
+B  resposta nao  -> recusado    pasta `imagens`    NAO criada
+C  resposta sim  -> executou    pasta `backups`    criada
+D  repetir o sim -> nada        nao duplicou
+```
+
+**O que NÃO foi afrouxado.** A permissão pula a *pergunta*, não as guardas. Dois
+testes prendem isso: escrita fora da raiz e comando na lista negra continuam sendo
+recusados mesmo com `ja_autorizado = true`. E `precisa_confirmar` espelha
+`executar` por teste sobre o registro inteiro — se as duas saírem de sincronia, o
+servidor passaria a executar direto algo que deveria perguntar.
+
+O `bind` continua `127.0.0.1` no código, o token continua por execução, e negar
+continua sendo o padrão em todo caminho ambíguo.
 
 ---
 
