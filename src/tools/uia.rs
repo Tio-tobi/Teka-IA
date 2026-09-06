@@ -2,40 +2,62 @@
 //!
 //! ## Por que isto existe
 //!
-//! `Ctrl+Shift+M` alterna o mudo do Discord às cegas: não sabe se ficou mudo ou se
-//! desmutou, e depende de o atalho global estar configurado. O UIAutomation — a
-//! mesma API que leitor de tela usa — **lê o estado, age, e confirma que mudou**.
+//! `Ctrl+Shift+M` alterna o mudo do Discord às cegas: não sabe se ficou mudo, e
+//! depende do atalho global estar configurado. Tecla de mídia pula faixa mas não
+//! sabe **tocar uma música pelo nome**. O UIAutomation — a mesma API que leitor de
+//! tela usa — resolve os dois: lê o estado, age, e confirma.
 //!
-//! ## O que foi medido antes de escrever isto (2026-09-06)
+//! ## Achar a janela: por PROCESSO, não por título
 //!
-//! Nem todo aplicativo publica sua árvore de acessibilidade, e a diferença é
-//! enorme:
+//! Custou duas medições falhadas para eu entender. No Discord o título contém
+//! "Discord" e casar por texto funciona. No Spotify **o título É a música tocando**:
 //!
 //! ```text
-//! WhatsApp (WebView2)   1238 controles   arvore completa
-//! Discord  (Electron)    898 controles   arvore completa
-//! XBOX     (UWP)          12
-//! Spotify  (Electron)     15, so 2 com nome   -> inutil
-//! Radmin   (Win32)         0
+//! parado     "Spotify Free"
+//! tocando    "Shiny_sz - Rota da Ira"
+//! 3 min dps  "Gibran Alcocer - Idea 22"
 //! ```
 //!
-//! **Não é a tecnologia, é o aplicativo.** Discord e Spotify são os dois Electron e
-//! estão nos extremos opostos. Por isso o Spotify continua sendo controlado por
-//! tecla de mídia, e só o Discord passa por aqui.
+//! Procurar "Spotify" no título falha exatamente quando ele está fazendo o que se
+//! quer controlar. Por isso um alvo terminado em `.exe` casa pelo **executável**
+//! (`GetWindowThreadProcessId` + `QueryFullProcessImageNameW`), que não muda.
 //!
-//! ## Três armadilhas que custaram tentativa
+//! ## O que cada aplicativo publica — medido, e eu errei antes
 //!
-//! 1. **Errar índice de vtable não dá erro de compilação.** Chama outra função e o
-//!    processo morre ou devolve lixo. Cada índice aqui foi validado sozinho antes
-//!    de entrar: `GetRootElement`[5] + `get_CurrentName`[23] devolveram "Área de
-//!    Trabalho 1", que é o nome real do elemento raiz.
-//! 2. **`GetCurrentPattern` devolve SUCESSO com ponteiro nulo** quando o controle
-//!    não suporta o padrão. Testar só o `HRESULT` passa batido.
-//! 3. **O botão de mudo não é `Invoke`, é `Toggle`.** Sondando cinco padrões:
-//!    `Invoke` nulo, `Toggle` disponível, `LegacyIAccessible` disponível. E o
-//!    `Toggle` ainda vem com leitura de estado de brinde.
+//! ```text
+//! Discord  (Electron)   898 controles
+//! Spotify  (Electron)   947 controles   <- ver nota
+//! WhatsApp (WebView2)  1238
+//! XBOX     (UWP)         12
+//! Radmin   (Win32)        0
+//! ```
+//!
+//! **A nota importa.** Numa primeira medição o Spotify deu 15 controles e eu
+//! concluí "não serve para UIA". Estava errado: a janela estava num estado sem o
+//! renderizador carregado. Com ele tocando, são 947 — a árvore inteira, com um
+//! botão `Tocar <faixa> de <artista>` por linha visível. Conclusão tirada de uma
+//! amostra ruim é pior que nenhuma conclusão, porque fecha a porta.
+//!
+//! ## Armadilhas de COM que custaram tentativa
+//!
+//! 1. **Errar índice de vtable não dá erro de compilação.** Cada índice aqui foi
+//!    validado sozinho: `GetRootElement`[5] + `get_CurrentName`[23] devolveram
+//!    "Área de Trabalho 1", que é o nome real do elemento raiz.
+//! 2. **`GetCurrentPattern` devolve S_OK com ponteiro NULO** quando o controle não
+//!    suporta o padrão. Testar só o `HRESULT` passa batido.
+//! 3. **O botão de mudo é `Toggle`, não `Invoke`.** O de tocar faixa é `Invoke`.
+//!    Sondar antes de assumir.
+//! 4. **Nome igual, tipo diferente.** `Tocar From The Start de Laufey` casa com a
+//!    LINHA da tabela (50029) e com o BOTÃO (50000). Acionar a linha não faz nada.
 
 #![allow(non_snake_case)]
+
+/// Tipos de controle do UIAutomation que este módulo usa.
+pub const TIPO_BOTAO: i32 = 50000;
+pub const TIPO_EDICAO: i32 = 50004;
+/// O campo de busca do Spotify e um ComboBox, nao um Edit — descoberto errando:
+/// procurar so por `Edit` nao achava "O que você quer ouvir?".
+pub const TIPO_COMBO: i32 = 50003;
 
 #[cfg(windows)]
 mod imp {
@@ -44,12 +66,7 @@ mod imp {
 
     #[repr(C)]
     #[derive(Clone, Copy)]
-    struct Guid {
-        d1: u32,
-        d2: u16,
-        d3: u16,
-        d4: [u8; 8],
-    }
+    struct Guid { d1: u32, d2: u16, d3: u16, d4: [u8; 8] }
     const CLSID_CUIAUTOMATION: Guid = Guid {
         d1: 0xFF48DBA4, d2: 0x60EF, d3: 0x4201,
         d4: [0xAA, 0x87, 0x54, 0x10, 0x3E, 0xEF, 0x59, 0x4E],
@@ -58,18 +75,10 @@ mod imp {
         d1: 0x30CBE57D, d2: 0xD9D0, d3: 0x452A,
         d4: [0xAB, 0x13, 0x7A, 0xC5, 0xAC, 0x48, 0x25, 0xEE],
     };
-    const UIA_NAME_PROP: i32 = 30005;
-    const UIA_TOGGLE_PATTERN: i32 = 10015;
+    const PATTERN_INVOKE: i32 = 10000;
+    const PATTERN_TOGGLE: i32 = 10015;
+    const PATTERN_VALOR: i32 = 10002;
     const ESCOPO_DESCENDENTES: i32 = 4;
-
-    #[repr(C)]
-    struct Variant {
-        vt: u16,
-        r1: u16,
-        r2: u16,
-        r3: u16,
-        val: [u64; 2],
-    }
 
     #[link(name = "ole32")]
     unsafe extern "system" {
@@ -88,31 +97,63 @@ mod imp {
         fn EnumWindows(f: extern "system" fn(isize, isize) -> i32, p: isize) -> i32;
         fn GetWindowTextW(h: isize, b: *mut u16, n: i32) -> i32;
         fn IsWindowVisible(h: isize) -> i32;
+        fn GetWindowThreadProcessId(h: isize, pid: *mut u32) -> u32;
+    }
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn OpenProcess(acesso: u32, herdar: i32, pid: u32) -> isize;
+        fn QueryFullProcessImageNameW(h: isize, f: u32, b: *mut u16, n: *mut u32) -> i32;
+        fn CloseHandle(h: isize) -> i32;
+    }
+
+    const SEP: [char; 2] = ['\\', '/'];
+
+    /// Nome do executável dono da janela. **Estável**, ao contrário do título.
+    fn exe_da_janela(h: isize) -> String {
+        unsafe {
+            let mut pid = 0u32;
+            GetWindowThreadProcessId(h, &mut pid);
+            if pid == 0 { return String::new(); }
+            // PROCESS_QUERY_LIMITED_INFORMATION: o minimo para ler o caminho, e o
+            // unico que funciona sem privilegio elevado.
+            let ph = OpenProcess(0x1000, 0, pid);
+            if ph == 0 { return String::new(); }
+            let mut buf = [0u16; 512];
+            let mut n = 512u32;
+            let ok = QueryFullProcessImageNameW(ph, 0, buf.as_mut_ptr(), &mut n);
+            CloseHandle(ph);
+            if ok == 0 { return String::new(); }
+            String::from_utf16_lossy(&buf[..n as usize])
+                .rsplit(SEP)
+                .next()
+                .unwrap_or("")
+                .to_string()
+        }
     }
 
     static ALVO: Mutex<isize> = Mutex::new(0);
     static PROCURA: Mutex<String> = Mutex::new(String::new());
 
     extern "system" fn visitar(h: isize, _: isize) -> i32 {
-        let mut b = [0u16; 256];
-        let n = unsafe { GetWindowTextW(h, b.as_mut_ptr(), 256) };
-        if n > 0 && unsafe { IsWindowVisible(h) } != 0 {
-            let t = String::from_utf16_lossy(&b[..n as usize]);
-            if t.contains(PROCURA.lock().unwrap().as_str()) {
-                *ALVO.lock().unwrap() = h;
-                return 0; // achou, para a enumeracao
-            }
-        }
+        if unsafe { IsWindowVisible(h) } == 0 { return 1; }
+        let spec = PROCURA.lock().unwrap().clone();
+        let casa = if spec.to_lowercase().ends_with(".exe") {
+            exe_da_janela(h).eq_ignore_ascii_case(&spec)
+        } else {
+            let mut b = [0u16; 256];
+            let n = unsafe { GetWindowTextW(h, b.as_mut_ptr(), 256) };
+            n > 0 && String::from_utf16_lossy(&b[..n as usize]).contains(spec.as_str())
+        };
+        if casa { *ALVO.lock().unwrap() = h; return 0; }
         1
     }
 
-    /// Primeira janela VISÍVEL cujo título contenha `trecho`.
+    /// Primeira janela visível que case com `spec`.
     ///
-    /// Visível de propósito: um app na bandeja não tem janela, e agir sobre ele por
-    /// aqui é impossível — melhor falhar com mensagem clara que achar um handle
-    /// morto.
-    fn janela_com(trecho: &str) -> Option<isize> {
-        *PROCURA.lock().unwrap() = trecho.to_string();
+    /// `spec` terminado em `.exe` casa pelo executável; qualquer outra coisa casa
+    /// por trecho do título. Ver a nota do módulo sobre por que os dois existem.
+    fn janela(spec: &str) -> Option<isize> {
+        *PROCURA.lock().unwrap() = spec.to_string();
         *ALVO.lock().unwrap() = 0;
         unsafe { EnumWindows(visitar, 0) };
         let h = *ALVO.lock().unwrap();
@@ -122,44 +163,55 @@ mod imp {
     fn wide(s: &str) -> Vec<u16> {
         s.encode_utf16().chain(std::iter::once(0)).collect()
     }
-
-    /// Ponteiro para o método `i` da vtable.
-    ///
-    /// # Safety
-    /// `o` tem de ser um ponteiro COM vivo, e `i` um índice válido da interface
-    /// dele. Errar o índice é comportamento indefinido — ver a nota do módulo.
+    unsafe fn bstr(p: *mut u16) -> String {
+        if p.is_null() { return String::new(); }
+        let n = unsafe { *(p as *const u32).offset(-1) } as usize;
+        let s = String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(p, n / 2) });
+        unsafe { SysFreeString(p) };
+        s
+    }
     unsafe fn vt(o: *mut c_void, i: usize) -> *const c_void {
         unsafe { *(*(o as *const *const *const c_void)).add(i) }
     }
-
     unsafe fn soltar(o: *mut c_void) {
         if !o.is_null() {
             let r: extern "system" fn(*mut c_void) -> u32 = unsafe { std::mem::transmute(vt(o, 2)) };
             r(o);
         }
     }
-
-    /// O que aconteceu com o controle.
-    pub struct Resultado {
-        pub antes: i32,
-        pub depois: i32,
+    unsafe fn nome_de(el: *mut c_void) -> String {
+        let g: extern "system" fn(*mut c_void, *mut *mut u16) -> i32 =
+            unsafe { std::mem::transmute(vt(el, 23)) };
+        let mut s = std::ptr::null_mut();
+        g(el, &mut s);
+        unsafe { bstr(s) }
+    }
+    unsafe fn tipo_de(el: *mut c_void) -> i32 {
+        let g: extern "system" fn(*mut c_void, *mut i32) -> i32 =
+            unsafe { std::mem::transmute(vt(el, 21)) };
+        let mut t = 0;
+        g(el, &mut t);
+        t
     }
 
-    /// Acha o controle `controle` dentro da janela cujo título contém `janela`, e
-    /// alterna. Devolve o estado antes e depois — é o que separa isto de apertar
-    /// uma tecla às cegas.
-    pub fn alternar(janela: &str, controle: &str) -> Result<Resultado, String> {
-        let Some(hwnd) = janela_com(janela) else {
+    /// Sessão de automação viva: o objeto UIA e o elemento da janela.
+    struct Sessao { aut: *mut c_void, jan: *mut c_void }
+
+    impl Drop for Sessao {
+        fn drop(&mut self) {
+            unsafe { soltar(self.jan); soltar(self.aut) };
+        }
+    }
+
+    fn abrir(spec: &str) -> Result<Sessao, String> {
+        let Some(hwnd) = janela(spec) else {
             return Err(format!(
-                "nao achei janela visivel com {janela:?} no titulo (o app esta na bandeja?)"
+                "nao achei janela visivel de {spec:?} (o app esta fechado ou na bandeja?)"
             ));
         };
         unsafe {
-            // S_FALSE (0x1) quando ja inicializado: nao e erro.
             let hr = CoInitializeEx(std::ptr::null_mut(), 2);
-            if hr < 0 {
-                return Err(format!("CoInitializeEx falhou (0x{hr:08X})"));
-            }
+            if hr < 0 { return Err(format!("CoInitializeEx falhou (0x{hr:08X})")); }
             let mut aut: *mut c_void = std::ptr::null_mut();
             let hr = CoCreateInstance(
                 &CLSID_CUIAUTOMATION, std::ptr::null_mut(), 1, &IID_IUIAUTOMATION, &mut aut,
@@ -167,8 +219,6 @@ mod imp {
             if hr != 0 || aut.is_null() {
                 return Err(format!("UIAutomation indisponivel (0x{hr:08X})"));
             }
-
-            // [6] ElementFromHandle
             let f: extern "system" fn(*mut c_void, isize, *mut *mut c_void) -> i32 =
                 std::mem::transmute(vt(aut, 6));
             let mut jan: *mut c_void = std::ptr::null_mut();
@@ -176,113 +226,197 @@ mod imp {
                 soltar(aut);
                 return Err("nao consegui ler a janela".into());
             }
-
-            let r = achar_e_alternar(aut, jan, controle);
-            soltar(jan);
-            soltar(aut);
-            r
+            Ok(Sessao { aut, jan })
         }
     }
 
-    unsafe fn achar_e_alternar(
-        aut: *mut c_void, jan: *mut c_void, controle: &str,
-    ) -> Result<Resultado, String> {
-        let w = wide(controle);
-        let b = unsafe { SysAllocString(w.as_ptr()) };
-        let var = Variant { vt: 8, r1: 0, r2: 0, r3: 0, val: [b as u64, 0] }; // VT_BSTR
-
-        // [23] CreatePropertyCondition — consome a VARIANT.
-        let cpc: extern "system" fn(*mut c_void, i32, Variant, *mut *mut c_void) -> i32 =
-            unsafe { std::mem::transmute(vt(aut, 23)) };
+    /// Varre a árvore e devolve o primeiro controle do tipo pedido cujo nome case.
+    ///
+    /// Varre em vez de usar `FindFirst` com condição de nome porque o alvo aqui é
+    /// **parcial** ("Tocar From The Start" dentro de "Tocar From The Start de
+    /// Laufey") e porque o TIPO precisa entrar no filtro: o mesmo nome aparece na
+    /// linha da tabela e no botão, e acionar a linha não faz nada.
+    unsafe fn achar(s: &Sessao, tipo: i32, trecho: &str) -> Option<*mut c_void> {
+        let ct: extern "system" fn(*mut c_void, *mut *mut c_void) -> i32 =
+            unsafe { std::mem::transmute(vt(s.aut, 21)) };
         let mut cond: *mut c_void = std::ptr::null_mut();
-        let hr = cpc(aut, UIA_NAME_PROP, var, &mut cond);
-        unsafe { SysFreeString(b) };
-        if hr != 0 || cond.is_null() {
-            return Err(format!("nao montei a condicao de busca (0x{hr:08X})"));
-        }
+        if ct(s.aut, &mut cond) != 0 { return None; }
 
-        // [5] FindFirst
-        let ff: extern "system" fn(*mut c_void, i32, *mut c_void, *mut *mut c_void) -> i32 =
-            unsafe { std::mem::transmute(vt(jan, 5)) };
-        let mut el: *mut c_void = std::ptr::null_mut();
-        let hr = ff(jan, ESCOPO_DESCENDENTES, cond, &mut el);
+        let fa: extern "system" fn(*mut c_void, i32, *mut c_void, *mut *mut c_void) -> i32 =
+            unsafe { std::mem::transmute(vt(s.jan, 6)) };
+        let mut arr: *mut c_void = std::ptr::null_mut();
+        let hr = fa(s.jan, ESCOPO_DESCENDENTES, cond, &mut arr);
         unsafe { soltar(cond) };
-        if hr != 0 || el.is_null() {
-            return Err(format!("nao achei o controle {controle:?} na janela"));
-        }
+        if hr != 0 || arr.is_null() { return None; }
 
-        let r = unsafe { alternar_elemento(el) };
-        unsafe { soltar(el) };
-        r
-    }
-
-    unsafe fn alternar_elemento(el: *mut c_void) -> Result<Resultado, String> {
-        // [16] GetCurrentPattern — CUIDADO: devolve S_OK com ponteiro NULO quando o
-        // controle nao suporta o padrao. Testar so o HRESULT passa batido.
-        let gp: extern "system" fn(*mut c_void, i32, *mut *mut c_void) -> i32 =
-            unsafe { std::mem::transmute(vt(el, 16)) };
-        let mut pat: *mut c_void = std::ptr::null_mut();
-        if gp(el, UIA_TOGGLE_PATTERN, &mut pat) != 0 || pat.is_null() {
-            return Err("esse controle nao e de alternancia (sem padrao Toggle)".into());
-        }
-        // [4] get_CurrentToggleState  |  [3] Toggle
-        let estado: extern "system" fn(*mut c_void, *mut i32) -> i32 =
-            unsafe { std::mem::transmute(vt(pat, 4)) };
-        let acionar: extern "system" fn(*mut c_void) -> i32 =
-            unsafe { std::mem::transmute(vt(pat, 3)) };
-
-        let mut antes = -1;
-        estado(pat, &mut antes);
-        let hr = acionar(pat);
-        if hr != 0 {
-            unsafe { soltar(pat) };
-            return Err(format!("Toggle falhou (0x{hr:08X})"));
-        }
-
-        // ESPERA ATE MUDAR, e nao um tempo fixo.
-        //
-        // A primeira versao dormia 400 ms e lia uma vez. Deu isto, medido:
-        //
-        //     1: mutar_discord: desligado -> desligado   (diz que nao mudou)
-        //     2: mutar_discord: ligado    -> desligado   (mas leu "ligado"!)
-        //
-        // O `Toggle` tinha funcionado na rodada 1; a arvore do Discord e que ainda
-        // nao tinha atualizado quando eu li. Um tempo fixo troca "confirmei" por
-        // "esperei o bastante na maioria das vezes" — e confirmar e a unica coisa
-        // que esta ferramenta tem que a tecla nao tem.
-        //
-        // Se estourar o prazo sem mudar, `depois` volta igual a `antes` e quem
-        // chamou VE isso. Silenciar seria pior que o problema original.
-        const PASSO: std::time::Duration = std::time::Duration::from_millis(60);
-        const TETO: u32 = 40; // ~2,4 s
-        let mut depois = antes;
-        for _ in 0..TETO {
-            std::thread::sleep(PASSO);
-            let mut agora = -1;
-            estado(pat, &mut agora);
-            if agora != antes {
-                depois = agora;
+        let gl: extern "system" fn(*mut c_void, *mut i32) -> i32 =
+            unsafe { std::mem::transmute(vt(arr, 3)) };
+        let ge: extern "system" fn(*mut c_void, i32, *mut *mut c_void) -> i32 =
+            unsafe { std::mem::transmute(vt(arr, 4)) };
+        let mut n = 0;
+        gl(arr, &mut n);
+        let alvo = trecho.to_lowercase();
+        let mut achado = None;
+        for i in 0..n {
+            let mut el: *mut c_void = std::ptr::null_mut();
+            if ge(arr, i, &mut el) != 0 || el.is_null() { continue; }
+            if unsafe { tipo_de(el) } == tipo
+                && unsafe { nome_de(el) }.to_lowercase().contains(&alvo)
+            {
+                achado = Some(el);
                 break;
             }
+            unsafe { soltar(el) };
         }
-        unsafe { soltar(pat) };
-        Ok(Resultado { antes, depois })
+        unsafe { soltar(arr) };
+        achado
+    }
+
+    unsafe fn padrao(el: *mut c_void, id: i32) -> Option<*mut c_void> {
+        let gp: extern "system" fn(*mut c_void, i32, *mut *mut c_void) -> i32 =
+            unsafe { std::mem::transmute(vt(el, 16)) };
+        let mut p: *mut c_void = std::ptr::null_mut();
+        // S_OK com ponteiro NULO quando o padrao nao existe — ver nota do modulo.
+        if gp(el, id, &mut p) != 0 || p.is_null() { None } else { Some(p) }
+    }
+
+    pub struct Resultado { pub antes: i32, pub depois: i32 }
+
+    /// Alterna um controle de dois estados (mudo, ensurdecer) e **confirma**.
+    pub fn alternar(spec: &str, controle: &str) -> Result<Resultado, String> {
+        let s = abrir(spec)?;
+        unsafe {
+            let el = achar(&s, super::TIPO_BOTAO, controle)
+                .ok_or_else(|| format!("nao achei o botao {controle:?}"))?;
+            let pat = padrao(el, PATTERN_TOGGLE);
+            let Some(pat) = pat else {
+                soltar(el);
+                return Err("esse controle nao e de alternancia (sem padrao Toggle)".into());
+            };
+            let estado: extern "system" fn(*mut c_void, *mut i32) -> i32 =
+                std::mem::transmute(vt(pat, 4));
+            let acionar: extern "system" fn(*mut c_void) -> i32 = std::mem::transmute(vt(pat, 3));
+
+            let mut antes = -1;
+            estado(pat, &mut antes);
+            let hr = acionar(pat);
+            if hr != 0 {
+                soltar(pat); soltar(el);
+                return Err(format!("Toggle falhou (0x{hr:08X})"));
+            }
+            // ESPERA ATE MUDAR, e nao um tempo fixo.
+            //
+            // A versao com 400 ms fixos reportou "desligado -> desligado" numa
+            // rodada que TINHA mudado (a seguinte leu "ligado"). Tempo fixo troca
+            // "confirmei" por "esperei o bastante quase sempre" — e confirmar e a
+            // unica coisa que isto tem que a tecla nao tem.
+            let mut depois = antes;
+            for _ in 0..40 {
+                std::thread::sleep(std::time::Duration::from_millis(60));
+                let mut agora = -1;
+                estado(pat, &mut agora);
+                if agora != antes { depois = agora; break; }
+            }
+            soltar(pat); soltar(el);
+            Ok(Resultado { antes, depois })
+        }
+    }
+
+    /// Aciona um botão pelo nome (parcial). Devolve o nome inteiro do que acionou.
+    pub fn acionar_botao(spec: &str, trecho: &str) -> Result<String, String> {
+        let s = abrir(spec)?;
+        unsafe {
+            let el = achar(&s, super::TIPO_BOTAO, trecho)
+                .ok_or_else(|| format!("nao achei botao contendo {trecho:?}"))?;
+            let nome = nome_de(el);
+            let Some(pat) = padrao(el, PATTERN_INVOKE) else {
+                soltar(el);
+                return Err(format!("{nome:?} nao e acionavel (sem padrao Invoke)"));
+            };
+            let inv: extern "system" fn(*mut c_void) -> i32 = std::mem::transmute(vt(pat, 3));
+            let hr = inv(pat);
+            soltar(pat); soltar(el);
+            if hr != 0 { return Err(format!("Invoke falhou (0x{hr:08X})")); }
+            Ok(nome)
+        }
+    }
+
+    /// Escreve num campo de edição (o campo de busca, por exemplo).
+    pub fn escrever(spec: &str, campo: &str, texto: &str) -> Result<(), String> {
+        let s = abrir(spec)?;
+        unsafe {
+            // Edit OU ComboBox: o campo de busca do Spotify e o segundo.
+            let el = achar(&s, super::TIPO_EDICAO, campo)
+                .or_else(|| achar(&s, super::TIPO_COMBO, campo))
+                .ok_or_else(|| format!("nao achei campo contendo {campo:?}"))?;
+            let Some(pat) = padrao(el, PATTERN_VALOR) else {
+                soltar(el);
+                return Err("esse campo nao aceita escrita (sem padrao Value)".into());
+            };
+            // IUIAutomationValuePattern [3] = SetValue(BSTR)
+            let sv: extern "system" fn(*mut c_void, *mut u16) -> i32 =
+                std::mem::transmute(vt(pat, 3));
+            let w = wide(texto);
+            let b = SysAllocString(w.as_ptr());
+            let hr = sv(pat, b);
+            SysFreeString(b);
+            soltar(pat); soltar(el);
+            if hr != 0 { return Err(format!("nao consegui escrever (0x{hr:08X})")); }
+            Ok(())
+        }
+    }
+
+    /// Lista os controles de um tipo cujo nome contenha `trecho`. Para diagnóstico.
+    pub fn listar(spec: &str, tipo: i32, trecho: &str) -> Result<Vec<String>, String> {
+        let s = abrir(spec)?;
+        let mut fora = Vec::new();
+        unsafe {
+            let ct: extern "system" fn(*mut c_void, *mut *mut c_void) -> i32 =
+                std::mem::transmute(vt(s.aut, 21));
+            let mut cond: *mut c_void = std::ptr::null_mut();
+            ct(s.aut, &mut cond);
+            let fa: extern "system" fn(*mut c_void, i32, *mut c_void, *mut *mut c_void) -> i32 =
+                std::mem::transmute(vt(s.jan, 6));
+            let mut arr: *mut c_void = std::ptr::null_mut();
+            fa(s.jan, ESCOPO_DESCENDENTES, cond, &mut arr);
+            soltar(cond);
+            if arr.is_null() { return Ok(fora); }
+            let gl: extern "system" fn(*mut c_void, *mut i32) -> i32 = std::mem::transmute(vt(arr, 3));
+            let ge: extern "system" fn(*mut c_void, i32, *mut *mut c_void) -> i32 =
+                std::mem::transmute(vt(arr, 4));
+            let mut n = 0;
+            gl(arr, &mut n);
+            let alvo = trecho.to_lowercase();
+            for i in 0..n {
+                let mut el: *mut c_void = std::ptr::null_mut();
+                if ge(arr, i, &mut el) != 0 || el.is_null() { continue; }
+                let nm = nome_de(el);
+                if (tipo == 0 || tipo_de(el) == tipo) && nm.to_lowercase().contains(&alvo) {
+                    fora.push(nm);
+                }
+                soltar(el);
+            }
+            soltar(arr);
+        }
+        Ok(fora)
     }
 }
 
 #[cfg(windows)]
-pub use imp::{alternar, Resultado};
+pub use imp::{acionar_botao, alternar, escrever, listar, Resultado};
 
 #[cfg(not(windows))]
-pub struct Resultado {
-    pub antes: i32,
-    pub depois: i32,
-}
-
+pub struct Resultado { pub antes: i32, pub depois: i32 }
 #[cfg(not(windows))]
-pub fn alternar(_janela: &str, _controle: &str) -> Result<Resultado, String> {
-    Err("UIAutomation so existe no Windows".into())
-}
+pub fn alternar(_s: &str, _c: &str) -> Result<Resultado, String> { Err(so_windows()) }
+#[cfg(not(windows))]
+pub fn acionar_botao(_s: &str, _t: &str) -> Result<String, String> { Err(so_windows()) }
+#[cfg(not(windows))]
+pub fn escrever(_s: &str, _c: &str, _t: &str) -> Result<(), String> { Err(so_windows()) }
+#[cfg(not(windows))]
+pub fn listar(_s: &str, _t: i32, _x: &str) -> Result<Vec<String>, String> { Err(so_windows()) }
+#[cfg(not(windows))]
+fn so_windows() -> String { "UIAutomation so existe no Windows".into() }
 
 /// 0 desligado, 1 ligado, 2 indefinido — o vocabulário do `ToggleState`.
 pub fn rotulo(estado: i32) -> &'static str {

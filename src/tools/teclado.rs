@@ -50,6 +50,13 @@ pub enum Como {
     /// `janela` e casada por TRECHO do titulo, porque o titulo do Discord carrega o
     /// canal atual ("anny_lay | R.E.P.O. Brasil - Discord").
     Controle { janela: &'static str, nome: &'static str },
+    /// Botao NOMEADO que so aciona (nao alterna). O "Tocar <faixa>" do Spotify.
+    Botao { janela: &'static str, nome: &'static str },
+    /// Busca e toca pelo nome: escreve no campo de busca e aciona o resultado.
+    ///
+    /// Duas etapas porque e assim que uma pessoa faz — nao existe atalho para
+    /// "tocar musica X" no Spotify, existe "buscar" e depois "tocar o primeiro".
+    TocarPorNome { janela: &'static str, campo: &'static str },
 }
 
 /// Os atalhos que ela sabe mandar, e nada além disso.
@@ -77,8 +84,13 @@ pub const ATALHOS: &[(&str, Como)] = &[
     // Discord — por CONTROLE e nao por tecla, porque ele publica a arvore inteira
     // (898 controles, medido) e assim ela confirma o estado em vez de alternar as
     // cegas. Os nomes sao os que o proprio Discord expoe em portugues.
-    ("mutar_discord", Como::Controle { janela: "Discord", nome: "Silenciar" }),
-    ("ensurdecer_discord", Como::Controle { janela: "Discord", nome: "Desativar áudio" }),
+    ("mutar_discord", Como::Controle { janela: "Discord.exe", nome: "Silenciar" }),
+    ("ensurdecer_discord", Como::Controle { janela: "Discord.exe", nome: "Desativar áudio" }),
+    // Spotify — casado por EXECUTAVEL e nao por titulo, porque o titulo dele E a
+    // musica tocando ("Gibran Alcocer - Idea 22") e muda a cada faixa. Procurar
+    // "Spotify" no titulo falha exatamente quando ele esta tocando.
+    ("tocar_faixa", Como::TocarPorNome { janela: "Spotify.exe", campo: "O que você quer ouvir" }),
+    ("tocar_playlist", Como::Botao { janela: "Spotify.exe", nome: "Playlist" }),
 ];
 
 pub const VK_SHIFT: u16 = 0x10;
@@ -140,10 +152,74 @@ mod win {
 ///
 /// A ordem inversa não é detalhe: soltar `ctrl` antes do `m` faria o `m` chegar
 /// sozinho ao aplicativo, que é uma tecla completamente diferente do que foi pedido.
+/// O botao "Tocar X" para um alvo, se existir na arvore agora.
+fn achar_botao_tocar(janela: &str, alvo: &str) -> Option<String> {
+    let baixo = alvo.to_lowercase();
+    super::uia::listar(janela, super::uia::TIPO_BOTAO, "Tocar ")
+        .ok()?
+        .into_iter()
+        .find(|n| n.to_lowercase().contains(&baixo))
+}
+
+/// Busca e toca. Duas etapas, porque e assim que uma pessoa faz.
+///
+/// O botao alvo precisa casar com "Tocar" **e com a busca**. So "Tocar" nao serve:
+/// os resultados anteriores continuam na arvore enquanto a busca nova nao chega, e
+/// a primeira versao disto pediu "Deslocado NAPA" e tocou "SHADOW de ONIMXRU" —
+/// clicou no botao que ja estava la. Tocar a musica errada e pior que falhar, porque
+/// parece ter funcionado.
+fn tocar_por_nome(janela: &str, campo: &str, alvo: Option<&str>) -> Result<String, String> {
+    let Some(musica) = alvo.map(str::trim).filter(|s| !s.is_empty()) else {
+        return Err("tocar_faixa precisa do nome da musica".into());
+    };
+    // A palavra mais longa da busca e a mais distintiva: em "Deslocado NAPA" e
+    // "Deslocado", e e ela que tem de aparecer no nome do botao.
+    let chave = musica
+        .split_whitespace()
+        .max_by_key(|p| p.chars().count())
+        .unwrap_or(musica);
+
+    super::uia::escrever(janela, campo, musica)?;
+
+    // A busca do Spotify e assincrona. Espera o botao CERTO aparecer, e nao um
+    // botao qualquer.
+    for _ in 0..30 {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        if let Some(bom) = achar_botao_tocar(janela, chave) {
+            let n = super::uia::acionar_botao(janela, &bom)?;
+            return Ok(format!("tocando {n:?}"));
+        }
+    }
+    Err(format!(
+        "busquei {musica:?} mas nenhum resultado com {chave:?} apareceu em 7s"
+    ))
+}
+
 pub fn mandar(nome: &str) -> Result<String, String> {
+    mandar_com(nome, None)
+}
+
+/// A mesma coisa, com um alvo — o nome da musica, por exemplo.
+pub fn mandar_com(nome: &str, alvo: Option<&str>) -> Result<String, String> {
     match como_de(nome) {
         None => Err(format!("nao conheco o atalho {nome:?}. conheco: {}", nomes())),
         Some(Como::Teclas(t)) => mandar_teclas(nome, t),
+        Some(Como::Botao { janela, nome: ctl }) => {
+            // Prefere o botao "Tocar X" ao item de navegacao "X".
+            //
+            // Clicar no item da barra lateral so ABRE a playlist; quem toca e o
+            // botao de play dela. Os dois casam com o nome da playlist, e o de
+            // navegacao vem primeiro na arvore — entao pedir "toca a playlist" sem
+            // esta preferencia navegava e ficava por isso mesmo.
+            let alvo = alvo.unwrap_or(ctl);
+            match achar_botao_tocar(janela, alvo) {
+                Some(n) => super::uia::acionar_botao(janela, &n)
+                    .map(|x| format!("{nome}: tocando {x:?}")),
+                None => super::uia::acionar_botao(janela, alvo)
+                    .map(|n| format!("{nome}: abri {n:?} (sem botao de tocar visivel)")),
+            }
+        }
+        Some(Como::TocarPorNome { janela, campo }) => tocar_por_nome(janela, campo, alvo),
         Some(Como::Controle { janela, nome: ctl }) => {
             let r = super::uia::alternar(janela, ctl)?;
             // O estado ANTES e DEPOIS e o que esta ferramenta tem e a tecla nao tem:

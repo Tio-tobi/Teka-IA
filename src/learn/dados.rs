@@ -1110,7 +1110,7 @@ const DISCOS: &[&str] = &["C:", "D:", "C:\\", "D:\\"];
 pub const NOMES_DE_ATALHO: &[&str] = &[
     "proxima_musica", "musica_anterior", "pausar_musica", "tocar_musica",
     "parar_musica", "aumentar_volume", "diminuir_volume", "mudo",
-    "mutar_discord", "ensurdecer_discord",
+    "mutar_discord", "ensurdecer_discord", "tocar_faixa", "tocar_playlist",
 ];
 
 const NOMES: &[&str] = &[
