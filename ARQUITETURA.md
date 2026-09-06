@@ -240,7 +240,7 @@ Não são estilo. São o que separa medição de ilusão, e todas custaram caro.
 | # | mudança | tipo | tamanho | estado |
 |---|---|---|---|---|
 | 4.1 | ~~Poços de fora-de-escopo (23 → 66)~~ | dados | — | **FECHADO: sem efeito medível** |
-| 4.2 | Escolha de ferramenta: `abrir_programa`, `executar_comando`, `procurar_arquivo` | dados | dias | próximo |
+| 4.2 | Escolha de ferramenta — variedade de verbo | dados | — | **sinal sem confirmação, corrida rodando** |
 | 4.3 | ~~Canal de confirmação na interface web~~ | código | — | **FEITO em 2026-09-05** |
 | 4.4 | Argumento de restrição múltipla | **arquitetura** | semanas | só com medição na mão |
 | 4.5 | Fusão COMPLETA com o DeepSeek-Harness | integração | 20–40 sessões | depois de 4.2 |
@@ -409,6 +409,43 @@ que restam atacam a mesma causa pelos dois lados:
 para estes mesmos dados, então o p ≈ 0,01 é otimista. Antes de virar plano, confirmar
 numa régua independente (`dados/frases_john_2.txt`, `dados/teste_do_amigo.txt`) ou numa
 sonda nova escrita para isso.
+
+#### 4.2.3 Variedade de verbo — medido em 2026-09-05, NÃO confirmado
+
+62 moldes de verbo novo nas ferramentas reais, nenhum verbo do benchmark nem das
+réguas independentes. 12 sementes pareadas contra o braço `f66`.
+
+```
+                                        f66      verbos    delta      t
+instrumento REGISTRADO (falsa acao)     10,00    10,00     +0,00    0,00
+benchmark de 150                       112,75   114,25     +1,50   +0,98
+falsa abstencao — POS-HOC               9,67     7,33      -2,33   -2,14
+```
+
+**Pelo critério pré-registrado o resultado é nulo**, e é isso que vale como evidência.
+
+**O erro foi meu, e é de método.** Registrei como decisor a sonda de abstenção —
+frases `perguntar` em que ela age — mas os 62 moldes foram para as ferramentas
+**reais**, atacando a direção oposta. Pré-registrar não protege sozinho: o
+instrumento tem de apontar para a mudança.
+
+**E a predição pontual falhou.** Eu disse que, se o mecanismo fosse "quadro familiar
++ verbo novo", estas cairiam primeiro:
+
+```
+resgata um arquivo chamado chave         8 ->  8
+seleciona os arquivos de nome banner    11 -> 11
+reune tudo que se chame logo            12 -> 12
+cade o documento de nome atestado        8 -> 10   (piorou)
+```
+
+Nenhuma se moveu. O −2,33 veio de outras frases, por um caminho que não é o que a
+hipótese previa — a combinação clássica de achar um número sem achar a explicação.
+
+**Corrida de confirmação em andamento**, com o instrumento certo registrado antes e
+sementes NOVAS (19–30), porque confirmar no mesmo dado que gerou a hipótese não
+confirma nada. Braços: código atual com e sem os 62 moldes, o que isola exatamente a
+mudança.
 
 #### 4.2.2 Uma régua vazada, achada no caminho
 

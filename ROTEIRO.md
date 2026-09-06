@@ -248,6 +248,26 @@ Três coisas que o John fez, cada uma boa numa parte diferente.
 | Viés de fronteira no ponteiro fino | 94,3% → 88,4% | removido |
 | Aprender da própria atividade (`ambiente`) | sem efeito | 3 × 1.200 |
 | Fora-de-escopo 23 -> 66 | +2,08 no benchmark (t=1,43), -0,67 na sonda (t=-0,89) | 12 pares |
+| Variedade de verbo (+62 moldes) | sonda registrada +0,00 (t=0,00); sinal POS-HOC de -2,33 na falsa abstencao | 12 pares |
+
+### A armadilha de 2026-09-05: registrar o medidor errado
+
+Eu fixei o instrumento ANTES de rodar, como manda a regra — e fixei o **da direção
+errada**. Os 62 moldes de verbo foram para as ferramentas REAIS, ou seja atacam
+"frase real que ela abstem". O que registrei mede "frase `perguntar` em que ela age".
+
+```
+instrumento REGISTRADO   falsa acao sobre `perguntar`   +0,00   t = 0,00
+direcao que a mudanca ataca (POS-HOC)   falsa abstencao   -2,33   t = -2,14
+```
+
+Pre-registrar nao protege sozinho: **o instrumento tem de apontar para a mudanca**.
+Registrar um medidor qualquer antes da hora da a sensacao de rigor sem a substancia,
+e o custo aparece depois, quando o numero que interessa so pode ser lido como
+pos-hoc.
+
+Ao escrever o cabecalho, escrever tambem a frase "se a mudanca funcionar, ESTE numero
+se move" — e conferir que esse numero e o que o instrumento mede.
 
 **O padrão é inequívoco: arquitetura não moveu nada, dado moveu tudo.** Antes de
 propor mudança estrutural, ter uma medição que aponte para ela — como a de restrição
