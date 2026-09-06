@@ -65,8 +65,22 @@
 set -u
 cd "/c/Users/User/Projetos/Assistente/Teka-IA" || exit 1
 
+# RETOMAVEL, para o John poder desligar o PC no meio.
+#
+# Uma corrida so conta como pronta se o LOG tem a linha final do benchmark. O
+# `.bin` sozinho nao serve: uma corrida interrompida deixa arquivo pela metade,
+# e ele seria pulado como se estivesse bom — trocando 12 pares por 11 sem que
+# ninguem visse.
+pronta() {
+  [ -f "cf_$1_s$2.log" ] && grep -aq "ferramenta certa:" "cf_$1_s$2.log"
+}
+
 for s in 19 20 21 22 23 24 25 26 27 28 29 30; do
   for braco in ctrl vb; do
+    if pronta "$braco" "$s"; then
+      echo "=== ${braco} semente ${s} — ja pronta, pulando ==="
+      continue
+    fi
     echo "=== ${braco} semente ${s} — $(date +%H:%M) ==="
     "./teka_${braco}.exe" agente --patcher por_palavra --epocas 12 --exemplos 16000 \
       --semente "$s" --threads 10 --saida "teka_cf_${braco}_s${s}.bin" --benchmark \
