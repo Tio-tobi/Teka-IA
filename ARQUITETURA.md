@@ -548,6 +548,71 @@ continua sendo o padrão em todo caminho ambíguo.
 
 ---
 
+### 4.3.1 A tela virtual: o que ela resolve, e o que ela nunca vai resolver
+
+Análise pedida pelo John em 2026-09-06, depois de uma sessão inteira medindo.
+Tudo abaixo é medido, não estimado.
+
+**O que ela FAZ, e faz bem:**
+
+```
+processo lancado la    janela nasce numa area que ninguem ve
+custo                  um handle; ~0 MB   (VM daria isolamento por 1 a 4 GB)
+diretorio de trabalho  chega certo (lpCurrentDirectory), provado com caminho relativo
+```
+
+**O que ela NÃO faz, e isso é definitivo:**
+
+| não faz | prova |
+|---|---|
+| mover app que já está rodando | Discord: 6 processos antes, 6 depois; janela ficou na tela do John |
+| conter risco | mesmo token do usuário — `del` continua apagando, rede continua aberta |
+| esconder app single-instance | lançar o Discord entrega o pedido à instância existente |
+
+A segunda linha é a que mais engana. A tela virtual **não é fronteira de
+segurança**; ela é uma cortina. Quem contém é a lista negra, a raiz, o
+`Politica::processos` e a confirmação.
+
+**A regra que resume:** a tela virtual serve para o que a Teka **lança**, nunca para
+o que ela **encontra rodando**.
+
+```
+LANCAR (vai para a tela)        ENCONTRAR RODANDO (nao vai)
+navegador para uma consulta     Discord numa chamada
+instalador                      Spotify tocando
+script com janela               qualquer app single-instance
+o mundo do laco de pratica      qualquer coisa que o John esteja usando
+```
+
+#### O que falta para ela ser 100% confiável
+
+Três buracos, em ordem de importância:
+
+**1. Ela não sabe o que tem lá dentro.** Hoje a Teka lança e esquece. Existe
+`EnumDesktopWindows` (provei num rascunho: listou as janelas da tela virtual,
+inclusive uma que o PowerShell não enxergava porque enumera só a área de trabalho
+dele). Sem isso, "abriu?" é fé.
+
+**2. Processo órfão.** Fechar o handle do desktop não mata o que está rodando nele —
+o Windows só destrói o objeto quando o último processo sai. Um programa que trava lá
+fica invisível **e** vivo. Falta uma varredura que liste e encerre.
+
+**3. Não há como saber se o que subiu é o que foi pedido.** O teste do Discord
+mostrou uma janela chamada `discord` na tela virtual que era o **`cmd.exe`** —
+título vindo do argumento. Conferir por PID resolveu; a ferramenta ainda não confere.
+
+#### Onde ela ganharia mais, e ainda não está ligada
+
+O laço de prática está com `processos: false` desde que um modelo não treinado abriu
+dezenas de janelas na área de trabalho. Com a tela virtual + PID conferido,
+`abrir_programa` volta a ser praticável **num mundo fechado**: o mundo escreve um
+`.bat` de mentira chamado `chrome.bat`, e `abrir_programa("chrome")` resolve para
+esse arquivo em vez do Chrome real do John.
+
+Isso daria sinal de prática a uma das três famílias-gargalo do §4.2 — que hoje não
+tem nenhum. **Mas só vale depois de o laço provar que serve para alguma coisa**: a
+medição dele é "sem efeito, 3 sementes × 1.200".
+
 ### 4.4 Argumento de restrição múltipla — a única mudança de arquitetura justificada
 
 **Motivação medida.**
