@@ -629,7 +629,7 @@ fn atalho(nome: &str, pol: &Politica) -> Result<String, String> {
     if nome.trim().is_empty() {
         return Err(format!("atalho precisa de um nome. conheco: {}", super::teclado::nomes()));
     }
-    if super::teclado::teclas_de(nome).is_none() {
+    if super::teclado::como_de(nome).is_none() {
         return Err(format!(
             "nao conheco o atalho {nome:?}. conheco: {}",
             super::teclado::nomes()

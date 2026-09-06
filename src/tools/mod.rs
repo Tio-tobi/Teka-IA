@@ -19,6 +19,7 @@ pub mod oficina;
 pub mod seguranca;
 pub mod teclado;
 pub mod tela;
+pub mod uia;
 
 pub use prim::Primitiva;
 pub use seguranca::{Modo, Politica};

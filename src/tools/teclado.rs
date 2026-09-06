@@ -31,27 +31,54 @@
 //! A guarda aqui não é perguntar — é a **lista fechada**. Ela não manda tecla
 //! arbitrária; manda uma das que estão em [`ATALHOS`].
 
+/// Como um atalho age no mundo.
+///
+/// Dois mecanismos, e a escolha nao e de gosto — foi medida. Ver
+/// [`crate::tools::uia`] para a tabela de quanto cada aplicativo publica.
+pub enum Como {
+    /// Tecla do SISTEMA. Funciona sem foco, com o jogo em tela cheia na frente, e
+    /// sem API nenhuma — e o que resolve o Spotify numa conta Free.
+    ///
+    /// Age as cegas: manda e nao sabe o que aconteceu.
+    Teclas(&'static [u16]),
+    /// Controle NOMEADO dentro de um aplicativo, via UIAutomation.
+    ///
+    /// Melhor que tecla quando o app publica a arvore: **le o estado, age, e
+    /// confirma que mudou**. Pior quando nao publica — o Spotify expoe 2 controles
+    /// com nome e nenhum serve, entao ele fica nas teclas.
+    ///
+    /// `janela` e casada por TRECHO do titulo, porque o titulo do Discord carrega o
+    /// canal atual ("anny_lay | R.E.P.O. Brasil - Discord").
+    Controle { janela: &'static str, nome: &'static str },
+}
+
 /// Os atalhos que ela sabe mandar, e nada além disso.
 ///
-/// Cada linha é `(nome, teclas)`. Toda entrada tem de ser reversível apertando de
-/// novo ou apertando o contrário — é o que sustenta o `Efeito::Reversivel`. Um
-/// atalho destrutivo aqui dentro furaria a confirmação por uma porta lateral.
-pub const ATALHOS: &[(&str, &[u16])] = &[
-    // Mídia — teclas do SISTEMA. Funcionam sem foco, com o jogo na frente.
-    ("proxima_musica", &[VK_MEDIA_NEXT]),
-    ("musica_anterior", &[VK_MEDIA_PREV]),
-    ("pausar_musica", &[VK_MEDIA_PLAY_PAUSE]),
-    ("tocar_musica", &[VK_MEDIA_PLAY_PAUSE]),
-    ("parar_musica", &[VK_MEDIA_STOP]),
+/// Toda entrada tem de ser reversível apertando de novo ou apertando o contrário —
+/// é o que sustenta o `Efeito::Reversivel`. Um atalho destrutivo aqui dentro furaria
+/// a confirmação por uma porta lateral.
+///
+/// **Deliberadamente de fora:** `Desconectar` (sai da chamada, e voltar exige achar
+/// o canal de novo) e `Compartilhar a tela` (manda imagem para outras pessoas — isso
+/// é `Efeito::ParaFora`, não `Reversivel`). Os dois existem na árvore do Discord e
+/// seriam triviais de adicionar. Não estão aqui porque a isenção de confirmação vale
+/// para o que se desfaz num clique, e nenhum dos dois se desfaz.
+pub const ATALHOS: &[(&str, Como)] = &[
+    // Midia — teclas do SISTEMA. Funcionam sem foco, com o jogo na frente.
+    ("proxima_musica", Como::Teclas(&[VK_MEDIA_NEXT])),
+    ("musica_anterior", Como::Teclas(&[VK_MEDIA_PREV])),
+    ("pausar_musica", Como::Teclas(&[VK_MEDIA_PLAY_PAUSE])),
+    ("tocar_musica", Como::Teclas(&[VK_MEDIA_PLAY_PAUSE])),
+    ("parar_musica", Como::Teclas(&[VK_MEDIA_STOP])),
     // Volume do sistema.
-    ("aumentar_volume", &[VK_VOLUME_UP]),
-    ("diminuir_volume", &[VK_VOLUME_DOWN]),
-    ("mudo", &[VK_VOLUME_MUTE]),
-    // Discord. Ctrl+Shift+M é o padrão dele para alternar o mudo; para funcionar
-    // com o jogo em primeiro plano, o atalho tem de estar marcado como GLOBAL nas
-    // preferências do Discord (Configurações -> Teclas de atalho).
-    ("mutar_discord", &[VK_CONTROL, VK_SHIFT, b'M' as u16]),
-    ("ensurdecer_discord", &[VK_CONTROL, VK_SHIFT, b'D' as u16]),
+    ("aumentar_volume", Como::Teclas(&[VK_VOLUME_UP])),
+    ("diminuir_volume", Como::Teclas(&[VK_VOLUME_DOWN])),
+    ("mudo", Como::Teclas(&[VK_VOLUME_MUTE])),
+    // Discord — por CONTROLE e nao por tecla, porque ele publica a arvore inteira
+    // (898 controles, medido) e assim ela confirma o estado em vez de alternar as
+    // cegas. Os nomes sao os que o proprio Discord expoe em portugues.
+    ("mutar_discord", Como::Controle { janela: "Discord", nome: "Silenciar" }),
+    ("ensurdecer_discord", Como::Controle { janela: "Discord", nome: "Desativar áudio" }),
 ];
 
 pub const VK_SHIFT: u16 = 0x10;
@@ -65,12 +92,9 @@ pub const VK_MEDIA_STOP: u16 = 0xB2;
 pub const VK_MEDIA_PLAY_PAUSE: u16 = 0xB3;
 
 /// O nome existe na lista?
-pub fn teclas_de(nome: &str) -> Option<&'static [u16]> {
+pub fn como_de(nome: &str) -> Option<&'static Como> {
     let n = nome.trim().to_lowercase();
-    ATALHOS
-        .iter()
-        .find(|(k, _)| *k == n)
-        .map(|(_, teclas)| *teclas)
+    ATALHOS.iter().find(|(k, _)| *k == n).map(|(_, c)| c)
 }
 
 /// Os nomes, para a mensagem de erro dizer o que ela aceita.
@@ -116,11 +140,25 @@ mod win {
 ///
 /// A ordem inversa não é detalhe: soltar `ctrl` antes do `m` faria o `m` chegar
 /// sozinho ao aplicativo, que é uma tecla completamente diferente do que foi pedido.
-#[cfg(windows)]
 pub fn mandar(nome: &str) -> Result<String, String> {
-    let Some(teclas) = teclas_de(nome) else {
-        return Err(format!("nao conheco o atalho {nome:?}. conheco: {}", nomes()));
-    };
+    match como_de(nome) {
+        None => Err(format!("nao conheco o atalho {nome:?}. conheco: {}", nomes())),
+        Some(Como::Teclas(t)) => mandar_teclas(nome, t),
+        Some(Como::Controle { janela, nome: ctl }) => {
+            let r = super::uia::alternar(janela, ctl)?;
+            // O estado ANTES e DEPOIS e o que esta ferramenta tem e a tecla nao tem:
+            // ela sabe o que aconteceu, em vez de torcer.
+            Ok(format!(
+                "{nome}: {} -> {}",
+                super::uia::rotulo(r.antes),
+                super::uia::rotulo(r.depois)
+            ))
+        }
+    }
+}
+
+#[cfg(windows)]
+fn mandar_teclas(nome: &str, teclas: &[u16]) -> Result<String, String> {
     let mut entradas: Vec<win::Input> = Vec::with_capacity(teclas.len() * 2);
     for &vk in teclas {
         entradas.push(win::Input { tipo: win::INPUT_KEYBOARD, vk, ..Default::default() });
@@ -150,7 +188,7 @@ pub fn mandar(nome: &str) -> Result<String, String> {
 }
 
 #[cfg(not(windows))]
-pub fn mandar(_nome: &str) -> Result<String, String> {
+fn mandar_teclas(_nome: &str, _teclas: &[u16]) -> Result<String, String> {
     Err("atalho de teclado so existe no Windows".into())
 }
 
@@ -172,11 +210,27 @@ mod tests {
 
     #[test]
     fn so_aceita_nome_da_lista() {
-        assert!(teclas_de("proxima_musica").is_some());
-        assert!(teclas_de("PROXIMA_MUSICA").is_some(), "deve ignorar caixa");
-        assert!(teclas_de("  mudo  ").is_some(), "deve ignorar espaco");
+        assert!(como_de("proxima_musica").is_some());
+        assert!(como_de("PROXIMA_MUSICA").is_some(), "deve ignorar caixa");
+        assert!(como_de("  mudo  ").is_some(), "deve ignorar espaco");
         for fora in ["alt+f4", "ctrl+w", "delete", "", "formatar"] {
-            assert!(teclas_de(fora).is_none(), "aceitou {fora:?}");
+            assert!(como_de(fora).is_none(), "aceitou {fora:?}");
+        }
+    }
+
+    /// A isencao de confirmacao vale para o que se desfaz. Um controle que
+    /// desconecta da chamada ou compartilha a tela nao se desfaz num clique, e
+    /// entrar aqui furaria a confirmacao por uma porta lateral.
+    #[test]
+    fn nenhum_controle_e_de_via_unica() {
+        const FORA: [&str; 4] = ["Desconectar", "Compartilhar a tela", "Sair", "Encerrar"];
+        for (nome, como) in ATALHOS {
+            if let Como::Controle { nome: ctl, .. } = como {
+                assert!(
+                    !FORA.contains(ctl),
+                    "{nome} aciona {ctl:?}, que nao se desfaz num clique"
+                );
+            }
         }
     }
 
@@ -185,7 +239,8 @@ mod tests {
     #[test]
     fn nenhum_atalho_e_destrutivo() {
         const PROIBIDAS: [u16; 4] = [0x2E, 0x73, 0x7B, 0x5B]; // Delete, F4, F12, Win
-        for (nome, teclas) in ATALHOS {
+        for (nome, como) in ATALHOS {
+            let Como::Teclas(teclas) = como else { continue };
             for t in *teclas {
                 assert!(
                     !PROIBIDAS.contains(t),
@@ -215,7 +270,7 @@ mod tests {
         let poco = crate::learn::dados::NOMES_DE_ATALHO;
         for nome in poco {
             assert!(
-                teclas_de(nome).is_some(),
+                como_de(nome).is_some(),
                 "o gerador ensina {nome:?}, que a ferramenta nao conhece"
             );
         }
