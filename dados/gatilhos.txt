@@ -1,0 +1,50 @@
+# Gatilhos: frase que voce diz  ->  atalho que ela executa.
+#
+# POR QUE ISTO EXISTE
+#
+# A cabeca de ponteiro da Teka COPIA um trecho do pedido; ela nao inventa texto.
+# Entao para chamar `atalho(nome="proxima_musica")`, a palavra "proxima_musica"
+# teria de estar no pedido — e ninguem fala assim. O John diz "pula essa musica".
+#
+# Esta tabela faz a traducao FORA do modelo. O trabalho dele passa a ser so
+# reconhecer que e um atalho e copiar o alvo quando houver; qual atalho e, decide
+# aqui. A ideia e da Nyxara (`tools/shortcuts.py`, com `triggers` no conf.yaml).
+#
+# FORMATO
+#
+#   atalho | gatilho, outro gatilho, mais um
+#
+# Casamento em tres niveis, igual ao da Nyxara:
+#   1.00  o gatilho aparece literal no pedido
+#   0.95  aparece depois de normalizar (sem acento, so letra e numero)
+#   0.66+ cobertura de palavras do gatilho dentro do pedido
+#
+# O de MAIOR pontuacao vence; empate vai para o gatilho mais longo, porque
+# "toca a playlist" e mais especifico que "toca".
+#
+# PARA ATALHOS COM ALVO (tocar_faixa, tocar_playlist), o que sobra do pedido
+# depois de tirar o gatilho vira o alvo:
+#
+#   "toca deslocado do napa"  ->  tocar_faixa, alvo="deslocado do napa"
+
+# ── musica ──────────────────────────────────────────────────────────────────
+proxima_musica  | pula essa musica, pula a musica, proxima musica, proxima faixa, passa a musica, avanca a musica, pula essa, proxima
+musica_anterior | musica anterior, volta a musica, faixa anterior, volta pra anterior, musica de antes
+pausar_musica   | pausa a musica, pausa ai, para a musica, pausar
+tocar_musica    | continua a musica, retoma a musica, volta a tocar, despausa
+parar_musica    | para tudo, encerra a musica
+
+# ── volume ──────────────────────────────────────────────────────────────────
+aumentar_volume | aumenta o volume, aumenta o som, sobe o volume, sobe o som, mais alto
+diminuir_volume | diminui o volume, abaixa o volume, abaixa o som, diminui o som, mais baixo
+mudo            | muta o som, tira o som, silencia o pc, mudo no sistema
+
+# ── discord ─────────────────────────────────────────────────────────────────
+# "me muta" e do Discord e nao do sistema: e o pedido do John, e ele quer o
+# microfone da chamada, nao o alto-falante.
+mutar_discord      | me muta no discord, muta meu microfone, desativa meu microfone, me silencia, muta o discord, me muta
+ensurdecer_discord | ensurdece no discord, desativa o audio do discord, me ensurdece
+
+# ── tocar coisa especifica (o resto da frase vira o alvo) ───────────────────
+tocar_playlist | toca a playlist, poe a playlist, coloca a playlist, quero a playlist
+tocar_faixa    | toca a musica, poe pra tocar, quero ouvir, coloca a musica, bota pra tocar, toca

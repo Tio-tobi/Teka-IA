@@ -15,6 +15,7 @@
 pub mod prim;
 pub mod diario;
 pub mod execucao;
+pub mod gatilhos;
 pub mod oficina;
 pub mod seguranca;
 pub mod teclado;
@@ -276,7 +277,7 @@ impl Registro {
                 f(
                     "atalho",
                     "manda um atalho de teclado (musica, volume, mudo)",
-                    vec![Param::obrigatorio("nome", Texto)],
+                    vec![Param::obrigatorio("nome", Texto), Param::opcional("alvo", Texto)],
                     P::Atalho,
                 ),
             ],

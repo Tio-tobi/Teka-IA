@@ -201,6 +201,10 @@ pub fn mandar(nome: &str) -> Result<String, String> {
 
 /// A mesma coisa, com um alvo — o nome da musica, por exemplo.
 pub fn mandar_com(nome: &str, alvo: Option<&str>) -> Result<String, String> {
+    // Uma guarda para a OPERACAO inteira. Sem isto, `tocar_faixa` — que abre tres
+    // sessoes de UIA — devolvia o foco para o estado intermediario e deixava o
+    // Spotify na frente do jogo do John.
+    let _foco = super::uia::Foco::guardar();
     match como_de(nome) {
         None => Err(format!("nao conheco o atalho {nome:?}. conheco: {}", nomes())),
         Some(Como::Teclas(t)) => mandar_teclas(nome, t),

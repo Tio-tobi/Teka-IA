@@ -94,6 +94,9 @@ mod imp {
     }
     #[link(name = "user32")]
     unsafe extern "system" {
+        fn GetForegroundWindow() -> isize;
+        fn SetForegroundWindow(h: isize) -> i32;
+                fn AttachThreadInput(de: u32, para: u32, liga: i32) -> i32;
         fn EnumWindows(f: extern "system" fn(isize, isize) -> i32, p: isize) -> i32;
         fn GetWindowTextW(h: isize, b: *mut u16, n: i32) -> i32;
         fn IsWindowVisible(h: isize) -> i32;
@@ -101,6 +104,7 @@ mod imp {
     }
     #[link(name = "kernel32")]
     unsafe extern "system" {
+        fn GetCurrentThreadId() -> u32;
         fn OpenProcess(acesso: u32, herdar: i32, pid: u32) -> isize;
         fn QueryFullProcessImageNameW(h: isize, f: u32, b: *mut u16, n: *mut u32) -> i32;
         fn CloseHandle(h: isize) -> i32;
@@ -194,8 +198,76 @@ mod imp {
         t
     }
 
+    /// Devolve o foco a quem estava na frente, ao sair de escopo.
+    ///
+    /// **O John joga em tela cheia.** Medido: acionar o botao de mudo do Discord ou
+    /// tocar uma faixa no Spotify TRAZ A JANELA PARA A FRENTE — o UIAutomation nao
+    /// manda clique, mas o aplicativo reage subindo. No meio de uma partida isso
+    /// tira ele do jogo, que e exatamente o que a ferramenta existe para evitar.
+    ///
+    /// `SetForegroundWindow` sozinho costuma ser recusado pelo Windows. O truque de
+    /// `AttachThreadInput` — ligar a fila de entrada da nossa thread a da janela
+    /// alvo — e o que faz o sistema aceitar. Ligar e desligar em volta da chamada.
+    struct GuardaFoco { anterior: isize }
+
+    impl GuardaFoco {
+        fn novo() -> Self {
+            Self { anterior: unsafe { GetForegroundWindow() } }
+        }
+    }
+
+    impl Drop for GuardaFoco {
+        fn drop(&mut self) {
+            if self.anterior == 0 { return; }
+            // DEVOLVE O QUE DER, e nao promete mais que isso.
+            //
+            // Medido, e o resultado e INCONSISTENTE entre rodadas: as vezes volta,
+            // as vezes o aplicativo sobe de novo depois. Nao e bug meu — o Windows
+            // impede de proposito que um processo de fundo tome o primeiro plano, e
+            // o `AttachThreadInput` so as vezes contorna.
+            //
+            // **Consequencia pratica, e ela importa:** para quem esta jogando em
+            // tela cheia, o caminho por UIA NAO e seguro. O caminho quieto e a tecla
+            // (`Como::Teclas`), que age sem tocar em janela nenhuma. UIA vale quando
+            // confirmar o estado importa mais que nao ser interrompido.
+            for _ in 0..3 {
+                unsafe {
+                    if GetForegroundWindow() == self.anterior { return; }
+                    let mut pid = 0u32;
+                    let alheia = GetWindowThreadProcessId(self.anterior, &mut pid);
+                    let minha = GetCurrentThreadId();
+                    if alheia != 0 && alheia != minha {
+                        AttachThreadInput(minha, alheia, 1);
+                        SetForegroundWindow(self.anterior);
+                        AttachThreadInput(minha, alheia, 0);
+                    } else {
+                        SetForegroundWindow(self.anterior);
+                    }
+                }
+                std::thread::sleep(std::time::Duration::from_millis(120));
+            }
+        }
+    }
+
+    /// Guarda o foco por uma OPERACAO INTEIRA, e nao por sessao.
+    ///
+    /// `tocar_faixa` abre tres sessoes (escrever, listar, acionar). Com so a guarda
+    /// por sessao, a primeira rouba o foco para o Spotify e a ultima "devolve" para
+    /// o Spotify — que ja era o estado errado. Medido: o Discord voltava certo e o
+    /// Spotify ficava na frente.
+    ///
+    /// Quem chama uma operacao de varios passos segura isto do comeco ao fim.
+    pub struct Foco(GuardaFoco);
+
+    impl Foco {
+        pub fn guardar() -> Self { Foco(GuardaFoco::novo()) }
+    }
+
     /// Sessão de automação viva: o objeto UIA e o elemento da janela.
-    struct Sessao { aut: *mut c_void, jan: *mut c_void }
+    ///
+    /// O `foco` fica DEPOIS dos ponteiros COM de proposito: `Drop` roda em ordem de
+    /// declaracao, entao o foco volta por ultimo — depois de a acao ter terminado.
+    struct Sessao { aut: *mut c_void, jan: *mut c_void, _foco: GuardaFoco }
 
     impl Drop for Sessao {
         fn drop(&mut self) {
@@ -226,7 +298,7 @@ mod imp {
                 soltar(aut);
                 return Err("nao consegui ler a janela".into());
             }
-            Ok(Sessao { aut, jan })
+            Ok(Sessao { aut, jan, _foco: GuardaFoco::novo() })
         }
     }
 
@@ -403,10 +475,14 @@ mod imp {
 }
 
 #[cfg(windows)]
-pub use imp::{acionar_botao, alternar, escrever, listar, Resultado};
+pub use imp::{acionar_botao, alternar, escrever, listar, Foco, Resultado};
 
 #[cfg(not(windows))]
 pub struct Resultado { pub antes: i32, pub depois: i32 }
+#[cfg(not(windows))]
+pub struct Foco;
+#[cfg(not(windows))]
+impl Foco { pub fn guardar() -> Self { Foco } }
 #[cfg(not(windows))]
 pub fn alternar(_s: &str, _c: &str) -> Result<Resultado, String> { Err(so_windows()) }
 #[cfg(not(windows))]

@@ -174,7 +174,7 @@ impl Primitiva {
             Primitiva::ApagarArquivo => apagar(Path::new(&arg("caminho")), pol),
             Primitiva::Disco => disco(&arg("caminho")),
             Primitiva::ExecutarComando => executar_cmd(&arg("comando"), pol),
-            Primitiva::Atalho => atalho(&arg("nome"), pol),
+            Primitiva::Atalho => atalho(&arg("nome"), &arg("alvo"), pol),
         }
     }
 }
@@ -625,20 +625,41 @@ fn disco(caminho: &str) -> Result<String, String> {
 /// Em sandbox descreve, como todas as outras. Nao passa pela lista negra porque
 /// nao ha comando para inspecionar — a guarda equivalente e a lista fechada de
 /// `teclado::ATALHOS`, que so tem tecla reversivel.
-fn atalho(nome: &str, pol: &Politica) -> Result<String, String> {
+fn atalho(nome: &str, alvo: &str, pol: &Politica) -> Result<String, String> {
     if nome.trim().is_empty() {
         return Err(format!("atalho precisa de um nome. conheco: {}", super::teclado::nomes()));
     }
-    if super::teclado::como_de(nome).is_none() {
-        return Err(format!(
-            "nao conheco o atalho {nome:?}. conheco: {}",
-            super::teclado::nomes()
-        ));
-    }
+    // O nome pode vir de dois jeitos, e os dois sao legitimos:
+    //
+    //   1. o nome exato do atalho — o gerador ensina esta forma, e e o que sai do
+    //      modelo quando o pedido contem "manda o atalho proxima_musica"
+    //   2. a FRASE NATURAL — "pula essa musica" — que o ponteiro copiou do pedido
+    //      inteiro porque `proxima_musica` nao aparece nele
+    //
+    // O caso 2 e o que acontece de verdade quando o John fala. A tabela de gatilhos
+    // traduz; ver `crate::tools::gatilhos`.
+    let (nome, alvo) = match super::teclado::como_de(nome) {
+        Some(_) => (nome.to_string(), (!alvo.trim().is_empty()).then(|| alvo.to_string())),
+        None => match super::gatilhos::casar(nome) {
+            Some((a, sobra)) => {
+                // Um alvo explicito ganha da sobra: se o modelo separou os dois, ele
+                // separou melhor do que a subtracao de texto consegue.
+                let alvo = (!alvo.trim().is_empty()).then(|| alvo.to_string()).or(sobra);
+                (a, alvo)
+            }
+            None => {
+                return Err(format!(
+                    "nao conheco o atalho {nome:?}. conheco: {}",
+                    super::teclado::nomes()
+                ))
+            }
+        },
+    };
     if pol.modo == Modo::Sandbox {
-        return Ok(format!("[sandbox] mandaria o atalho {nome}"));
+        return Ok(format!("[sandbox] mandaria o atalho {nome}{}",
+            alvo.as_deref().map(|a| format!(" com alvo {a:?}")).unwrap_or_default()));
     }
-    super::teclado::mandar(nome)
+    super::teclado::mandar_com(&nome, alvo.as_deref())
 }
 
 fn executar_cmd(cmd: &str, pol: &Politica) -> Result<String, String> {
