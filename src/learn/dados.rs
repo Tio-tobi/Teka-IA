@@ -956,6 +956,29 @@ const MOLDES: &[Molde] = &[
             "quero gravar {1} dentro de {0}",
         ],
     },
+    // ── atalho de teclado ───────────────────────────────────────────────────
+    //
+    // O argumento e um NOME DE LISTA FECHADA, nao texto livre — entao os moldes
+    // ensinam a mapear "pula essa musica" -> `proxima_musica`, e nao a copiar um
+    // trecho qualquer. Por isso o `{0}` fica quase sempre no fim: o nome do atalho
+    // nao aparece no pedido do John, ele e a TRADUCAO do pedido.
+    Molde {
+        ferramenta: "atalho",
+        frases: &[
+            "manda o atalho {0}",
+            "aciona {0} pra mim",
+            "dispara o atalho {0}",
+            "usa o atalho {0}",
+            "aperta {0}",
+            "faz {0} ai",
+            "{0} por favor",
+            "quero {0}",
+            "preciso de {0}",
+            "roda o atalho {0}",
+            "aciona o atalho {0} agora",
+            "manda {0} rapido",
+        ],
+    },
     Molde {
         ferramenta: "executar_comando",
         frases: &[
@@ -1079,6 +1102,16 @@ const ARQUIVOS: &[&str] = &[
 
 /// Raízes de disco.
 const DISCOS: &[&str] = &["C:", "D:", "C:\\", "D:\\"];
+
+/// Os nomes de atalho — os MESMOS de `teclado::ATALHOS`, e um teste prende os dois.
+///
+/// Poco fechado por natureza: se ela extrair um nome que nao existe la, a chamada
+/// falha com "nao conheco o atalho". Ensinar nome inventado seria ensinar a errar.
+pub const NOMES_DE_ATALHO: &[&str] = &[
+    "proxima_musica", "musica_anterior", "pausar_musica", "tocar_musica",
+    "parar_musica", "aumentar_volume", "diminuir_volume", "mudo",
+    "mutar_discord", "ensurdecer_discord",
+];
 
 const NOMES: &[&str] = &[
     "relatorio",
@@ -1670,6 +1703,7 @@ fn valor_para(ferramenta: &str, nome_param: &str, rng: &mut Rng) -> &'static str
         ("ler_arquivo", _) => ARQUIVOS,
         ("escrever_arquivo", "caminho") => ARQUIVOS,
         ("disco", _) => DISCOS,
+        ("atalho", _) => NOMES_DE_ATALHO,
         ("buscar_web", _) => CONSULTAS,
         ("abrir_programa", _) => PROGRAMAS,
         // As duas pontas de copiar/mover saem do mesmo poco de arquivos: quem copia
@@ -2459,7 +2493,7 @@ mod testes_destilacao {
         let exs = gerar(&reg, &patcher, 6000, &mut rng);
 
         let mut todos: Vec<&str> = Vec::new();
-        for p in [PASTAS, ARQUIVOS, DISCOS, NOMES, EXPRESSOES, TEXTOS, COMANDOS, PROGRAMAS, CONSULTAS] {
+        for p in [PASTAS, ARQUIVOS, DISCOS, NOMES, EXPRESSOES, TEXTOS, COMANDOS, PROGRAMAS, CONSULTAS, NOMES_DE_ATALHO] {
             todos.extend_from_slice(p);
         }
 

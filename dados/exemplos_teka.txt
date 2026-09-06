@@ -884,3 +884,25 @@ mover_arquivo | passa o notas.md para Cargo.toml | notas.md | Cargo.toml
 mover_arquivo | troca o nome de config.json por leia_me.txt | config.json | leia_me.txt
 mover_arquivo | manda o contrato.pdf para notas.md | contrato.pdf | notas.md
 mover_arquivo | move o Cargo.toml la pra orcamento.csv | Cargo.toml | orcamento.csv
+
+# ── atalho: pedido de dentro do jogo ────────────────────────────────────────
+#
+# O John pede estas coisas SEM SAIR DA PARTIDA. Por isso o argumento nao e um
+# trecho copiado do pedido — e a traducao dele para um nome da lista fechada de
+# `teclado::ATALHOS`. "pula essa musica" nao contem "proxima_musica" em lugar
+# nenhum, e e exatamente isso que ela precisa aprender a fazer.
+#
+# ATENCAO: o carregador localiza o argumento por substring no pedido. Um nome de
+# atalho que nao apareca literalmente e DESCARTADO — entao aqui o pedido tem de
+# conter o nome. As formas naturais ("pula essa musica") vao para os MOLDES, onde
+# o span e montado, e nao para ca.
+atalho | manda o atalho proxima_musica | proxima_musica
+atalho | aciona musica_anterior | musica_anterior
+atalho | dispara pausar_musica ai | pausar_musica
+atalho | usa o atalho tocar_musica | tocar_musica
+atalho | quero parar_musica agora | parar_musica
+atalho | aperta aumentar_volume | aumentar_volume
+atalho | manda diminuir_volume rapido | diminuir_volume
+atalho | aciona mudo pra mim | mudo
+atalho | dispara o atalho mutar_discord | mutar_discord
+atalho | usa ensurdecer_discord | ensurdecer_discord

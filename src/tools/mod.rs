@@ -17,6 +17,7 @@ pub mod diario;
 pub mod execucao;
 pub mod oficina;
 pub mod seguranca;
+pub mod teclado;
 pub mod tela;
 
 pub use prim::Primitiva;
@@ -267,6 +268,16 @@ impl Registro {
                     vec![Param::obrigatorio("comando", Texto)],
                     P::ExecutarComando,
                 ),
+                // A vigésima, e a primeira pedida de dentro de uma partida: trocar
+                // música, mutar o microfone, mexer no volume sem alt-tab. O nome do
+                // atalho vem de uma lista fechada (`teclado::ATALHOS`), então o
+                // argumento não é texto livre — é um de dez.
+                f(
+                    "atalho",
+                    "manda um atalho de teclado (musica, volume, mudo)",
+                    vec![Param::obrigatorio("nome", Texto)],
+                    P::Atalho,
+                ),
             ],
         }
     }
@@ -358,8 +369,13 @@ mod tests {
     #[test]
     fn registro_padrao_esta_consistente() {
         let r = Registro::padrao();
-        // 18 ferramentas de verdade + `perguntar`, que é a ação de NÃO agir.
-        assert_eq!(r.n(), 19);
+        // 19 ferramentas de verdade + `perguntar`, que é a ação de NÃO agir.
+        //
+        // Foram 19 ate 2026-09-06, quando entrou `atalho`. Este numero e conferido
+        // de proposito: crescer o registro custa acuracia (10->19 derrubou de 108,3
+        // para 107,0 e so voltou depois do conserto dos pocos), entao ferramenta
+        // nova tem de ser uma decisao, nunca um efeito colateral de um commit.
+        assert_eq!(r.n(), 20);
         assert_eq!(
             r.ferramentas[0].nome, "perguntar",
             "perguntar tem de ser a primeira: e o que ela escolhe quando nada encaixa"

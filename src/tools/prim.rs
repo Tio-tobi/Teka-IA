@@ -18,6 +18,21 @@ use super::seguranca::{Modo, Politica};
 pub enum Efeito {
     /// So le. Nao deixa marca nenhuma.
     Nenhum,
+    /// Muda alguma coisa, e desfazer custa um segundo.
+    ///
+    /// Pular faixa, mutar microfone, mudar volume. **Nao pede confirmacao**, e nao
+    /// e frouxidao: a confirmacao existe por causa de dano IRREVERSIVEL e de
+    /// SURPRESA, e nenhum dos dois esta aqui. Faixa errada? Aperta de novo.
+    ///
+    /// O caso de uso e o que dita isso. O John pede essas coisas **de dentro do
+    /// jogo**, justamente para nao ter que sair dele. Uma confirmacao que exige
+    /// alt-tab para clicar "sim" destroi a unica razao de a ferramenta existir —
+    /// eu construi o canal de confirmacao (4.3) e quase o apliquei aqui sem
+    /// perceber que ele inverteria o proposito.
+    ///
+    /// A guarda aqui nao e perguntar: e a **lista fechada de atalhos nomeados**.
+    /// Ela nao manda tecla arbitraria, manda uma das que estao no registro.
+    Reversivel,
     /// Muda a maquina: escreve, move, abre programa, roda comando.
     Local,
     /// Alcanca fora da maquina.
@@ -64,6 +79,13 @@ pub enum Primitiva {
     Memoria,
     Disco,
     ExecutarComando,
+    /// Manda um atalho de teclado NOMEADO. Ver [`crate::tools::teclado`].
+    ///
+    /// Existe para o John pedir de dentro do jogo: trocar de musica, mutar o
+    /// microfone, mexer no volume — sem alt-tab. As teclas de midia sao do
+    /// sistema operacional, entao funcionam sem API do Spotify, sem Premium e
+    /// sem foco na janela.
+    Atalho,
 }
 
 impl Primitiva {
@@ -98,6 +120,8 @@ impl Primitiva {
             // Sai da maquina: manda o que voce escreveu para um servidor, e traz de
             // volta texto que NAO e ordem sua. Ver `Efeito::ParaFora`.
             Primitiva::BuscarWeb => Efeito::ParaFora,
+            // Muda o mundo, e desfazer custa apertar de novo. Ver `Efeito::Reversivel`.
+            Primitiva::Atalho => Efeito::Reversivel,
             _ => Efeito::Nenhum,
         }
     }
@@ -105,6 +129,19 @@ impl Primitiva {
     /// Mexe no mundo de algum jeito? Mantido para quem so precisa do sim ou nao.
     pub fn efeito_colateral(&self) -> bool {
         self.efeito() != Efeito::Nenhum
+    }
+
+    /// Passa pelo diario e pela confirmacao?
+    ///
+    /// Separado de [`Primitiva::efeito_colateral`] por causa do `Reversivel`, e a
+    /// razao e concreta: o diario **deduplica**. Se `atalho` entrasse nele, o
+    /// segundo "proxima musica" receberia *"ja tinha sido feito; nao repeti"* — a
+    /// ferramenta funcionaria uma vez por argumento e nunca mais.
+    ///
+    /// Um booleano que amarra duas politicas diferentes so parece certo enquanto as
+    /// duas coincidem. Aqui pararam de coincidir.
+    pub fn pede_cerimonia(&self) -> bool {
+        matches!(self.efeito(), Efeito::Local | Efeito::ParaFora)
     }
 
     pub fn executar(&self, args: &[(String, String)], pol: &Politica) -> Result<String, String> {
@@ -137,6 +174,7 @@ impl Primitiva {
             Primitiva::ApagarArquivo => apagar(Path::new(&arg("caminho")), pol),
             Primitiva::Disco => disco(&arg("caminho")),
             Primitiva::ExecutarComando => executar_cmd(&arg("comando"), pol),
+            Primitiva::Atalho => atalho(&arg("nome"), pol),
         }
     }
 }
@@ -580,6 +618,27 @@ fn disco(caminho: &str) -> Result<String, String> {
     }
     #[cfg(not(windows))]
     Err(format!("disco {alvo}: só implementado no Windows"))
+}
+
+/// Manda um atalho nomeado.
+///
+/// Em sandbox descreve, como todas as outras. Nao passa pela lista negra porque
+/// nao ha comando para inspecionar — a guarda equivalente e a lista fechada de
+/// `teclado::ATALHOS`, que so tem tecla reversivel.
+fn atalho(nome: &str, pol: &Politica) -> Result<String, String> {
+    if nome.trim().is_empty() {
+        return Err(format!("atalho precisa de um nome. conheco: {}", super::teclado::nomes()));
+    }
+    if super::teclado::teclas_de(nome).is_none() {
+        return Err(format!(
+            "nao conheco o atalho {nome:?}. conheco: {}",
+            super::teclado::nomes()
+        ));
+    }
+    if pol.modo == Modo::Sandbox {
+        return Ok(format!("[sandbox] mandaria o atalho {nome}"));
+    }
+    super::teclado::mandar(nome)
 }
 
 fn executar_cmd(cmd: &str, pol: &Politica) -> Result<String, String> {

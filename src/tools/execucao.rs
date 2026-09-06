@@ -185,7 +185,7 @@ impl Executor {
         let Some(f) = reg.ferramentas.get(c.ferramenta) else {
             return false;
         };
-        self.confirmar && f.prim.efeito_colateral() && self.oficina.is_none()
+        self.confirmar && f.prim.pede_cerimonia() && self.oficina.is_none()
     }
 
     /// Executa uma chamada, com as guardas que ela merecer.
@@ -215,8 +215,12 @@ impl Executor {
             .ok_or_else(|| format!("ferramenta {} nao existe", c.ferramenta))?;
         let pol = self.politica_efetiva();
 
-        // Sem efeito no mundo, ou dentro da oficina (que é reversível): direto.
-        if !f.prim.efeito_colateral() || self.oficina.is_some() {
+        // Sem cerimonia devida, ou dentro da oficina (que é reversível): direto.
+        //
+        // `pede_cerimonia` e nao `efeito_colateral` por causa do `Reversivel`: um
+        // atalho de teclado muda o mundo, mas nao pode passar pelo diario — ele
+        // deduplica, e o segundo "proxima musica" viraria "ja tinha sido feito".
+        if !f.prim.pede_cerimonia() || self.oficina.is_some() {
             return reg.executar(c, &pol);
         }
 
@@ -470,7 +474,7 @@ mod tests {
             let c = Chamada { ferramenta: i, args: Vec::new() };
             assert_eq!(
                 ex.precisa_confirmar(&reg, &c),
-                f.prim.efeito_colateral(),
+                f.prim.pede_cerimonia(),
                 "{}: precisa_confirmar discorda do efeito colateral",
                 f.nome
             );
