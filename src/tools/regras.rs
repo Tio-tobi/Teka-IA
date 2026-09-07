@@ -27,7 +27,7 @@
 //! ela para de tentar. Uma regra que insiste contra a realidade queima CPU e enche
 //! log sem nunca dar certo.
 
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 /// Quantas vezes seguidas a regra pode disparar sem o mundo mudar.
@@ -161,6 +161,56 @@ impl Vigia {
         self.suspensa = true;
         self.tocava = false;
     }
+}
+
+/// Regras LIGADAS agora, nesta execucao.
+///
+/// O arquivo `dados/regras.txt` diz o **padrao**; isto diz o estado de agora. A
+/// diferenca importa porque ligar uma regra e um PEDIDO, nao uma configuracao:
+/// o John fala "toda vez que a musica parar, retoma" e ela passa a fazer; fala
+/// "para de retomar" e ela para. Editar arquivo para isso seria pedir que ele
+/// abrisse um editor no meio de uma partida.
+fn ligadas() -> &'static Mutex<Vec<String>> {
+    static L: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
+    L.get_or_init(|| {
+        Mutex::new(tabela().into_iter().filter(|r| r.ligada).map(|r| r.nome).collect())
+    })
+}
+
+/// Liga uma regra pelo nome. Devolve `false` se ela nao existe na tabela.
+pub fn ligar(nome: &str) -> bool {
+    if !tabela().iter().any(|r| r.nome == nome) {
+        return false;
+    }
+    let mut l = ligadas().lock().unwrap();
+    if !l.iter().any(|n| n == nome) {
+        l.push(nome.to_string());
+    }
+    // Comeca limpa: uma regra recem-ligada nao herda a suspensao nem o teto de
+    // disparos de quando esteve ligada antes.
+    *vigia().lock().unwrap() = Vigia::default();
+    true
+}
+
+/// Desliga uma regra. Devolve `false` se ela nao estava ligada.
+pub fn desligar(nome: &str) -> bool {
+    let mut l = ligadas().lock().unwrap();
+    let antes = l.len();
+    l.retain(|n| n != nome);
+    antes != l.len()
+}
+
+pub fn esta_ligada(nome: &str) -> bool {
+    ligadas().lock().unwrap().iter().any(|n| n == nome)
+}
+
+/// As regras que valem agora — tabela filtrada pelo estado de execucao.
+pub fn ativas() -> Vec<Regra> {
+    let l = ligadas().lock().unwrap().clone();
+    tabela()
+        .into_iter()
+        .filter(|r| l.iter().any(|n| *n == r.nome))
+        .collect()
 }
 
 /// O vigia do processo. Uma regra só, por enquanto — a de retomar a música.

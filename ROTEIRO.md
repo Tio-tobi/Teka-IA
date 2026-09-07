@@ -249,6 +249,31 @@ Três coisas que o John fez, cada uma boa numa parte diferente.
 | Aprender da própria atividade (`ambiente`) | sem efeito | 3 × 1.200 |
 | Fora-de-escopo 23 -> 66 | +2,08 no benchmark (t=1,43), -0,67 na sonda (t=-0,89) | 12 pares |
 | Variedade de verbo (+62 moldes) | sonda registrada +0,00 (t=0,00); sinal POS-HOC de -2,33 na falsa abstencao | 12 pares |
+| Variedade de verbo — CONFIRMACAO | -1,17 (t=-1,45), sementes novas, instrumento certo: **nao confirmado** | 12 pares |
+
+### O efeito pos-hoc que encolheu pela metade (2026-09-07)
+
+O sinal de -2,33 (t=-2,14) na falsa abstencao era POS-HOC — eu o encontrei depois
+de o instrumento registrado dar zero. A corrida de confirmacao, com sementes novas
+e o medidor certo fixado antes:
+
+```
+                        descoberta (pos-hoc)   confirmacao (registrada)
+falsa abstencao              -2,33                    -1,17
+t                            -2,14                    -1,45
+a favor                      9 de 12                  8 de 12
+```
+
+**Mesma direcao, metade do tamanho, sem significancia.** E o padrao classico de
+regressao a media: efeito escolhido depois de olhar encolhe quando e testado
+honestamente. A estimativa que vale e a da confirmacao, nao a da descoberta.
+
+O benchmark confirmou que nada quebrou: -0,50, t=-0,27.
+
+**Decisao: os 62 moldes ficam** — nao custam nada em inferencia e a direcao e
+consistente nas duas medicoes. Mas registrados como NAO CONFIRMADOS, e a variedade
+de verbo sai da lista de alavancas a perseguir. Se um dia voltar, precisa de n
+muito maior: com desvio pareado ~2,8 e efeito real de ~1,2, seriam ~45 pares.
 
 ### A armadilha de 2026-09-05: registrar o medidor errado
 

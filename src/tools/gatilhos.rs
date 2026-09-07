@@ -239,6 +239,30 @@ mod tests {
         assert_eq!(alvo, None);
     }
 
+    /// O pedido que originou a tabela de regras, dito como o John diria.
+    #[test]
+    fn pedir_para_retomar_sempre_liga_a_regra() {
+        let t = tabela();
+        for pedido in [
+            "toda vez que a musica parar voce retoma",
+            "sempre que a musica parar retoma",
+            "retoma sempre a musica",
+        ] {
+            assert_eq!(
+                casar_em(&t, pedido).map(|(a, _)| a),
+                Some("retomar_sempre".to_string()),
+                "{pedido:?}"
+            );
+        }
+        for pedido in ["para de retomar a musica", "pode parar de retomar"] {
+            assert_eq!(
+                casar_em(&t, pedido).map(|(a, _)| a),
+                Some("parar_de_retomar".to_string()),
+                "{pedido:?}"
+            );
+        }
+    }
+
     /// Conversa nao pode virar atalho. A tabela e um filtro, nao um ima.
     #[test]
     fn conversa_nao_dispara_atalho() {

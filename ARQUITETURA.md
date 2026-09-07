@@ -240,7 +240,7 @@ Não são estilo. São o que separa medição de ilusão, e todas custaram caro.
 | # | mudança | tipo | tamanho | estado |
 |---|---|---|---|---|
 | 4.1 | ~~Poços de fora-de-escopo (23 → 66)~~ | dados | — | **FECHADO: sem efeito medível** |
-| 4.2 | Escolha de ferramenta — variedade de verbo | dados | — | **sinal sem confirmação, corrida rodando** |
+| 4.2 | ~~Escolha de ferramenta — variedade de verbo~~ | dados | — | **FECHADO: não confirmado** |
 | 4.3 | ~~Canal de confirmação na interface web~~ | código | — | **FEITO em 2026-09-05** |
 | 4.4 | Argumento de restrição múltipla | **arquitetura** | semanas | só com medição na mão |
 | 4.5 | Fusão COMPLETA com o DeepSeek-Harness | integração | 20–40 sessões | depois de 4.2 |
@@ -442,7 +442,20 @@ cade o documento de nome atestado        8 -> 10   (piorou)
 Nenhuma se moveu. O −2,33 veio de outras frases, por um caminho que não é o que a
 hipótese previa — a combinação clássica de achar um número sem achar a explicação.
 
-**Corrida de confirmação em andamento**, com o instrumento certo registrado antes e
+**RESULTADO DA CONFIRMAÇÃO (2026-09-07), sementes 19–30, instrumento certo:**
+
+```
+                    descoberta (pos-hoc)   confirmacao (registrada)
+falsa abstencao          -2,33                    -1,17
+t                        -2,14                    -1,45
+benchmark                                          -0,50  (t=-0,27)
+```
+
+**Não confirmado.** Mesma direção, metade do tamanho, sem significância — regressão
+à média, que é o que acontece com efeito escolhido depois de olhar os dados. Os 62
+moldes ficam (não custam nada em inferência), registrados como não confirmados.
+
+~~Corrida de confirmação em andamento~~, com o instrumento certo registrado antes e
 sementes NOVAS (19–30), porque confirmar no mesmo dado que gerou a hipótese não
 confirma nada. Braços: código atual com e sem os 62 moldes, o que isola exatamente a
 mudança.

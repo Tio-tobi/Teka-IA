@@ -59,6 +59,14 @@ pub enum Como {
     /// por UIAutomation faz o Spotify subir na frente, o que no meio de uma partida
     /// e exatamente o que se quer evitar.
     Ponte { cmd: &'static str },
+    /// Liga ou desliga uma REGRA PERMANENTE.
+    ///
+    /// Ligar uma regra e um PEDIDO, nao uma configuracao. O John fala "toda vez que
+    /// a musica parar, retoma" e ela passa a fazer; fala "para de retomar" e ela
+    /// para. A alternativa — editar `dados/regras.txt` — seria pedir que ele
+    /// abrisse um editor no meio de uma partida, que e exatamente o alt-tab que
+    /// tudo isto existe para evitar.
+    Regra { nome: &'static str, ligar: bool },
     /// Busca e toca pelo nome: escreve no campo de busca e aciona o resultado.
     ///
     /// Duas etapas porque e assim que uma pessoa faz — nao existe atalho para
@@ -105,6 +113,9 @@ pub const ATALHOS: &[(&str, Como)] = &[
     ("embaralhar", Como::Ponte { cmd: "shuffle" }),
     ("que_musica_e_essa", Como::Ponte { cmd: "getdata" }),
     ("tocar_faixa_na_tela", Como::TocarPorNome { janela: "Spotify.exe", campo: "O que você quer ouvir" }),
+    // Regras permanentes, ligadas e desligadas pela voz.
+    ("retomar_sempre", Como::Regra { nome: "retomar_musica", ligar: true }),
+    ("parar_de_retomar", Como::Regra { nome: "retomar_musica", ligar: false }),
     ("tocar_playlist", Como::Botao { janela: "Spotify.exe", nome: "Playlist" }),
 ];
 
@@ -259,9 +270,35 @@ pub fn mandar_com(nome: &str, alvo: Option<&str>) -> Result<String, String> {
                     .map(|n| format!("{nome}: abri {n:?} (sem botao de tocar visivel)")),
             }
         }
+        Some(Como::Regra { nome: regra, ligar }) => {
+            let mudou = if *ligar {
+                super::regras::ligar(regra)
+            } else {
+                super::regras::desligar(regra)
+            };
+            Ok(match (*ligar, mudou) {
+                (true, true) => format!("combinado, vou {regra} daqui pra frente"),
+                (true, false) => format!("ja estava fazendo {regra}"),
+                (false, true) => format!("parei de {regra}"),
+                (false, false) => format!("nao estava fazendo {regra}"),
+            })
+        }
         Some(Como::Ponte { cmd }) => {
             let r = super::ponte::global()?.comando(cmd, alvo)?;
             // A extensao devolve JSON; extrai a faixa se houver, senao devolve cru.
+            // Pausa pedida A ELA suspende a regra de retomar. Sem isto, ele pede
+            // pausa e a regra desfaz 3 segundos depois — a briga que ele mesmo
+            // apontou como o jeito de resolver.
+            //
+            // So quando o resultado e "parou": `alternar_musica` serve para os dois
+            // sentidos, e chamar quando LIGOU a musica suspenderia pelo oposto.
+            if matches!(*cmd, "pause" | "play_pause")
+                && r.contains("\"tocando\":false")
+            {
+                if let Ok(mut v) = super::regras::vigia().lock() {
+                    v.dono_pausou();
+                }
+            }
             Ok(match campo_json(&r, "track") {
                 Some(t) if !t.is_empty() => format!("{nome}: {t}"),
                 _ => match campo_json(&r, "error") {

@@ -303,8 +303,11 @@ impl Pulso {
     /// ser exercitavel sozinha — testar automacao so pelo laco inteiro e como
     /// testar um freio dirigindo o carro.
     pub fn vigiar(&mut self) -> Option<String> {
-        let regras = crate::tools::regras::tabela();
-        let regra = regras.iter().find(|r| r.ligada)?;
+        // `ativas`, e nao `tabela`: o arquivo diz o PADRAO, mas ligar uma regra e
+        // um pedido falado ("toda vez que a musica parar, retoma") e o estado que
+        // vale e o desta execucao.
+        let regras = crate::tools::regras::ativas();
+        let regra = regras.first()?;
 
         // So agora fala com a ponte. Se ela nao estiver de pe, a regra fica quieta
         // em vez de encher o log a cada tick — o Spotify pode simplesmente nao
