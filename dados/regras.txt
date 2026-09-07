@@ -1,0 +1,23 @@
+# Regras permanentes: enquanto ligada, ela vigia e age sozinha.
+#
+# FORMATO
+#
+#   nome | condicao | acao | ligada
+#
+# CONDICOES que ela sabe observar hoje:
+#
+#   musica_parada    o Spotify esta pausado (a extensao reporta `tocando: false`)
+#
+# ACAO e o nome de um atalho de `teclado::ATALHOS`.
+#
+# ── A REGRA NAO BRIGA COM O DONO ──────────────────────────────────────────────
+#
+# Se o John pausar de proposito — por ele mesmo ou pedindo a Teka — a regra fica
+# SUSPENSA ate ele voltar a tocar. Sem isso, ele aperta pausa e ela despausa; ele
+# aperta de novo e ela despausa de novo. Uma regra que desfaz o que o dono acabou
+# de fazer nao e automacao, e briga.
+#
+# E ha teto de disparos: se a acao nao resolve, ela para de tentar em vez de ficar
+# num laco. Regra que insiste contra a realidade e pior que regra nenhuma.
+
+retomar_musica | musica_parada | alternar_musica | nao
