@@ -168,6 +168,25 @@ treino pesado em Docker. A ponte só-leitura (`grep`, `glob`, `read`, `lsp`) é 
 do caminho, não destino** — serve para medir a acurácia dela comandando ferramenta
 alheia sem risco nenhum.
 
+**O upstream corre, o contrato nao (medido em 2026-09-07).** A copia local esta em
+`dsh-0.1.1-rc.2`, de 21/08, com a arvore limpa. O upstream ja esta em
+`0.1.3-alpha.2`:
+
+```
+2512 commits    9727 arquivos    +514k / -191k
+core 167 · shell 100 · fs 98 · web 49 · lsp 30
+```
+
+E mesmo assim os pacotes `tool-*` foram de **23 para 22**: nenhum entrou, so saiu
+`subagent/tool-subagent-report`. Toda a movimentacao e interna. Como a fusao fala
+com as ferramentas por protocolo, o que importa e o contrato — e ele esta parado.
+
+Decisao do John: **nao subir agora.** A instalacao funciona (ha uma pasta
+`instalacao-funcionando` com lock proprio), o ganho seria zero enquanto o 3.2
+estiver aberto, e subir seria trocar uma linha `rc` por uma `alpha`. Quando a fusao
+comecar, o alvo e o `dsh-v0.1.2-rc.1`, que e o `rc` do meio, com a
+`instalacao-funcionando` intacta como rede.
+
 Estimativa, já corrigida pelo meu otimismo medido de ~1,5x: **20 a 40 sessões**. A
 ponte é trabalho conhecido; o imprevisível é recuperar a acurácia depois de o registro
 crescer de 19 para ~32 ferramentas. Precedente que dimensiona: 10→19 derrubou de 108,3
