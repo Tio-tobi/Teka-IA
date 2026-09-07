@@ -52,6 +52,13 @@ pub enum Como {
     Controle { janela: &'static str, nome: &'static str },
     /// Botao NOMEADO que so aciona (nao alterna). O "Tocar <faixa>" do Spotify.
     Botao { janela: &'static str, nome: &'static str },
+    /// Pela PONTE — socket para a extensao dentro do Spotify.
+    ///
+    /// **O caminho preferido**, e a razao foi medida: com o navegador do John em
+    /// primeiro plano, as cinco trocas de faixa deixaram o foco INTACTO. O caminho
+    /// por UIAutomation faz o Spotify subir na frente, o que no meio de uma partida
+    /// e exatamente o que se quer evitar.
+    Ponte { cmd: &'static str },
     /// Busca e toca pelo nome: escreve no campo de busca e aciona o resultado.
     ///
     /// Duas etapas porque e assim que uma pessoa faz — nao existe atalho para
@@ -89,7 +96,15 @@ pub const ATALHOS: &[(&str, Como)] = &[
     // Spotify — casado por EXECUTAVEL e nao por titulo, porque o titulo dele E a
     // musica tocando ("Gibran Alcocer - Idea 22") e muda a cada faixa. Procurar
     // "Spotify" no titulo falha exatamente quando ele esta tocando.
-    ("tocar_faixa", Como::TocarPorNome { janela: "Spotify.exe", campo: "O que você quer ouvir" }),
+    // Pela ponte: toca por nome SEM subir a janela. Se a extensao nao estiver no
+    // ar, o erro diz isso — e ai o `tocar_faixa_na_tela` e a reserva.
+    ("tocar_faixa", Como::Ponte { cmd: "play" }),
+    ("proxima_faixa", Como::Ponte { cmd: "next" }),
+    ("faixa_anterior", Como::Ponte { cmd: "prev" }),
+    ("alternar_musica", Como::Ponte { cmd: "play_pause" }),
+    ("embaralhar", Como::Ponte { cmd: "shuffle" }),
+    ("que_musica_e_essa", Como::Ponte { cmd: "getdata" }),
+    ("tocar_faixa_na_tela", Como::TocarPorNome { janela: "Spotify.exe", campo: "O que você quer ouvir" }),
     ("tocar_playlist", Como::Botao { janela: "Spotify.exe", nome: "Playlist" }),
 ];
 
@@ -152,6 +167,27 @@ mod win {
 ///
 /// A ordem inversa não é detalhe: soltar `ctrl` antes do `m` faria o `m` chegar
 /// sozinho ao aplicativo, que é uma tecla completamente diferente do que foi pedido.
+/// Puxa um campo de texto de um JSON simples, sem trazer um parser inteiro.
+///
+/// A resposta da extensao e sempre plana (`{"ok":true,"track":"...","id":1}`), entao
+/// isto basta — e um parser de JSON completo por causa de tres campos seria peso sem
+/// retorno num projeto que se orgulha de nao ter dependencia.
+fn campo_json(json: &str, chave: &str) -> Option<String> {
+    let marca = format!("\"{chave}\":\"");
+    let i = json.find(&marca)? + marca.len();
+    let resto = &json[i..];
+    let mut fora = String::new();
+    let mut chars = resto.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '"' => return Some(fora),
+            c if c == 92 as char => fora.push(chars.next().unwrap_or(c)),
+            c => fora.push(c),
+        }
+    }
+    None
+}
+
 /// O botao "Tocar X" para um alvo, se existir na arvore agora.
 fn achar_botao_tocar(janela: &str, alvo: &str) -> Option<String> {
     let baixo = alvo.to_lowercase();
@@ -222,6 +258,17 @@ pub fn mandar_com(nome: &str, alvo: Option<&str>) -> Result<String, String> {
                 None => super::uia::acionar_botao(janela, alvo)
                     .map(|n| format!("{nome}: abri {n:?} (sem botao de tocar visivel)")),
             }
+        }
+        Some(Como::Ponte { cmd }) => {
+            let r = super::ponte::global()?.comando(cmd, alvo)?;
+            // A extensao devolve JSON; extrai a faixa se houver, senao devolve cru.
+            Ok(match campo_json(&r, "track") {
+                Some(t) if !t.is_empty() => format!("{nome}: {t}"),
+                _ => match campo_json(&r, "error") {
+                    Some(e) if !e.is_empty() => return Err(e),
+                    _ => format!("{nome}: {r}"),
+                },
+            })
         }
         Some(Como::TocarPorNome { janela, campo }) => tocar_por_nome(janela, campo, alvo),
         Some(Como::Controle { janela, nome: ctl }) => {

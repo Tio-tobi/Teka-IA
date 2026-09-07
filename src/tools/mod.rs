@@ -17,6 +17,7 @@ pub mod diario;
 pub mod execucao;
 pub mod gatilhos;
 pub mod oficina;
+pub mod ponte;
 pub mod seguranca;
 pub mod teclado;
 pub mod tela;

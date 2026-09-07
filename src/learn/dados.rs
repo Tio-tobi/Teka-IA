@@ -1111,6 +1111,8 @@ pub const NOMES_DE_ATALHO: &[&str] = &[
     "proxima_musica", "musica_anterior", "pausar_musica", "tocar_musica",
     "parar_musica", "aumentar_volume", "diminuir_volume", "mudo",
     "mutar_discord", "ensurdecer_discord", "tocar_faixa", "tocar_playlist",
+    "proxima_faixa", "faixa_anterior", "alternar_musica", "embaralhar",
+    "que_musica_e_essa", "tocar_faixa_na_tela",
 ];
 
 const NOMES: &[&str] = &[
