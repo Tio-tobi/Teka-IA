@@ -105,6 +105,12 @@ impl Default for CfgPulso {
 #[derive(Clone, Debug, Default)]
 pub struct Relatorio {
     pub tick: u64,
+    /// O que uma regra permanente fez neste tick, se fez alguma coisa.
+    ///
+    /// `None` na esmagadora maioria dos ticks — regra desligada, ou mundo ja como
+    /// se quer. Existe porque **regra que age em silencio e regra que ninguem
+    /// consegue depurar** quando comeca a fazer besteira sozinha.
+    pub vigia: Option<String>,
     pub episodios_novos: usize,
     pub consolidou: bool,
     /// Chegou a hora de consolidar (por relogio ou por percepcao nova)?
@@ -289,6 +295,42 @@ impl Pulso {
         self.idade_fio = 0;
     }
 
+    /// Roda as regras permanentes, se houver alguma ligada.
+    ///
+    /// Devolve o que aconteceu, para o relatorio — uma regra que age em silencio e
+    /// uma regra que ninguem consegue depurar quando der errado.
+    /// Publica de proposito: e o unico ponto do tick que AGE no mundo, e precisa
+    /// ser exercitavel sozinha — testar automacao so pelo laco inteiro e como
+    /// testar um freio dirigindo o carro.
+    pub fn vigiar(&mut self) -> Option<String> {
+        let regras = crate::tools::regras::tabela();
+        let regra = regras.iter().find(|r| r.ligada)?;
+
+        // So agora fala com a ponte. Se ela nao estiver de pe, a regra fica quieta
+        // em vez de encher o log a cada tick — o Spotify pode simplesmente nao
+        // estar aberto, e isso nao e erro.
+        let ponte = crate::tools::ponte::global().ok()?;
+        let resposta = ponte.comando("getdata", None).ok()?;
+        let tocando = resposta.contains("\"tocando\":true");
+
+        let passo = {
+            let mut v = crate::tools::regras::vigia().lock().ok()?;
+            v.olhar(tocando, Instant::now())
+        };
+        use crate::tools::regras::Passo;
+        match passo {
+            Passo::Age => {
+                let r = crate::tools::teclado::mandar(&regra.acao);
+                Some(match r {
+                    Ok(s) => format!("{}: {s}", regra.nome),
+                    Err(e) => format!("{}: falhou ({e})", regra.nome),
+                })
+            }
+            Passo::Desistiu => Some(format!("{}: desisti, a acao nao resolve", regra.nome)),
+            Passo::Suspensa | Passo::Quieto => None,
+        }
+    }
+
     /// Um tick.
     ///
     /// `ag` é `&mut` porque a consolidação muda peso. O devaneio, dentro, só recebe
@@ -312,6 +354,15 @@ impl Pulso {
         // ---- PERCEBER ----
         let novos = mem.len().saturating_sub(self.vistos);
         self.vistos = mem.len();
+
+        // ---- VIGIAR (regras permanentes) ----
+        //
+        // O unico lugar do tick em que ela AGE no mundo. Fica antes de tudo de
+        // proposito: o devaneio e a consolidacao gastam tempo, e uma regra que so
+        // dispara depois deles reagiria com atraso de segundos.
+        //
+        // Sai barato quando nao ha regra ligada — nem chega a falar com a ponte.
+        let vigia = self.vigiar();
 
         // ---- reancorar o fio ----
         if novos > 0 || self.fio.is_empty() || self.idade_fio >= IDADE_MAXIMA_FIO {
@@ -352,6 +403,7 @@ impl Pulso {
             || (cfg.consolidar_a_cada > 0 && self.ticks % cfg.consolidar_a_cada == 0);
         let mut rel = Relatorio {
             tick: self.ticks,
+            vigia,
             episodios_novos: novos,
             esquecendo,
             pensamento,
@@ -643,6 +695,26 @@ mod tests {
         p.reancorar(&mem);
         assert!(p.fio.contains("notas.md"), "nao reancorou na memoria: {:?}", p.fio);
         assert_eq!(p.idade_fio, 0);
+    }
+
+    /// Sem regra ligada, o vigia sai barato: nem tenta falar com a ponte.
+    ///
+    /// Importa porque o tick roda o tempo todo. Se cada tick abrisse socket e
+    /// esperasse resposta, o pulso viraria uma metralhadora de conexoes contra um
+    /// Spotify que talvez nem esteja aberto.
+    #[test]
+    fn sem_regra_ligada_o_vigia_nao_faz_nada() {
+        let ligadas = crate::tools::regras::tabela().iter().filter(|r| r.ligada).count();
+        assert_eq!(ligadas, 0, "o padrao do repositorio tem de vir DESLIGADO");
+
+        let mut p = Pulso::novo(7);
+        let t0 = std::time::Instant::now();
+        assert_eq!(p.vigiar(), None);
+        assert!(
+            t0.elapsed() < std::time::Duration::from_millis(200),
+            "demorou {:?} — sinal de que foi falar com a ponte a toa",
+            t0.elapsed()
+        );
     }
 
     #[test]
