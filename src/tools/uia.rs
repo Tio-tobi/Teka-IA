@@ -308,18 +308,22 @@ mod imp {
     /// **parcial** ("Tocar From The Start" dentro de "Tocar From The Start de
     /// Laufey") e porque o TIPO precisa entrar no filtro: o mesmo nome aparece na
     /// linha da tabela e no botão, e acionar a linha não faz nada.
-    unsafe fn achar(s: &Sessao, tipo: i32, trecho: &str) -> Option<*mut c_void> {
+    /// Varre e diz TAMBEM quantos controles a arvore ofereceu.
+    ///
+    /// O numero e o que separa "esse controle nao existe" de "a arvore ainda nao
+    /// nasceu" — ver `achar_teimoso`.
+    unsafe fn achar_contando(s: &Sessao, tipo: i32, trecho: &str) -> (Option<*mut c_void>, i32) {
         let ct: extern "system" fn(*mut c_void, *mut *mut c_void) -> i32 =
             unsafe { std::mem::transmute(vt(s.aut, 21)) };
         let mut cond: *mut c_void = std::ptr::null_mut();
-        if ct(s.aut, &mut cond) != 0 { return None; }
+        if ct(s.aut, &mut cond) != 0 { return (None, 0); }
 
         let fa: extern "system" fn(*mut c_void, i32, *mut c_void, *mut *mut c_void) -> i32 =
             unsafe { std::mem::transmute(vt(s.jan, 6)) };
         let mut arr: *mut c_void = std::ptr::null_mut();
         let hr = fa(s.jan, ESCOPO_DESCENDENTES, cond, &mut arr);
         unsafe { soltar(cond) };
-        if hr != 0 || arr.is_null() { return None; }
+        if hr != 0 || arr.is_null() { return (None, 0); }
 
         let gl: extern "system" fn(*mut c_void, *mut i32) -> i32 =
             unsafe { std::mem::transmute(vt(arr, 3)) };
@@ -332,8 +336,10 @@ mod imp {
         for i in 0..n {
             let mut el: *mut c_void = std::ptr::null_mut();
             if ge(arr, i, &mut el) != 0 || el.is_null() { continue; }
+            let nm = unsafe { nome_de(el) };
             if unsafe { tipo_de(el) } == tipo
-                && unsafe { nome_de(el) }.to_lowercase().contains(&alvo)
+                && nm.to_lowercase().contains(&alvo)
+                && !proibido(&nm)
             {
                 achado = Some(el);
                 break;
@@ -341,7 +347,216 @@ mod imp {
             unsafe { soltar(el) };
         }
         unsafe { soltar(arr) };
-        achado
+        (achado, n)
+    }
+
+    /// ## Por que agir sobre OUTRA PESSOA nunca vai sair daqui
+    ///
+    /// Nao e cautela: e que a arvore de UI **nao tem identidade**. Medido no
+    /// Discord do John, cujo apelido e "Stitch", nos 881 controles da arvore:
+    ///
+    /// ```text
+    /// Pane       'Stitch | R.E.P.O. Brasil - Discord'   a janela
+    /// Document   'Stitch | R.E.P.O. Brasil'
+    /// Hyperlink  'Stitch (canal de voz), Stitch, ...'
+    /// Button     'Stitch'
+    /// Text       'Stitch'  (x3)
+    /// Text       'Canal de voz Stitch'                  um CANAL com o nome dele
+    /// Image      'Stitch'                               o avatar
+    /// ```
+    ///
+    /// Dez controles, de sete tipos, um so e a pessoa. E o casamento por trecho e
+    /// escopeta: "an" casa com 9 nomes de participante, e o primeiro que "dash"
+    /// encontra e o resumo do canal — que lista todo mundo dentro, entao contem o
+    /// nome de todos. Some a isso apelido em unicode estilizado (`𝕿𝖍𝖊𝖔`,
+    /// `🍂 𝙵 𝙸 𝙻 𝙸 𝙿 𝙴 🍂`), que `normalizar` reduz a nada.
+    ///
+    /// **Nome nao e identificador numa arvore de UI, e rotulo — e rotulo se repete
+    /// entre coisas de tipos diferentes.** Nao ha casamento melhor que conserte:
+    /// a informacao que distingue as pessoas nao esta aqui.
+    ///
+    /// Ela esta no ID do Discord, que a Nyxara guarda e a arvore nunca publica.
+    /// Entao a divisao e:
+    ///
+    /// ```text
+    /// sobre VOCE MESMO      UI serve — seu botao de mudo nao e achado por nome,
+    ///                       e estrutural (pai "Status do usuario e configuracoes")
+    /// sobre OUTRA PESSOA    so pela API, com ID. Por UI nao e dificil: e impossivel
+    /// ```
+    ///
+    /// Nomes que ela NUNCA aciona sozinha, nem por casamento parcial.
+    ///
+    /// O John tem cargo de administrador no servidor dele. No Discord isso muda o
+    /// que os controles significam:
+    ///
+    /// ```text
+    /// "Silenciar"                    silencia so PARA MIM         — local
+    /// "Silenciar voz no servidor"    silencia para TODO MUNDO     — para fora
+    /// "Desativar audio no servidor"  idem                          — para fora
+    /// "Desconectar"                  expulsa a pessoa da chamada   — para fora
+    /// ```
+    ///
+    /// E `"Silenciar voz no servidor"` **contem** `"Silenciar"`. Casamento por
+    /// substring pega o errado, e o errado aqui e um ato publico sobre outra pessoa.
+    ///
+    /// Hoje esses controles nao estao na arvore (sao item de menu de contexto, so
+    /// nascem no clique direito) — medido, 868 controles, nenhum deles la. Isto e
+    /// defesa em profundidade, para quando um deles aparecer.
+    ///
+    /// Nada disto e "a Teka nao pode": e "a Teka nao faz isto CALADA, por um
+    /// casamento aproximado de nome". Ato sobre outra pessoa se pede explicitamente.
+    const NUNCA_SOZINHA: &[&str] = &[
+        "no servidor",
+        "desconectar",
+        "expulsar",
+        "banir",
+        "acoes de servidor",
+        "ações de servidor",
+    ];
+
+    /// Este nome e proibido de acionar?
+    fn proibido(nome: &str) -> bool {
+        let n = nome.to_lowercase();
+        NUNCA_SOZINHA.iter().any(|p| n.contains(p))
+    }
+
+    /// Quantos controles a arvore precisa ter para eu acreditar num "nao achei".
+    ///
+    /// Discord vivo publica 1066; Spotify carregado, 947. Descarregado, o Spotify
+    /// da 25. Qualquer coisa abaixo disto e arvore fria, nao ausencia.
+    const ARVORE_FRIA: i32 = 60;
+
+    /// Quanto esperar entre as tentativas, quando a arvore parece fria.
+    ///
+    /// Medido: 5s depois de o Discord subir a arvore ja tinha 1153 controles; no
+    /// instante em que a janela aparece, 7. Oito tentativas de 300ms cobrem 2,4s.
+    const ESPERA_FRIA_MS: u64 = 300;
+
+    /// Como `achar_teimoso`, mas so aceita o controle que SABE fazer o que eu quero.
+    ///
+    /// ## Por que o nome nao basta
+    ///
+    /// O Discord publica DOIS botoes chamados "Silenciar", os dois seus:
+    ///
+    /// ```text
+    /// #1  pai='Status do usuario e configuracoes'  pats=Value,Toggle,ScrollItem
+    /// #2  pai=''  (painel da chamada)              pats=Invoke,ScrollItem
+    /// ```
+    ///
+    /// So o #1 alterna. Pegar o primeiro pelo nome funciona hoje por ORDEM DE
+    /// ARVORE, nao por desenho — se o Discord reordenar, `alternar` morre num
+    /// "esse controle nao e de alternancia" que nao explica nada.
+    ///
+    /// (Os controles de OUTRAS pessoas nao entram nisto: eles se chamam
+    /// "Stitch, Silenciado(a)", com o nome de quem e. O risco aqui nunca foi mutar
+    /// o outro — foi achar o botao que nao alterna.)
+    unsafe fn achar_que_faz(
+        s: &Sessao,
+        tipo: i32,
+        trecho: &str,
+        padrao_id: i32,
+        exato: bool,
+    ) -> Option<(*mut c_void, *mut c_void)> {
+        for tentativa in 0..8 {
+            let (todos, n) = unsafe { todos_que_casam(s, tipo, trecho, exato) };
+            for el in &todos {
+                if let Some(pat) = unsafe { padrao(*el, padrao_id) } {
+                    for outro in &todos {
+                        if outro != el {
+                            unsafe { soltar(*outro) };
+                        }
+                    }
+                    return Some((*el, pat));
+                }
+            }
+            for el in &todos {
+                unsafe { soltar(*el) };
+            }
+            if n >= ARVORE_FRIA {
+                return None;
+            }
+            if tentativa < 7 {
+                std::thread::sleep(std::time::Duration::from_millis(ESPERA_FRIA_MS));
+            }
+        }
+        None
+    }
+
+    /// Todos os controles do tipo cujo nome contenha o trecho, e o tamanho da arvore.
+    unsafe fn todos_que_casam(
+        s: &Sessao,
+        tipo: i32,
+        trecho: &str,
+        exato: bool,
+    ) -> (Vec<*mut c_void>, i32) {
+        let ct: extern "system" fn(*mut c_void, *mut *mut c_void) -> i32 =
+            unsafe { std::mem::transmute(vt(s.aut, 21)) };
+        let mut cond: *mut c_void = std::ptr::null_mut();
+        if ct(s.aut, &mut cond) != 0 { return (Vec::new(), 0); }
+        let fa: extern "system" fn(*mut c_void, i32, *mut c_void, *mut *mut c_void) -> i32 =
+            unsafe { std::mem::transmute(vt(s.jan, 6)) };
+        let mut arr: *mut c_void = std::ptr::null_mut();
+        let hr = fa(s.jan, ESCOPO_DESCENDENTES, cond, &mut arr);
+        unsafe { soltar(cond) };
+        if hr != 0 || arr.is_null() { return (Vec::new(), 0); }
+        let gl: extern "system" fn(*mut c_void, *mut i32) -> i32 =
+            unsafe { std::mem::transmute(vt(arr, 3)) };
+        let ge: extern "system" fn(*mut c_void, i32, *mut *mut c_void) -> i32 =
+            unsafe { std::mem::transmute(vt(arr, 4)) };
+        let mut n = 0;
+        gl(arr, &mut n);
+        let alvo = trecho.to_lowercase();
+        let mut fora = Vec::new();
+        for i in 0..n {
+            let mut el: *mut c_void = std::ptr::null_mut();
+            if ge(arr, i, &mut el) != 0 || el.is_null() { continue; }
+            let nm = unsafe { nome_de(el) };
+            let casa = if exato {
+                nm.to_lowercase() == alvo
+            } else {
+                nm.to_lowercase().contains(&alvo)
+            };
+            if unsafe { tipo_de(el) } == tipo && casa && !proibido(&nm) {
+                fora.push(el);
+            } else {
+                unsafe { soltar(el) };
+            }
+        }
+        unsafe { soltar(arr) };
+        (fora, n)
+    }
+
+    /// Procura, e se a arvore parecer fria, espera e procura DE NOVO.
+    ///
+    /// ## O que isto conserta
+    ///
+    /// A arvore de acessibilidade do Chromium nasce **preguicosa**: ela so e
+    /// construida quando um cliente UIA pergunta, e a PRIMEIRA pergunta volta antes
+    /// de a construcao terminar. Medido em PowerShell, a mesma consulta duas vezes
+    /// seguidas no mesmo Discord:
+    ///
+    /// ```text
+    /// 1a   NAO ACHOU o controle 'Silenciar'   863ms
+    /// 2a   ACHOU  nome='Silenciar'            461ms
+    /// ```
+    ///
+    /// Discord e Spotify sao os dois Electron, entao os dois tem isto. Sem a
+    /// repeticao, o primeiro "me muta" depois de a Teka subir falha, e o segundo
+    /// funciona — o pior tipo de defeito, porque parece instabilidade.
+    ///
+    /// A contagem e o que evita transformar todo erro honesto em 2,4s de espera:
+    /// arvore cheia sem o controle e ausencia de verdade, e desiste na hora.
+    unsafe fn achar_teimoso(s: &Sessao, tipo: i32, trecho: &str) -> Option<*mut c_void> {
+        for tentativa in 0..4 {
+            let (achado, n) = unsafe { achar_contando(s, tipo, trecho) };
+            if achado.is_some() || n >= ARVORE_FRIA {
+                return achado;
+            }
+            if tentativa < 3 {
+                std::thread::sleep(std::time::Duration::from_millis(300));
+            }
+        }
+        None
     }
 
     unsafe fn padrao(el: *mut c_void, id: i32) -> Option<*mut c_void> {
@@ -358,13 +573,14 @@ mod imp {
     pub fn alternar(spec: &str, controle: &str) -> Result<Resultado, String> {
         let s = abrir(spec)?;
         unsafe {
-            let el = achar(&s, super::TIPO_BOTAO, controle)
-                .ok_or_else(|| format!("nao achei o botao {controle:?}"))?;
-            let pat = padrao(el, PATTERN_TOGGLE);
-            let Some(pat) = pat else {
-                soltar(el);
-                return Err("esse controle nao e de alternancia (sem padrao Toggle)".into());
-            };
+            // O que eu quero nao e "um botao com esse nome", e "um botao com esse
+            // nome QUE ALTERNA". Ver `achar_que_faz`: o Discord publica dois
+            // "Silenciar" e so um deles tem Toggle.
+            // NOME EXATO aqui, nao substring: "Silenciar voz no servidor" contem
+            // "Silenciar", e sao coisas diferentes — uma e sobre mim, a outra e um
+            // ato publico sobre outra pessoa. Ver `NUNCA_SOZINHA`.
+            let (el, pat) = achar_que_faz(&s, super::TIPO_BOTAO, controle, PATTERN_TOGGLE, true)
+                .ok_or_else(|| format!("nao achei botao {controle:?} que saiba alternar"))?;
             let estado: extern "system" fn(*mut c_void, *mut i32) -> i32 =
                 std::mem::transmute(vt(pat, 4));
             let acionar: extern "system" fn(*mut c_void) -> i32 = std::mem::transmute(vt(pat, 3));
@@ -398,7 +614,10 @@ mod imp {
     pub fn acionar_botao(spec: &str, trecho: &str) -> Result<String, String> {
         let s = abrir(spec)?;
         unsafe {
-            let el = achar(&s, super::TIPO_BOTAO, trecho)
+            if proibido(trecho) {
+                return Err(format!("{trecho:?} e ato sobre outra pessoa; isso nao sai de atalho"));
+            }
+            let el = achar_teimoso(&s, super::TIPO_BOTAO, trecho)
                 .ok_or_else(|| format!("nao achei botao contendo {trecho:?}"))?;
             let nome = nome_de(el);
             let Some(pat) = padrao(el, PATTERN_INVOKE) else {
@@ -418,8 +637,8 @@ mod imp {
         let s = abrir(spec)?;
         unsafe {
             // Edit OU ComboBox: o campo de busca do Spotify e o segundo.
-            let el = achar(&s, super::TIPO_EDICAO, campo)
-                .or_else(|| achar(&s, super::TIPO_COMBO, campo))
+            let el = achar_teimoso(&s, super::TIPO_EDICAO, campo)
+                .or_else(|| achar_teimoso(&s, super::TIPO_COMBO, campo))
                 .ok_or_else(|| format!("nao achei campo contendo {campo:?}"))?;
             let Some(pat) = padrao(el, PATTERN_VALOR) else {
                 soltar(el);
@@ -439,9 +658,33 @@ mod imp {
     }
 
     /// Lista os controles de um tipo cujo nome contenha `trecho`. Para diagnóstico.
+    /// Lista os controles de um tipo cujo nome contenha o trecho. So leitura.
+    ///
+    /// Teimosa pela mesma razao de `achar_teimoso`: numa arvore fria ela devolveria
+    /// lista vazia e a pessoa concluiria que o aplicativo nao publica nada. Foi
+    /// exatamente o erro que eu ja cometi com o Spotify — 15 controles medidos com
+    /// o renderizador descarregado, 947 com ele de pe.
     pub fn listar(spec: &str, tipo: i32, trecho: &str) -> Result<Vec<String>, String> {
+        for tentativa in 0..4 {
+            let (fora, n) = listar_uma_vez(spec, tipo, trecho)?;
+            if !fora.is_empty() || n >= ARVORE_FRIA {
+                return Ok(fora);
+            }
+            if tentativa < 3 {
+                std::thread::sleep(std::time::Duration::from_millis(300));
+            }
+        }
+        Ok(Vec::new())
+    }
+
+    /// Uma varredura so, sem teimosia — e o que enxerga a arvore FRIA.
+    ///
+    /// Publica de proposito: e o instrumento que mede o fenomeno. Ferramenta
+    /// nenhuma chama isto; quem chama e `listar`, e a sonda `sonda_uia`.
+    pub fn listar_uma_vez(spec: &str, tipo: i32, trecho: &str) -> Result<(Vec<String>, i32), String> {
         let s = abrir(spec)?;
         let mut fora = Vec::new();
+        let mut total = 0i32;
         unsafe {
             let ct: extern "system" fn(*mut c_void, *mut *mut c_void) -> i32 =
                 std::mem::transmute(vt(s.aut, 21));
@@ -452,12 +695,13 @@ mod imp {
             let mut arr: *mut c_void = std::ptr::null_mut();
             fa(s.jan, ESCOPO_DESCENDENTES, cond, &mut arr);
             soltar(cond);
-            if arr.is_null() { return Ok(fora); }
+            if arr.is_null() { return Ok((fora, 0)); }
             let gl: extern "system" fn(*mut c_void, *mut i32) -> i32 = std::mem::transmute(vt(arr, 3));
             let ge: extern "system" fn(*mut c_void, i32, *mut *mut c_void) -> i32 =
                 std::mem::transmute(vt(arr, 4));
             let mut n = 0;
             gl(arr, &mut n);
+            total = n;
             let alvo = trecho.to_lowercase();
             for i in 0..n {
                 let mut el: *mut c_void = std::ptr::null_mut();
@@ -470,12 +714,12 @@ mod imp {
             }
             soltar(arr);
         }
-        Ok(fora)
+        Ok((fora, total))
     }
 }
 
 #[cfg(windows)]
-pub use imp::{acionar_botao, alternar, escrever, listar, Foco, Resultado};
+pub use imp::{acionar_botao, alternar, escrever, listar, listar_uma_vez, Foco, Resultado};
 
 #[cfg(not(windows))]
 pub struct Resultado { pub antes: i32, pub depois: i32 }

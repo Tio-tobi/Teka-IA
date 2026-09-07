@@ -74,6 +74,9 @@ pub fn normalizar(texto: &str) -> String {
 const VAZIAS: &[&str] = &[
     "os", "as", "no", "na", "nos", "nas", "em", "de", "do", "da", "ai", "um",
     "uma", "que", "esta", "isso", "aqui", "pra", "mais",
+    // Cortesia e enchimento: nao mudam o pedido, e sem elas "pausa a musica por
+    // favor" perderia o gatilho pela regra da sobra.
+    "por", "favor", "pfv", "agora", "ja", "entao",
 ];
 
 /// As palavras do gatilho que de fato o distinguem.
@@ -142,6 +145,8 @@ const TABELA: &str = include_str!("../../dados/gatilhos.txt");
 pub struct Entrada {
     pub atalho: String,
     pub gatilhos: Vec<String>,
+    /// Marcado com `*` na tabela: este atalho recebe um alvo.
+    pub com_alvo: bool,
 }
 
 pub fn ler(texto: &str) -> Vec<Entrada> {
@@ -158,7 +163,13 @@ pub fn ler(texto: &str) -> Vec<Entrada> {
             .filter(|g| !g.is_empty())
             .collect();
         if !gatilhos.is_empty() {
-            fora.push(Entrada { atalho: atalho.trim().to_string(), gatilhos });
+            let nome = atalho.trim();
+            let com_alvo = nome.ends_with('*');
+            fora.push(Entrada {
+                atalho: nome.trim_end_matches('*').to_string(),
+                gatilhos,
+                com_alvo,
+            });
         }
     }
     fora
@@ -189,6 +200,28 @@ pub fn casar_em(tab: &[Entrada], pedido: &str) -> Option<(String, Option<String>
             // Empate vai para o gatilho MAIS LONGO: "toca a playlist" e "toca"
             // casam os dois em "toca a playlist animada", e o curto mandaria
             // procurar uma FAIXA chamada "a playlist animada".
+            // ATALHO SEM ALVO NAO CASA COM FRASE QUE SOBRA CONTEUDO.
+            //
+            // "muta o theo no discord" casava com o gatilho "muta o discord" por
+            // cobertura, virava `mutar_discord` — que nao tem alvo — e "theo" ia
+            // fora calado: voce pedia para mutar o Theo e ela mutava VOCE.
+            //
+            // Sobra de palavra vazia segue valendo, senao "pula essa musica ai"
+            // morreria por causa do "ai".
+            if !e.com_alvo {
+                if let Some(resto) = sobra(pedido, g) {
+                    // A sobra so vale se for vocabulario DESTE atalho. "para de
+                    // retomar a musica" sobra "a musica", e "musica" esta nos
+                    // gatilhos dele — e o mesmo assunto, dito com mais palavra.
+                    // "muta o theo no discord" sobra "theo", que nao esta em lugar
+                    // nenhum da entrada: e OUTRO alguem, e ai nao e este atalho.
+                    let vocab: Vec<String> =
+                        e.gatilhos.iter().flat_map(|x| palavras_fortes(x)).collect();
+                    if palavras_fortes(&resto).iter().any(|w| !vocab.contains(w)) {
+                        continue;
+                    }
+                }
+            }
             let cand = (p, g.chars().count(), e.atalho.as_str(), g.as_str());
             if melhor.is_none_or(|m| (cand.0, cand.1) > (m.0, m.1)) {
                 melhor = Some(cand);
@@ -196,7 +229,11 @@ pub fn casar_em(tab: &[Entrada], pedido: &str) -> Option<(String, Option<String>
         }
     }
     let (_, _, atalho, gatilho) = melhor?;
-    Some((atalho.to_string(), sobra(pedido, gatilho)))
+    // Atalho sem alvo devolve alvo NENHUM. O que sobrou dele ja passou pelo filtro
+    // acima, entao e cortesia ou enchimento ("por favor", "ai") — nao e argumento,
+    // e deixar passar convidaria alguem a ler isso um dia como se fosse.
+    let com_alvo = tab.iter().any(|e| e.atalho == atalho && e.com_alvo);
+    Some((atalho.to_string(), com_alvo.then(|| sobra(pedido, gatilho)).flatten()))
 }
 
 /// O que resta do pedido depois de tirar o gatilho.
@@ -325,6 +362,36 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// Pedir para mutar OUTRA PESSOA nao pode virar "muta voce".
+    #[test]
+    fn atalho_sem_alvo_nao_engole_conteudo() {
+        let t = tabela();
+        for pedido in [
+            "muta o theo no discord",
+            "muta o stitch no discord",
+            "silencia o filipe no discord",
+        ] {
+            assert_eq!(
+                casar_em(&t, pedido),
+                None,
+                "{pedido:?} virou atalho, e o alvo sumiria"
+            );
+        }
+        // O de voce mesmo continua funcionando.
+        for pedido in ["me muta", "muta meu microfone", "muta o discord"] {
+            assert_eq!(
+                casar_em(&t, pedido).map(|(a, _)| a),
+                Some("mutar_discord".to_string()),
+                "{pedido:?}"
+            );
+        }
+        // E sobra de palavra vazia nao derruba nada.
+        assert_eq!(
+            casar_em(&t, "pula essa musica ai").map(|(a, _)| a),
+            Some("proxima_musica".to_string())
+        );
     }
 
     /// Conversa nao pode virar atalho. A tabela e um filtro, nao um ima.

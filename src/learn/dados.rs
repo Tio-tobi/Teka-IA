@@ -1184,8 +1184,10 @@ pub const NOMES_DE_ATALHO: &[&str] = &[
     "embaralha ai",
     "poe no aleatorio",
     "embaralhar",
+    "para de retomar a musica",
     "para de retomar",
     "pode parar de retomar",
+    "nao retoma mais a musica",
     "nao retoma mais",
     "cancela o retomar",
     "toda vez que a musica parar voce retoma",
@@ -1194,6 +1196,7 @@ pub const NOMES_DE_ATALHO: &[&str] = &[
     "retoma sempre",
     "fica retomando a musica",
 ];
+
 
 
 const NOMES: &[&str] = &[

@@ -22,7 +22,9 @@ A seção "O que já foi tentado e não vale repetir" é a mais valiosa dele.
 benchmark de 150     110,67 ± 4,48  no PADRAO (por_palavra, 12 sementes)
                      114,58 ± 3,55  com --patcher entropia (opcional)
 argumento condicional  ~92%        (quando a ferramenta sai certa)
-ferramentas             19         11 sem efeito, 7 com efeito local, 1 para fora
+ferramentas             20         `atalho` entrou em 4c02b67; o custo dela esta
+                                    SENDO MEDIDO (ver secao 4). Os 110,67 acima
+                                    sao do catalogo de 19 e valem ate fechar.
 parâmetros            1,6 M
 para rodar            ~24 MB       binário 1,6 + modelo 6,2 + n-grama 16
 latência              ~103 ms      na CPU, incluindo carregar do disco
@@ -136,12 +138,12 @@ justificativa medida.
 único de enciclopédia; frase composta devolve vazio. Quem pede conselho de
 configuração recebe verbete. Nenhum treino resolve — só trocar a fonte.
 
-### 3.4 Interface: falta o canal de confirmação (dias)
+### 3.4 ~~Interface: falta o canal de confirmação~~ FECHADO em 2026-09-05 (e6d4801)
 
-A web nasce read-only porque `IsTerminal` é falso. Para ela **agir** pelo navegador
-falta um canal de confirmação que não seja terminal — um "faz? [sim/não]" na página,
-com o token e um identificador de pedido. É trabalho pequeno e é o que libera as oito
-ferramentas restantes fora do terminal.
+A web nascia read-only porque `IsTerminal` é falso, e isso deixava as oito ferramentas
+que agem inalcançáveis pelo navegador. Resolvido em **dois passos, não uma espera**: o
+servidor é sequencial, então bloquear no handler esperando resposta travaria tudo. A
+confirmação é por pedido, identificada, de uso único e com prazo de 120s.
 
 ### 3.5 Juntar com o DeepSeek-Harness
 
@@ -331,6 +333,110 @@ minimo de 2 fortes        "mais alto" ficou com [alto] so, e pegou "o consumo
 
 `nao` e `para` ficaram **fora** da lista de vazias de propósito: `nao` é o que
 separa "nao retoma mais" de "retoma sempre", e `para` em "para tudo" é o verbo.
+
+### O Discord com cargo de admin, e tres travas (2026-09-07)
+
+O John perguntou se o Harness nao faria o mesmo com comando do Windows. Faz — eu
+mutei o Discord pelo nome, por UIAutomation, em PowerShell puro, em 461ms. A
+diferenca nao e poder fazer, e **preco e latencia**: 103ms local contra um
+round-trip de LLM, e a ponte WebSocket precisa de processo que sobreviva a chamada,
+coisa que o `tool-pwsh` nao tem ("No state persists between calls").
+
+Mas testar a pergunta dele rendeu tres defeitos, e o ultimo so apareceu porque ele
+disse uma coisa que eu nao sabia: **ele e administrador do servidor**.
+
+**1. A arvore do Chromium nasce fria.** A MESMA consulta, duas vezes seguidas:
+
+```
+1a   NAO ACHOU o controle 'Silenciar'   863ms
+2a   ACHOU  nome='Silenciar'            461ms
+```
+
+Discord e Spotify sao Electron; a arvore de acessibilidade so e construida quando
+um cliente UIA pergunta, e a primeira pergunta volta antes de terminar. Medido no
+reinicio: no instante em que a janela aparece, 7 controles; 5s depois, 1153. E o
+Spotify passou de 25 para 405 sozinho, so por ter sido acordado.
+
+`uia.rs` nao repetia — o primeiro "me muta" depois de a Teka subir falharia, e o
+segundo funcionaria. O pior tipo de defeito, porque parece instabilidade.
+
+**2. Dois botoes com o mesmo nome, e so um alterna.**
+
+```
+#1  pai='Status do usuario e configuracoes'  pats=Value,Toggle,ScrollItem
+#2  pai='' (painel da chamada)               pats=Invoke,ScrollItem
+```
+
+Pegar o primeiro pelo nome funcionava por ORDEM DE ARVORE, nao por desenho. O
+requisito nunca foi "botao chamado X", e **"controle chamado X que sabe alternar"**.
+
+**3. Substring mais cargo de admin.** No Discord do John:
+
+```
+"Silenciar"                    silencia so para ele        local
+"Silenciar voz no servidor"    silencia para todo mundo    PARA FORA
+"Desativar audio no servidor"  idem                        PARA FORA
+"Desconectar"                  expulsa da chamada          PARA FORA
+```
+
+E `"Silenciar voz no servidor"` **contem** `"Silenciar"`. Os de servidor sao item
+de menu de contexto e nao estavam nos 868 controles medidos — mas dois
+`Desconectar` estavam VIVOS, e o botao `"acoes de servidor"` tambem.
+
+E na tabela de gatilhos o buraco irmao, este medido de verdade:
+
+```
+antes   "muta o theo no discord"  ->  mutar_discord, alvo="o theo no"
+```
+
+Ele pedia para mutar o Theo e **ela mutava ele**, jogando "theo" fora calada.
+
+As tres travas:
+
+```
+nome EXATO na alternancia    "Silenciar voz no servidor" deixa de casar
+lista NUNCA_SOZINHA          no servidor / desconectar / expulsar / banir /
+                             acoes de servidor, filtrados em todo acionamento
+sobra tem de ser vocabulario "musica" em "para de retomar a musica" e do mesmo
+DO PROPRIO ATALHO            assunto e passa; "theo" nao esta em lugar nenhum
+                             da entrada — e outro alguem, logo nao e este atalho
+```
+
+O principio escrito no codigo nao e "a Teka nao pode". E **"a Teka nao faz isto
+calada, por casamento aproximado de nome"**. Ato sobre outra pessoa se pede
+explicitamente, e quando existir entra pela borda do `ParaFora`, com uma pergunta.
+
+### Nome nao e identidade: por que "muta o fulano" nunca sai da UI (2026-09-07)
+
+O John perguntou, genuinamente, se ela procuraria na call e mutaria alguem de nome
+parecido. Fui medir na call dele em vez de responder de cabeca.
+
+```
+"dash"   -> 2 casam, e o PRIMEIRO e o resumo do canal de voz, que lista todo
+            mundo dentro e portanto contem o nome de todos
+"an"     -> 9 casam
+"theo"   -> 0, porque ele se escreve 𝕿𝖍𝖊𝖔
+```
+
+E o apelido do proprio John, "Stitch", aparece em **10 dos 881 controles**: a
+janela, um Document, um Hyperlink, um Button, tres Text, o avatar — e um **canal
+de voz chamado Stitch**. Dez controles, sete tipos, uma pessoa.
+
+**Nome nao e identificador numa arvore de UI, e rotulo.** Nao existe casamento
+melhor que conserte isso: a informacao que distingue as pessoas nao esta ali.
+
+Ela esta no ID do Discord — que a Nyxara ja guarda, e que a arvore nunca publica.
+Dai a divisao, que e resposta e nao meio-termo:
+
+```
+sobre VOCE MESMO      UI serve. O botao de mudo nao e achado por nome: e
+                      estrutural, pai "Status do usuario e configuracoes"
+sobre OUTRA PESSOA    so pela API, com ID. Por UI nao e dificil — e impossivel
+```
+
+Isto tambem corrige a escada de reserva que eu tinha desenhado antes: o bot da
+Nyxara nao e "o plano B quando o Spotify falha". Para qualquer coisa que envolva
+identidade de gente, ele e o plano A, e a UI nao e plano nenhum.
 
 ### O eixo do tempo caiu na epoca 1 (2026-09-07)
 

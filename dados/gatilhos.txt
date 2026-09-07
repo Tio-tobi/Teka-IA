@@ -38,10 +38,19 @@
 # `nenhuma_frase_do_benchmark_cai_na_tabela_de_gatilhos`: ele passa as 150
 # frases do benchmark pela tabela e exige zero captura.
 #
-# PARA ATALHOS COM ALVO (tocar_faixa, tocar_playlist), o que sobra do pedido
-# depois de tirar o gatilho vira o alvo:
+# ATALHO COM ALVO leva `*` no nome. O que sobra do pedido depois de tirar o
+# gatilho vira o alvo:
 #
 #   "toca deslocado do napa"  ->  tocar_faixa, alvo="deslocado do napa"
+#
+# E o `*` nao e enfeite: atalho SEM alvo que sobra conteudo NAO casa. Medido,
+# antes desta regra existir:
+#
+#   "muta o theo no discord"  ->  mutar_discord, alvo="o theo no"
+#
+# Voce pedia para mutar o Theo e ela mutava VOCE, jogando "theo" fora calada.
+# "muta o discord" tem as duas palavras fortes espalhadas na frase e casava por
+# cobertura. Sobra de palavra vazia continua valendo ("pula essa musica ai").
 
 # ── musica ──────────────────────────────────────────────────────────────────
 proxima_musica  | pula essa musica, pula a musica, proxima musica, proxima faixa, passa a musica, avanca a musica, pula essa, proxima
@@ -62,8 +71,8 @@ mutar_discord      | me muta no discord, muta meu microfone, desativa meu microf
 ensurdecer_discord | ensurdece no discord, desativa o audio do discord, me ensurdece
 
 # ── tocar coisa especifica (o resto da frase vira o alvo) ───────────────────
-tocar_playlist | toca a playlist, poe a playlist, coloca a playlist, quero a playlist
-tocar_faixa    | toca a musica, poe pra tocar, quero ouvir, coloca a musica, bota pra tocar, toca
+tocar_playlist* | toca a playlist, poe a playlist, coloca a playlist, quero a playlist
+tocar_faixa*   | toca a musica, poe pra tocar, quero ouvir, coloca a musica, bota pra tocar, toca
 
 # ── estado do que esta tocando ──────────────────────────────────────────────
 # "que musica e essa" nao muda nada — so pergunta. Fica aqui e nao na conversa
@@ -75,5 +84,5 @@ embaralhar        | embaralha as musicas, modo aleatorio, embaralha ai, poe no a
 # "parar_de_retomar" vem ANTES de propósito: "para de retomar" contém "retoma",
 # e o desempate por gatilho mais longo resolve, mas a ordem deixa a intenção clara
 # para quem ler a tabela.
-parar_de_retomar | para de retomar, pode parar de retomar, nao retoma mais, cancela o retomar
+parar_de_retomar | para de retomar a musica, para de retomar, pode parar de retomar, nao retoma mais a musica, nao retoma mais, cancela o retomar
 retomar_sempre   | toda vez que a musica parar voce retoma, sempre que a musica parar retoma, retoma sempre a musica, retoma sempre, fica retomando a musica
