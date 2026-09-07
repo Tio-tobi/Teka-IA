@@ -332,6 +332,30 @@ minimo de 2 fortes        "mais alto" ficou com [alto] so, e pegou "o consumo
 `nao` e `para` ficaram **fora** da lista de vazias de propósito: `nao` é o que
 separa "nao retoma mais" de "retoma sempre", e `para` em "para tudo" é o verbo.
 
+### O eixo do tempo caiu na epoca 1 (2026-09-07)
+
+A corrida do braco de 20 comecou e a epoca 1 levou **516s**, contra 155s no braco
+de 19. Fui olhar a maquina antes de acreditar no numero: MIR4, REPO, Spotify e
+Discord no ar, CPU a 83%. O braco de 19 rodou de madrugada, com a maquina vazia.
+
+**3,3x e grande demais para ser uma ferramenta**, e a carga explica inteiro.
+
+O que isto custa a medicao, dito na hora e nao no fim:
+
+```
+ACURACIA    continua valendo — e determinista dada a semente, nao a carga
+TEMPO       morreu. Os bracos rodaram em dias e cargas diferentes.
+```
+
+O desenho alternado do `exp_confirma` existia exatamente para isto: alternar por
+semente faz os dois bracos pagarem a mesma deriva. Aqui eu nao tinha como aplicar,
+e a razao e a propria economia que me agradou — **aproveitar metade da corrida ja
+paga custa o eixo do tempo**. Foi uma troca, nao um descuido, mas eu so a vi depois
+de disparar, o que quer dizer que nao a pesei quando devia.
+
+Custo em tempo, se um dia interessar, pede corrida propria: os dois binarios
+alternados na mesma sessao, sob a mesma carga.
+
 ### Quanto custa a ferramenta 20 — REGISTRADO EM 2026-09-07, ANTES DE RODAR
 
 O John pediu: *"treina com as 20 ferramentas e mede o custo"*. Uma ferramenta nova

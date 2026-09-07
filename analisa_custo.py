@@ -65,8 +65,24 @@ print(f"SECUNDARIO 149 sem a 117  {m2:+.2f}  t={t2:+.2f}  n={n}  pior em {pior2}
 acertou = sum(1 for s in pares if not b[s]["errou_mina"])
 print(f"\na linha 117: o braco de 20 respondeu `perguntar` em {acertou}/{len(pares)}")
 
+# TEMPO NAO E COMPARAVEL ENTRE OS BRACOS, e isto apareceu na epoca 1.
+#
+# O braco de 19 rodou de madrugada com a maquina vazia: epoca 1 em 155s. O de 20
+# comecou com MIR4, REPO, Spotify e Discord no ar, CPU a 83%: epoca 1 em 516s.
+# 3,3x -- grande demais para ser uma ferramenta, e explicado inteiro pela carga.
+#
+# Os bracos rodaram em DIAS diferentes, sob cargas diferentes. Qualquer diferenca
+# de tempo aqui e da maquina, nao do modelo. O desenho alternado do `exp_confirma`
+# existia exatamente para isto, e aqui nao da para aplicar: metade da corrida ja
+# estava paga, e o preco de aproveita-la e perder o eixo do tempo.
+#
+# A ACURACIA continua valendo: e determinista dada a semente, nao a carga.
+#
+# Para medir custo EM TEMPO seria preciso alternar os dois binarios na mesma
+# sessao, sob a mesma carga -- corrida separada, nao esta.
 sa = [a[s]["seg"] for s in pares if a[s]["seg"]]
 sb = [b[s]["seg"] for s in pares if b[s]["seg"]]
 if sa and sb:
-    print(f"\ntempo de 12 epocas   19f {sum(sa)/len(sa):6.0f}s   20f {sum(sb)/len(sb):6.0f}s"
-          f"   {100*(sum(sb)/len(sb))/(sum(sa)/len(sa))-100:+.1f}%")
+    print()
+    print(f"tempo    19f {sum(sa)/len(sa):6.0f}s   20f {sum(sb)/len(sb):6.0f}s"
+          "   -- NAO COMPARAVEL, cargas de maquina diferentes")
