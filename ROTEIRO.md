@@ -300,6 +300,95 @@ múltipla em 3.3, que é a única que hoje tem.
 
 ---
 
+### A tabela de gatilhos roubava do benchmark (2026-09-07)
+
+Escrevi um teste passando as 150 frases do benchmark pela tabela de gatilhos e
+exigindo zero captura. Ele pegou três, e uma **já existia antes de hoje**:
+
+```
+"quero conferir a data no sistema"     e hora             -> mudo
+"o que esta arquivado em target"       e listar_pasta     -> que_musica_e_essa
+"poe no diario.md a anotacao reuniao"  e escrever_arquivo -> embaralhar
+```
+
+Causa comum: a cobertura de 0,66 contava **palavra vazia**. "mudo no sistema" casa
+com qualquer frase que tenha "no" e "sistema" — e `mudo`, a palavra que decide, é
+justo a que falta. É o "manda = fora" de novo, agora na tabela em vez do molde:
+**superfície larga demais rouba de outra ferramenta.**
+
+Consertar exigiu três travas, e as duas últimas só apareceram porque a primeira
+quebrou testes que estavam certos:
+
+```
+palavra vazia nao conta   as tres capturas somem
+teto de 0,90              tirar as vazias encolhe o denominador e a cobertura
+                          chegava a 1,00, EMPATANDO com o literal — "pula essa
+                          musica" virou `que_musica_e_essa`
+minimo de 2 fortes        "mais alto" ficou com [alto] so, e pegou "o consumo
+                          de ram esta alto". Casar difuso uma palavra unica e
+                          busca por substring com passos a mais.
+```
+
+`nao` e `para` ficaram **fora** da lista de vazias de propósito: `nao` é o que
+separa "nao retoma mais" de "retoma sempre", e `para` em "para tudo" é o verbo.
+
+### Quanto custa a ferramenta 20 — REGISTRADO EM 2026-09-07, ANTES DE RODAR
+
+O John pediu: *"treina com as 20 ferramentas e mede o custo"*. Uma ferramenta nova
+acrescenta uma classe à cabeça de intenção e 75 frases de gatilho ao poço de
+argumento. A pergunta é se as outras 19 pioram.
+
+**Metade da medição já estava paga.** O braço `vb` da confirmação (`cf_vb_s19..s30`,
+12 sementes no disco) foi treinado com `teka_vb.exe`, de 41ab886 — e `atalho` só
+entrou em 4c02b67. Conferido no próprio binário: `hora` está lá, `atalho` e
+`pula essa musica` não estão. O diff de `dados.rs` entre 41ab886 e HEAD são 37
+linhas, todas dos 4 commits do `atalho`. Então falta rodar **12 corridas, não 24**.
+
+```
+INSTRUMENTO   `ferramenta certa` de 150, pareado por semente
+              `frases_teste.txt` NAO mudou entre 41ab886 e HEAD (git)
+              base do braco de 19: 112,9 de 150 (desvio 4,4)
+PODER         desvio pareado ~3,8 -> detectavel a 80% e ~3,2 pontos
+              um nulo aqui diz "nao custou mais que ~2 p.p.", nao "custou zero"
+n             12, FIXADO
+```
+
+**A mina da linha 117, dita antes de rodar.** O benchmark tem
+`perguntar | quero ouvir uma playlist relaxante |`, numa seção cujo cabeçalho diz
+*"coisa que ela nao tem"*. Tocar música virou capacidade dela; "quero a playlist" e
+"quero ouvir" são gatilhos. **O gabarito envelheceu**, e o braço de 20 leva um erro
+numa frase em que está certo — viés sistemático contra o braço que estou medindo.
+
+Não conserto a linha: consertar mudaria a régua entre os braços e nada seria
+comparável. Registro os dois, e **lidero pelo primário de propósito, porque é o que
+não me favorece** — se ele não mostrar custo, o secundário só pode estar melhor.
+
+```
+PRIMARIO     150 cruas         conservador, penaliza o braco novo
+SECUNDARIO   149, sem a 117    o gabarito honesto de hoje
+```
+
+### O poço copiado à mão que silenciou duas capacidades (2026-09-07)
+
+`NOMES_DE_ATALHO` em `dados.rs` era cópia manual de `dados/gatilhos.txt`, e a doc
+dizia *"um teste prende as duas listas juntas"*. **O teste não existia.** Havia só a
+direção fácil (frase do poço → atalho existente); a direção que pega esquecimento
+— gatilho da tabela que não chegou ao poço — faltava.
+
+Resultado: acrescentei `embaralhar` e `que_musica_e_essa` à tabela e o poço
+continuou com as 65 frases antigas. As duas capacidades ficaram inalcançáveis pelo
+treino, e nada reclamou. `o_poco_de_atalhos_e_a_tabela_inteira` prende as duas
+direções agora, e `todo_atalho_e_alcancavel` exige que todo atalho tenha fala,
+regra, ou uma linha escrita dizendo por que é peça interna e não pedido.
+
+Duas das quatro exceções que eu tinha escrito na primeira tentativa estavam erradas
+— `ensurdecer_discord` e `parar_musica` **tinham** gatilho. Eu as declarei internas
+por suposição, sem medir. A tabela de tradução das 75 frases, impressa, mostrou que
+cada uma cai no seu próprio atalho, sem uma ambiguidade. **Exceção declarada sem
+medir é dívida, não documentação.**
+
+---
+
 ## 5. Coisas pequenas que ficaram no caminho
 
 - `sonda2.sh` e `tmp_*.rs` são resto de diagnóstico; podem sumir

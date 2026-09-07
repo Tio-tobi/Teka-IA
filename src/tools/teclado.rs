@@ -58,7 +58,7 @@ pub enum Como {
     /// primeiro plano, as cinco trocas de faixa deixaram o foco INTACTO. O caminho
     /// por UIAutomation faz o Spotify subir na frente, o que no meio de uma partida
     /// e exatamente o que se quer evitar.
-    Ponte { cmd: &'static str },
+    Ponte { cmd: &'static str, reserva: Option<&'static [u16]> },
     /// Liga ou desliga uma REGRA PERMANENTE.
     ///
     /// Ligar uma regra e um PEDIDO, nao uma configuracao. O John fala "toda vez que
@@ -86,11 +86,19 @@ pub enum Como {
 /// seriam triviais de adicionar. Não estão aqui porque a isenção de confirmação vale
 /// para o que se desfaz num clique, e nenhum dos dois se desfaz.
 pub const ATALHOS: &[(&str, Como)] = &[
-    // Midia — teclas do SISTEMA. Funcionam sem foco, com o jogo na frente.
-    ("proxima_musica", Como::Teclas(&[VK_MEDIA_NEXT])),
-    ("musica_anterior", Como::Teclas(&[VK_MEDIA_PREV])),
-    ("pausar_musica", Como::Teclas(&[VK_MEDIA_PLAY_PAUSE])),
-    ("tocar_musica", Como::Teclas(&[VK_MEDIA_PLAY_PAUSE])),
+    // Midia — PONTE com a tecla de reserva.
+    //
+    // Uma entrada por acao, e nao duas. Antes havia `proxima_musica` (tecla) e
+    // `proxima_faixa` (ponte) fazendo a mesma coisa, e os gatilhos so apontavam
+    // para uma — capacidade duplicada com metade inalcancavel. Um teste pegou.
+    //
+    // A ponte e melhor quando esta de pe (confirma o que aconteceu e devolve a
+    // faixa); a tecla funciona sempre, inclusive com o Spotify fechado. Tentar a
+    // ponte e cair na tecla da os dois sem pedir escolha a ninguem.
+    ("proxima_musica", Como::Ponte { cmd: "next", reserva: Some(&[VK_MEDIA_NEXT]) }),
+    ("musica_anterior", Como::Ponte { cmd: "prev", reserva: Some(&[VK_MEDIA_PREV]) }),
+    ("pausar_musica", Como::Ponte { cmd: "pause", reserva: Some(&[VK_MEDIA_PLAY_PAUSE]) }),
+    ("tocar_musica", Como::Ponte { cmd: "resume", reserva: Some(&[VK_MEDIA_PLAY_PAUSE]) }),
     ("parar_musica", Como::Teclas(&[VK_MEDIA_STOP])),
     // Volume do sistema.
     ("aumentar_volume", Como::Teclas(&[VK_VOLUME_UP])),
@@ -106,12 +114,10 @@ pub const ATALHOS: &[(&str, Como)] = &[
     // "Spotify" no titulo falha exatamente quando ele esta tocando.
     // Pela ponte: toca por nome SEM subir a janela. Se a extensao nao estiver no
     // ar, o erro diz isso — e ai o `tocar_faixa_na_tela` e a reserva.
-    ("tocar_faixa", Como::Ponte { cmd: "play" }),
-    ("proxima_faixa", Como::Ponte { cmd: "next" }),
-    ("faixa_anterior", Como::Ponte { cmd: "prev" }),
-    ("alternar_musica", Como::Ponte { cmd: "play_pause" }),
-    ("embaralhar", Como::Ponte { cmd: "shuffle" }),
-    ("que_musica_e_essa", Como::Ponte { cmd: "getdata" }),
+    ("tocar_faixa", Como::Ponte { cmd: "play", reserva: None }),
+    ("alternar_musica", Como::Ponte { cmd: "play_pause", reserva: Some(&[VK_MEDIA_PLAY_PAUSE]) }),
+    ("embaralhar", Como::Ponte { cmd: "shuffle", reserva: None }),
+    ("que_musica_e_essa", Como::Ponte { cmd: "getdata", reserva: None }),
     ("tocar_faixa_na_tela", Como::TocarPorNome { janela: "Spotify.exe", campo: "O que você quer ouvir" }),
     // Regras permanentes, ligadas e desligadas pela voz.
     ("retomar_sempre", Como::Regra { nome: "retomar_musica", ligar: true }),
@@ -283,8 +289,20 @@ pub fn mandar_com(nome: &str, alvo: Option<&str>) -> Result<String, String> {
                 (false, false) => format!("nao estava fazendo {regra}"),
             })
         }
-        Some(Como::Ponte { cmd }) => {
-            let r = super::ponte::global()?.comando(cmd, alvo)?;
+        Some(Como::Ponte { cmd, reserva }) => {
+            let r = match super::ponte::global().and_then(|p| p.comando(cmd, alvo)) {
+                Ok(r) => r,
+                Err(e) => {
+                    // Ponte fora do ar: cai na tecla, se houver. Ela age as cegas,
+                    // mas agir as cegas e melhor que nao agir — e o John esta no
+                    // meio de uma partida, nao lendo mensagem de erro.
+                    return match reserva {
+                        Some(t) => mandar_teclas(nome, t)
+                            .map(|s| format!("{s} (pela tecla — a ponte esta fora)")),
+                        None => Err(e),
+                    };
+                }
+            };
             // A extensao devolve JSON; extrai a faixa se houver, senao devolve cru.
             // Pausa pedida A ELA suspende a regra de retomar. Sem isto, ele pede
             // pausa e a regra desfaz 3 segundos depois — a briga que ele mesmo
@@ -424,25 +442,77 @@ mod tests {
         assert!(e.contains("proxima_musica"), "{e}");
     }
 
-    /// O poço do gerador e a lista real têm de ser a MESMA coisa.
+    /// Toda frase do poço tem de TRADUZIR para um atalho que existe.
     ///
-    /// Se divergirem, o treino ensina nome que a ferramenta recusa — ela aprende a
-    /// pedir `pular_faixa` e leva "nao conheco o atalho" na cara toda vez. Erro que
-    /// não aparece em teste nenhum de execução, só na frustração do John.
+    /// O invariante mudou de nível quando o poço deixou de ser nomes de atalho e
+    /// passou a ser as frases de gatilho. Antes: "o nome existe?". Agora: "a frase
+    /// vira um nome que existe?" — porque entre o que o modelo copia e o que a
+    /// ferramenta recebe passou a haver a tradução.
+    ///
+    /// Se divergirem, o treino ensina a copiar uma frase que a ferramenta recusa, e
+    /// o John leva "nao conheco o atalho" toda vez — um erro que nenhum teste de
+    /// execução pega, só a frustração dele.
     #[test]
-    fn o_poco_do_gerador_e_a_lista_real_batem() {
-        let poco = crate::learn::dados::NOMES_DE_ATALHO;
-        for nome in poco {
+    fn toda_frase_do_poco_traduz_para_atalho_que_existe() {
+        for frase in crate::learn::dados::NOMES_DE_ATALHO {
+            let traduzida = crate::tools::gatilhos::casar(frase);
+            let Some((atalho, _)) = traduzida else {
+                panic!("o gerador ensina {frase:?}, que a tabela de gatilhos nao traduz");
+            };
             assert!(
-                como_de(nome).is_some(),
-                "o gerador ensina {nome:?}, que a ferramenta nao conhece"
+                como_de(&atalho).is_some(),
+                "{frase:?} traduz para {atalho:?}, que a ferramenta nao conhece"
             );
         }
+    }
+
+    /// O poço e a tabela têm de ser a mesma lista, nas duas direções.
+    ///
+    /// O poço é cópia manual de `dados/gatilhos.txt`, e cópia manual seca: eu
+    /// acrescentei `embaralhar` e `que_musica_e_essa` à tabela e o poço continuou
+    /// com as frases antigas — as duas capacidades ficaram inalcançáveis pelo
+    /// treino, sem nada reclamar. Este teste é o que reclama.
+    #[test]
+    fn o_poco_de_atalhos_e_a_tabela_inteira() {
+        let da_tabela: Vec<String> = crate::tools::gatilhos::tabela()
+            .into_iter()
+            .flat_map(|e| e.gatilhos)
+            .collect();
+        let no_poco: Vec<&str> = crate::learn::dados::NOMES_DE_ATALHO.to_vec();
+        for g in &da_tabela {
+            assert!(no_poco.iter().any(|f| f == g), "{g:?} esta na tabela e falta no poco");
+        }
+        for f in &no_poco {
+            assert!(da_tabela.iter().any(|g| g == f), "{f:?} esta no poco e sumiu da tabela");
+        }
+    }
+
+    /// Todo atalho tem de ser alcançável — pela fala, ou por uma regra.
+    ///
+    /// Sem isto, uma capacidade pode existir no código e ser inalcançável na vida.
+    /// Foi assim que eu criei `proxima_faixa` duplicando `proxima_musica`: as duas
+    /// faziam a mesma coisa e os gatilhos só apontavam para uma.
+    ///
+    /// A lista de internos é curta e cada entrada tem razão escrita. Ela existe para
+    /// a diferença entre "esqueci de dar um gatilho" e "isto não é pedido, é peça"
+    /// ficar explícita em vez de virar exceção silenciosa.
+    #[test]
+    fn todo_atalho_e_alcancavel() {
+        /// Acionados por REGRA ou como reserva, nao pela fala.
+        const INTERNOS: &[(&str, &str)] = &[
+            ("alternar_musica", "acao da regra `retomar_musica`; o John diz 'pausa' ou 'toca', nunca 'alterna'"),
+            ("tocar_faixa_na_tela", "reserva por UIAutomation, quando a extensao do Spotify nao esta no ar"),
+        ];
+        let frases: Vec<String> = crate::learn::dados::NOMES_DE_ATALHO
+            .iter()
+            .filter_map(|f| crate::tools::gatilhos::casar(f).map(|(a, _)| a))
+            .collect();
+        let acoes: Vec<String> = crate::tools::regras::tabela().into_iter().map(|r| r.acao).collect();
         for (nome, _) in ATALHOS {
-            assert!(
-                poco.contains(nome),
-                "{nome:?} existe na ferramenta mas o gerador nunca ensina a pedir"
-            );
+            let alcancavel = frases.iter().any(|a| a == nome)
+                || acoes.iter().any(|a| a == nome)
+                || INTERNOS.iter().any(|(n, _)| n == nome);
+            assert!(alcancavel, "{nome:?} existe mas nada leva ate ele — nem fala, nem regra");
         }
     }
 }

@@ -964,20 +964,20 @@ const MOLDES: &[Molde] = &[
     // nao aparece no pedido do John, ele e a TRADUCAO do pedido.
     Molde {
         ferramenta: "atalho",
-        frases: &[
-            "manda o atalho {0}",
-            "aciona {0} pra mim",
-            "dispara o atalho {0}",
-            "usa o atalho {0}",
-            "aperta {0}",
-            "faz {0} ai",
-            "{0} por favor",
-            "quero {0}",
-            "preciso de {0}",
-            "roda o atalho {0}",
-            "aciona o atalho {0} agora",
-            "manda {0} rapido",
-        ],
+        // As frases sao os GATILHOS — exatamente o que o John diz. Nao quadros
+        // genericos.
+        //
+        // A primeira versao usava "quero {0}", "preciso de {0}", "faz {0} ai" e
+        // "{0} por favor", com o poco sendo os NOMES dos atalhos. Medido: **20 das
+        // 150 frases do benchmark colidiam**, porque esses quadros nao tem palavra
+        // propria — "quero {0}" rouba "quero conferir a data no sistema". E o erro
+        // que o comentario do poco de `perguntar` documenta, cometido de novo.
+        //
+        // O desenho certo saiu da tabela de gatilhos: ela ja traduz a fala natural
+        // para o nome do atalho, entao o que o modelo precisa aprender e RECONHECER
+        // a frase inteira e copia-la. O `{0}` sozinho e o pedido todo virando
+        // argumento, e `gatilhos::casar` faz o resto.
+        frases: &["{0}", "teka, {0}", "{0} por favor", "{0} ai"],
     },
     Molde {
         ferramenta: "executar_comando",
@@ -1108,12 +1108,93 @@ const DISCOS: &[&str] = &["C:", "D:", "C:\\", "D:\\"];
 /// Poco fechado por natureza: se ela extrair um nome que nao existe la, a chamada
 /// falha com "nao conheco o atalho". Ensinar nome inventado seria ensinar a errar.
 pub const NOMES_DE_ATALHO: &[&str] = &[
-    "proxima_musica", "musica_anterior", "pausar_musica", "tocar_musica",
-    "parar_musica", "aumentar_volume", "diminuir_volume", "mudo",
-    "mutar_discord", "ensurdecer_discord", "tocar_faixa", "tocar_playlist",
-    "proxima_faixa", "faixa_anterior", "alternar_musica", "embaralhar",
-    "que_musica_e_essa", "tocar_faixa_na_tela", "retomar_sempre", "parar_de_retomar",
+    // As FRASES de `dados/gatilhos.txt`, nao os nomes dos atalhos.
+    //
+    // O ponteiro copia trecho do pedido; ele nunca produziria "proxima_musica" a
+    // partir de "pula essa musica". Entao o argumento que ele aprende a copiar e a
+    // FRASE, e `gatilhos::casar` traduz depois.
+    //
+    // A lista e copia manual da tabela, e copia manual seca: eu acrescentei dois
+    // atalhos em `gatilhos.txt` e o poco continuou com os antigos, deixando as
+    // capacidades novas inalcancaveis. `o_poco_de_atalhos_e_a_tabela_inteira`
+    // prende as duas listas nas DUAS direcoes agora.
+    "pula essa musica",
+    "pula a musica",
+    "proxima musica",
+    "proxima faixa",
+    "passa a musica",
+    "avanca a musica",
+    "pula essa",
+    "proxima",
+    "musica anterior",
+    "volta a musica",
+    "faixa anterior",
+    "volta pra anterior",
+    "musica de antes",
+    "pausa a musica",
+    "pausa ai",
+    "para a musica",
+    "pausar",
+    "continua a musica",
+    "retoma a musica",
+    "volta a tocar",
+    "despausa",
+    "para tudo",
+    "encerra a musica",
+    "aumenta o volume",
+    "aumenta o som",
+    "sobe o volume",
+    "sobe o som",
+    "mais alto",
+    "diminui o volume",
+    "abaixa o volume",
+    "abaixa o som",
+    "diminui o som",
+    "mais baixo",
+    "muta o som",
+    "tira o som",
+    "silencia o pc",
+    "mudo no sistema",
+    "me muta no discord",
+    "muta meu microfone",
+    "desativa meu microfone",
+    "me silencia",
+    "muta o discord",
+    "me muta",
+    "ensurdece no discord",
+    "desativa o audio do discord",
+    "me ensurdece",
+    "toca a playlist",
+    "poe a playlist",
+    "coloca a playlist",
+    "quero a playlist",
+    "toca a musica",
+    "poe pra tocar",
+    "quero ouvir",
+    "coloca a musica",
+    "bota pra tocar",
+    "toca",
+    "que musica e essa",
+    "qual musica ta tocando",
+    "que musica ta tocando",
+    "qual e essa musica",
+    "o que esta tocando",
+    "embaralha as musicas",
+    "modo aleatorio",
+    "embaralha ai",
+    "poe no aleatorio",
+    "embaralhar",
+    "para de retomar",
+    "pode parar de retomar",
+    "nao retoma mais",
+    "cancela o retomar",
+    "toda vez que a musica parar voce retoma",
+    "sempre que a musica parar retoma",
+    "retoma sempre a musica",
+    "retoma sempre",
+    "fica retomando a musica",
 ];
+
 
 const NOMES: &[&str] = &[
     "relatorio",
@@ -2278,6 +2359,43 @@ mod testes_destilacao {
             );
         }
         println!("\n  {} casos de teste, nenhum no conjunto escrito a mao", casos.len());
+    }
+
+    /// Nenhuma frase do benchmark pode ser capturada pela tabela de gatilhos.
+    ///
+    /// O molde de `atalho` usava quadros genéricos — "quero {0}", "preciso de {0}",
+    /// "faz {0} ai". Vinte das 150 frases do benchmark casavam com eles, entre elas
+    /// *"quero conferir a data no sistema"* (que é `hora`) e *"faz a matematica de
+    /// (5+3)*2"* (que é `calcular`). O molde estava ensinando que aquelas superfícies
+    /// são atalho — roubando de outras ferramentas, o mesmo erro que já está escrito
+    /// aqui em cima como "manda = fora" e que eu repeti mesmo assim.
+    ///
+    /// Hoje o molde usa as PRÓPRIAS frases de gatilho, e a colisão tem de ser zero.
+    #[test]
+    fn nenhuma_frase_do_benchmark_cai_na_tabela_de_gatilhos() {
+        /// O gabarito que envelheceu, e a razão de ele ficar como está.
+        ///
+        /// A seção do arquivo se chama "coisa que ela nao tem". Tocar música virou
+        /// capacidade dela em 4c02b67, então esta linha hoje está ERRADA: o certo é
+        /// `tocar_playlist`. Não conserto agora porque a régua tem de ser idêntica
+        /// nos dois braços da medição de custo da ferramenta 20 (ver ROTEIRO);
+        /// mudá-la no meio invalidaria as 12 corridas já no disco.
+        const GABARITO_VELHO: &[&str] = &["quero ouvir uma playlist relaxante"];
+
+        let casos = ler_casos_teste(include_str!("../../dados/frases_teste.txt"));
+        let tab = crate::tools::gatilhos::tabela();
+        let mut presos = Vec::new();
+        for c in &casos {
+            if c.ferramenta == "atalho" || GABARITO_VELHO.contains(&c.pedido.as_str()) {
+                continue;
+            }
+            if let Some((a, _)) = crate::tools::gatilhos::casar_em(&tab, &c.pedido) {
+                presos.push(format!("{:?} e {} e a tabela leva para {a}", c.pedido, c.ferramenta));
+            }
+        }
+        assert!(presos.is_empty(), "a tabela de gatilhos rouba do benchmark:
+  {}", presos.join("
+  "));
     }
 
     /// O exemplo com pontuacao COLADA no argumento chega ao treino?

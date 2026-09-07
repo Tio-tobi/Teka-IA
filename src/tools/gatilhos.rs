@@ -57,6 +57,30 @@ pub fn normalizar(texto: &str) -> String {
     fora.trim().to_string()
 }
 
+/// Palavras que não distinguem nada, e por isso não contam na cobertura.
+///
+/// A cobertura de 0,66 pressupõe que as palavras do gatilho carregam sentido. Não
+/// carregam: "mudo no sistema" casava com *"quero conferir a data no sistema"* —
+/// dois de três, 0,67 — porque "no" e "sistema" bastavam e `mudo`, a palavra que
+/// decide, era exatamente a que faltava. Três frases do benchmark caíam assim.
+///
+/// É o mesmo erro dos moldes genéricos ("manda = fora"), agora na tabela: superfície
+/// larga demais rouba de outra ferramenta. A lista é curta de propósito e cada
+/// entrada é gramatical, não temática — nada de tirar "musica" daqui.
+///
+/// `para` fica DE FORA: em "para tudo" ela é o verbo parar, não a preposição. Em
+/// português a distinção não cabe numa lista de palavras. `nao` também fica de fora,
+/// e por um motivo mais forte: é ela que separa "nao retoma mais" de "retoma sempre".
+const VAZIAS: &[&str] = &[
+    "os", "as", "no", "na", "nos", "nas", "em", "de", "do", "da", "ai", "um",
+    "uma", "que", "esta", "isso", "aqui", "pra", "mais",
+];
+
+/// As palavras do gatilho que de fato o distinguem.
+fn palavras_fortes(texto: &str) -> Vec<String> {
+    palavras(texto).into_iter().filter(|p| !VAZIAS.contains(&p.as_str())).collect()
+}
+
 fn palavras(texto: &str) -> Vec<String> {
     normalizar(texto)
         .split_whitespace()
@@ -82,8 +106,17 @@ pub fn pontuacao(gatilho: &str, pedido: &str, pedido_norm: &str) -> f64 {
     if !gn.is_empty() && pedido_norm.contains(&gn) {
         return 0.95;
     }
-    let gp = palavras(g);
-    if gp.is_empty() {
+    // A cobertura olha so as palavras FORTES: ver `VAZIAS`.
+    //
+    // E exige DUAS delas para valer. Com uma so, cobrir e o mesmo que conter a
+    // palavra, e o gatilho vira ima: "mais alto" tem [alto] de forte, e ai
+    // *"o consumo de ram esta alto"* virava `aumentar_volume`. Casar difuso uma
+    // palavra unica e busca por substring com passos a mais.
+    //
+    // Gatilho de uma palavra forte nao fica sem casamento — ele ainda casa literal
+    // e normalizado, que e como "toca" e "pausa ai" sempre funcionaram.
+    let gp = palavras_fortes(g);
+    if gp.len() < 2 {
         return 0.0;
     }
     let pp = palavras(pedido);
@@ -92,7 +125,14 @@ pub fn pontuacao(gatilho: &str, pedido: &str, pedido_norm: &str) -> f64 {
     if comuns < preciso {
         return 0.0;
     }
-    comuns as f64 / gp.len() as f64
+    // TETO DE 0,90, abaixo do 0,95 do nivel normalizado.
+    //
+    // Sem ele a cobertura EMPATA com o casamento literal: tirar as vazias encolhe o
+    // denominador, "que musica e essa" vira [musica, essa], e *"pula essa musica"*
+    // cobre as duas — 2 de 2, pontuacao 1,00. Empatava com o proprio gatilho literal
+    // e vencia no desempate por tamanho. Cobertura e o nivel mais fraco dos tres e
+    // tem de pontuar como tal, sempre.
+    (comuns as f64 / gp.len() as f64).min(0.90)
 }
 
 /// A tabela, embutida no binário. Zero dependência continua valendo.
@@ -263,6 +303,30 @@ mod tests {
         }
     }
 
+    /// Palavra vazia nao carrega cobertura — os tres casos que o benchmark pegou.
+    #[test]
+    fn palavra_vazia_nao_casa_gatilho() {
+        let t = tabela();
+        for (frase, ladrao) in [
+            ("quero conferir a data no sistema", "mudo"),
+            ("o que esta arquivado em target", "que_musica_e_essa"),
+            ("poe no diario.md a anotacao reuniao", "embaralhar"),
+        ] {
+            let r = casar_em(&t, frase).map(|(a, _)| a);
+            assert_ne!(r.as_deref(), Some(ladrao), "{frase:?} voltou a cair em {ladrao}");
+        }
+        // E nenhum gatilho pode ser SO palavra vazia: viraria um ima.
+        for e in &t {
+            for g in &e.gatilhos {
+                assert!(
+                    !palavras_fortes(g).is_empty(),
+                    "o gatilho {g:?} de {} nao tem palavra forte nenhuma",
+                    e.atalho
+                );
+            }
+        }
+    }
+
     /// Conversa nao pode virar atalho. A tabela e um filtro, nao um ima.
     #[test]
     fn conversa_nao_dispara_atalho() {
@@ -291,3 +355,4 @@ mod tests {
         }
     }
 }
+

@@ -15,12 +15,28 @@
 #   atalho | gatilho, outro gatilho, mais um
 #
 # Casamento em tres niveis, igual ao da Nyxara:
-#   1.00  o gatilho aparece literal no pedido
-#   0.95  aparece depois de normalizar (sem acento, so letra e numero)
-#   0.66+ cobertura de palavras do gatilho dentro do pedido
+#   1.00   o gatilho aparece literal no pedido
+#   0.95   aparece depois de normalizar (sem acento, so letra e numero)
+#   0.66+  cobertura das palavras FORTES do gatilho, com teto de 0,90
 #
 # O de MAIOR pontuacao vence; empate vai para o gatilho mais longo, porque
 # "toca a playlist" e mais especifico que "toca".
+#
+# A COBERTURA TEM TRES TRAVAS, e cada uma veio de um vazamento medido:
+#
+#   palavra vazia nao conta  "mudo no sistema" casava com "quero conferir a
+#                            data no sistema" — dois de tres, e `mudo`, a
+#                            palavra que decide, era a que faltava
+#
+#   teto de 0,90             sem ele a cobertura EMPATA com o literal, e
+#                            "que musica e essa" roubava "pula essa musica"
+#
+#   minimo de 2 fortes       com uma so, cobrir e o mesmo que conter: "mais
+#                            alto" pegava "o consumo de ram esta alto"
+#
+# Ao escrever gatilho novo, o teste que conta e
+# `nenhuma_frase_do_benchmark_cai_na_tabela_de_gatilhos`: ele passa as 150
+# frases do benchmark pela tabela e exige zero captura.
 #
 # PARA ATALHOS COM ALVO (tocar_faixa, tocar_playlist), o que sobra do pedido
 # depois de tirar o gatilho vira o alvo:
@@ -48,6 +64,12 @@ ensurdecer_discord | ensurdece no discord, desativa o audio do discord, me ensur
 # ── tocar coisa especifica (o resto da frase vira o alvo) ───────────────────
 tocar_playlist | toca a playlist, poe a playlist, coloca a playlist, quero a playlist
 tocar_faixa    | toca a musica, poe pra tocar, quero ouvir, coloca a musica, bota pra tocar, toca
+
+# ── estado do que esta tocando ──────────────────────────────────────────────
+# "que musica e essa" nao muda nada — so pergunta. Fica aqui e nao na conversa
+# porque a resposta vem do Spotify pela ponte, nao da cabeca dela.
+que_musica_e_essa | que musica e essa, qual musica ta tocando, que musica ta tocando, qual e essa musica, o que esta tocando
+embaralhar        | embaralha as musicas, modo aleatorio, embaralha ai, poe no aleatorio, embaralhar
 
 # ── regras permanentes, ligadas e desligadas pela voz ───────────────────────
 # "parar_de_retomar" vem ANTES de propósito: "para de retomar" contém "retoma",
