@@ -481,6 +481,66 @@ de disparar, o que quer dizer que nao a pesei quando devia.
 Custo em tempo, se um dia interessar, pede corrida propria: os dois binarios
 alternados na mesma sessao, sob a mesma carga.
 
+### O tick e decorativo, e o critico nunca foi alimentado (2026-09-08)
+
+O John disse que a Teka nao aparenta ter raciocinio, e perguntou se os ticks dela
+nao funcionam como pensamento — a nila_mind usava tick para pensar. Fui medir, e ele
+tinha percebido de fora exatamente o que esta no codigo.
+
+**Fato 1: o pensamento nao e lido por ninguem.** O passo PENSAR gera bytes a partir
+do fio e faz `self.fio.push_str(&pensamento)`. Fora do `pulso.rs`, o unico
+consumidor e `main.rs:2227`, e o que ele le e `rel.pensamento.len()` — o TAMANHO.
+Nenhuma decisao muda por causa do conteudo.
+
+**Fato 2: o pensamento e ruido.** Medido com `examples/sonda_pensamento.rs` sobre
+`teka_ct_20_s19.bin`: byte solto, nem palavra, com qualquer fio e qualquer
+temperatura. E coerente — ela **nunca foi treinada a gerar texto livre**, so a
+emitir chamada. E `teka-tronco-nao-transfere` ja enterrou o caminho de ensina-la a
+escrever: pre-treinar tronco em corpus nao transferiu para acuracia de ferramenta.
+**Faze-la falar nao a faria pensar.**
+
+**Fato 3: o critico nunca e treinado no caminho que usamos.**
+
+```
+supervisionado.rs   referencias a `valor`:   0
+reforco.rs                                  15
+```
+
+A corrida padrao (`agente --epocas 12`) e supervisionada. O critico tem parametros,
+produz um numero, e o numero e ruido — e o benchmark ja media isso sem ninguem
+notar:
+
+```
+margem     melhor limiar   0.70  saldo +11
+critico    melhor limiar  -0.30  saldo  +0     em 12 de 12 sementes
+```
+
+**Ela tem dois orgaos de raciocinio: um desligado e outro nunca alimentado.**
+
+### O CAMINHO: deliberacao cabe na Teka, compreensao precisa do Harness
+
+**Passo 1 — alimentar o critico.** Treinar `valor` no supervisionado com alvo
+auto-supervisionado: *"a minha propria escolha vai estar certa?"*. Amostra o argmax
+do modelo no exemplo, rotula certo/errado, ensina o critico a prever. Um termo de
+perda a mais.
+
+Isso da o que `teka-fronteira-do-perguntar` pediu em 04/09 e eu nao tinha
+conectado: **sinal de CAPACIDADE em vez de sinal de SUPERFICIE**. Hoje ela abstem
+porque o verbo e estranho; com o critico treinado, ela abstem porque **preve que vai
+errar**. E o instrumento ja existe e ja esta zerado: `sep_critico`, saldo +0.
+
+**Passo 2 — deliberar.** Trocar o argmax unico por: top-3 intencoes, montar a
+chamada candidata de cada, pontuar com o critico, escolher a melhor ou abster se
+todas forem ruins. **O resultado muda por causa de uma avaliacao interna.**
+
+**O TETO, dito antes de comecar.** Isto faz ela DELIBERAR, nao ENTENDER. Ela passa a
+saber quando nao sabe — enorme, porque 53% dos erros envolvem `perguntar`. Mas
+continua sem entender que "estou desanimado" pede musica animada. Semantica precisa
+de um leitor, e o leitor e a fusao.
+
+**Decisao do John (08/09): fazer o passo 1 assim que o experimento do fora-de-escopo
+fechar.**
+
 ### A INTERVENCAO MUDOU antes de rodar — e por que (2026-09-08)
 
 O plano de ontem era acrescentar a FORMA que falta (curta, imperativa) ao poco do
