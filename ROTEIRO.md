@@ -517,6 +517,59 @@ critico    melhor limiar  -0.30  saldo  +0     em 12 de 12 sementes
 
 **Ela tem dois orgaos de raciocinio: um desligado e outro nunca alimentado.**
 
+### PASSO 1 DO CRITICO — REGISTRADO EM 2026-09-08, ANTES DE RODAR
+
+**A MUDANCA.** `Alvo::auto_critico`, ligado em todo alvo supervisionado. O critico
+passa a prever *"a minha propria escolha vai estar certa?"* — 1 se a chamada que ela
+emitiria bate com o rotulo (ferramenta E argumento), 0 se nao. Alvo discreto,
+calculado no mesmo passo, sem forward extra.
+
+Campo NOVO e nao reuso de `alvo_valor`: `e_reforco = alvo_valor.is_some()` governa a
+contabilidade do placar, e encher aquele campo no supervisionado corromperia as
+metricas em silencio.
+
+**A LINHA DE BASE E O BRACO DE HOJE** (`oos_*`), nao o de ontem. O binario do
+experimento do fora-de-escopo foi compilado ANTES do critico, entao comparar contra
+ontem misturaria duas mudancas. Contra hoje, a unica diferenca e o critico.
+Decidido pelo John em 08/09, **antes de qualquer numero aparecer**.
+
+**INSTRUMENTO — ja existe e ja esta zerado.**
+
+```
+sep_critico   melhor limiar  -0.30  saldo  +0     em 12 de 12 sementes
+(comparar)    margem                saldo +11
+```
+
+Se o passo funcionar, o saldo do critico sai do zero. Nao inventei regua: ela ja e
+impressa em todo log de benchmark, e ja diz zero.
+
+O benchmark de 150 entra como GUARDA, nao como alvo: treinar mais uma cabeca nao
+pode estragar as outras.
+
+**TRES MECANISMOS DITOS ANTES, porque mordem em silencio.**
+
+1. **O alvo se move.** E a correcao do modelo ATUAL. Cedo no treino quase tudo e 0,
+   e o critico so aprende algo util quando a politica estabiliza. Convergencia mais
+   lenta que o resto, por construcao.
+
+2. **A PORTA LATERAL DO CLIPPING.** O gradiente do critico nao flui para o tronco —
+   ja e destacado de proposito, e esta medido no codigo que deixa-lo passar derrubou
+   a intencao de 77% para 56%. **Mas o clipping do Adam e de NORMA GLOBAL**: soma o
+   quadrado de todos os gradientes e, passando do teto, encolhe tudo pela mesma
+   escala. Mais gradiente na soma, escala menor, tronco andando menos por passo.
+
+   **REGRA DE PARADA:** se o benchmark de 150 desabar ja na primeira semente, o
+   suspeito e o clipping e NAO a hipotese; o conserto conhecido e tirar a cabeca de
+   critico da norma. Isto e distinto de "o efeito nao apareceu", e nao vou confundir
+   os dois depois.
+
+3. **Prever a propria correcao pode simplesmente nao ter sinal em 1,6 M.** E mais
+   dificil que classificar. Se o saldo continuar em zero, isso nao e fracasso do
+   plano — e a resposta de que deliberacao precisa de mais capacidade, e ai a fusao
+   sobe na fila.
+
+**DESENHO.** Mesmas 12 sementes (19-30), contra `oos_*`. n=12, FIXADO.
+
 ### O CAMINHO: deliberacao cabe na Teka, compreensao precisa do Harness
 
 **Passo 1 — alimentar o critico.** Treinar `valor` no supervisionado com alvo
