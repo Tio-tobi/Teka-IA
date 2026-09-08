@@ -481,6 +481,45 @@ de disparar, o que quer dizer que nao a pesei quando devia.
 Custo em tempo, se um dia interessar, pede corrida propria: os dois binarios
 alternados na mesma sessao, sob a mesma carga.
 
+### PROXIMO: estreitar a fronteira do `atalho` — REGISTRADO EM 2026-09-07, ANTES
+
+A medicao do custo entregou a familia de erro inteira, com nome:
+
+```
+25 erros, 13 frases, uma forma so: curta e imperativa
+"leva o lixo pra fora"   "cuida disso ai pra mim"   "me situa no tempo ai"
+```
+
+**HIPOTESE.** O poco do `perguntar` nao tem frase curta e imperativa fora-de-escopo.
+O do `atalho` tem 77 delas ("pula essa", "pausa ai", "toca", "proxima"). Entao toda
+frase dessa forma que aparece vai para o `atalho`, por falta de concorrente.
+
+**A MUDANCA.** Acrescentar a FORMA que falta ao poco do `perguntar` — curta e
+imperativa, conteudo diferente. Nao encolher o `atalho`: e o metodo que ja
+funcionou tres vezes (ARQUIVOS 12->60, CONSULTAS 30->77, moldes indiretos).
+
+Cuidado que a suite ja prende: mesma forma, **conteudo diferente**. As 13 frases
+acima estao no benchmark, e frase de teste no gerador e a linha que nao se cruza.
+
+**INSTRUMENTO, e ele aponta para a mudanca.** Frases de `perguntar` e `hora` que
+viram `atalho`, contadas por semente, **excluindo a linha 117** — naquela o modelo
+esta certo e o gabarito e que envelheceu.
+
+```
+base    20 erros em 12 sementes = 1,67 por semente
+se a mudanca funcionar, ESTE numero cai
+benchmark de 150 entra so para confirmar que nada quebrou em volta
+```
+
+**A RESSALVA, dita antes.** O -2,58 nao e significativo, e consertar efeito nao
+significativo e a receita de perseguir ruido. O que sustenta este passo nao e o
+agregado: sao 25 erros concretos numa forma unica. O mecanismo foi **observado**,
+nao inferido de um p. Se o instrumento acima nao se mover, a hipotese morre — nao
+se procura outro numero depois.
+
+**DESENHO.** Mesmas 12 sementes (19-30), braco novo contra `ct_20_*` que ja esta no
+disco. ~7h desatendidas. n=12, FIXADO.
+
 ### FECHADO: a ferramenta 20 custou -2,58, e o custo tem dono (2026-09-07)
 
 ```

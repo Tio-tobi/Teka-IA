@@ -114,6 +114,12 @@ escrever_arquivo | salva a observacao urgente em avisos.txt | avisos.txt
 perguntar | e ai, como voce ta hoje |
 perguntar | voce consegue programar em rust |
 perguntar | me explica como funciona uma rede neural |
+# GABARITO VELHO, mantido de proposito. Quando esta linha foi escrita, tocar
+# musica nao era capacidade dela; virou em 4c02b67. Hoje a resposta certa e
+# `tocar_playlist`. NAO corrijo porque a regua tem de ser identica entre bracos
+# de medicao, e as corridas de 19 e de 20 ferramentas ja estao no disco. Medido:
+# o braco de 20 respondeu `atalho` aqui em 5 de 12 sementes, e estava CERTO.
+# Todo instrumento novo deve excluir esta linha explicitamente.
 perguntar | quero ouvir uma playlist relaxante |
 perguntar | posta isso no instagram pra mim |
 perguntar | manda um zap pro pedro |
