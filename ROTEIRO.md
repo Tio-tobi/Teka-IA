@@ -19,12 +19,12 @@ A seção "O que já foi tentado e não vale repetir" é a mais valiosa dele.
 ## 1. Onde ela está
 
 ```
-benchmark de 150     110,67 ± 4,48  no PADRAO (por_palavra, 12 sementes)
+benchmark de 150     110,33         com as 20 ferramentas (12 sementes, s19-30)
+                     112,92         com 19, mesmas sementes, mesma regua
                      114,58 ± 3,55  com --patcher entropia (opcional)
 argumento condicional  ~92%        (quando a ferramenta sai certa)
-ferramentas             20         `atalho` entrou em 4c02b67; o custo dela esta
-                                    SENDO MEDIDO (ver secao 4). Os 110,67 acima
-                                    sao do catalogo de 19 e valem ate fechar.
+ferramentas             20         `atalho` custou -2,58 (t=-1,84, nao
+                                    significativo). Ver secao 4.
 parâmetros            1,6 M
 para rodar            ~24 MB       binário 1,6 + modelo 6,2 + n-grama 16
 latência              ~103 ms      na CPU, incluindo carregar do disco
@@ -480,6 +480,54 @@ de disparar, o que quer dizer que nao a pesei quando devia.
 
 Custo em tempo, se um dia interessar, pede corrida propria: os dois binarios
 alternados na mesma sessao, sob a mesma carga.
+
+### FECHADO: a ferramenta 20 custou -2,58, e o custo tem dono (2026-09-07)
+
+```
+PRIMARIO   150 cruas       -2,58   t = -1,84   n=12   pior em 7/12
+SECUNDARIO 149 sem a 117   -2,67   t = -1,86
+
+19 ferramentas  112,92        20 ferramentas  110,33
+```
+
+**Nao significativo** — o t critico em n=12 e 2,20. E e exatamente o caso declarado
+antes de rodar: com desvio pareado ~3,8 o detectavel a 80% era ~3,2, e o observado
+e menor. Le-se "nao custou mais que ~3 pontos", nao "custou zero". A melhor
+estimativa continua sendo perda real de ~2,6.
+
+**A mina da linha 117 nao valeu quase nada, e eu errei ao teme-la.** O braco de 20
+respondeu `perguntar` ali em 2 de 12 — mas o de 19 tambem errava aquela frase quase
+sempre. Tirar a linha mudou o resultado em 0,09. Eu tratei como vies sistematico e
+era ruido. Registrar os dois numeros foi o que permitiu ver isso.
+
+**O custo tem dono.** Onde o braco de 20 piorou, somando as 12 sementes:
+
+```
+perguntar -> atalho   0 -> 14        hora -> atalho   0 -> 4
+```
+
+25 erros em 13 frases, ~2,1 por semente contra um total de 2,58. **A ferramenta 20
+disparando quando nao devia explica quase todo o custo.** As frases:
+
+```
+5x  [perguntar]  quero ouvir uma playlist relaxante
+4x  [hora]       me situa no tempo ai
+3x  [perguntar]  leva o lixo pra fora
+3x  [perguntar]  cuida disso ai pra mim
+```
+
+As 5 primeiras sao a linha 117, onde o modelo esta CERTO e o gabarito e velho. As
+outras sao **superficie, nao valor**: frase curta e imperativa, que e a forma exata
+das 77 frases do poco do `atalho` ("pula essa", "pausa ai", "toca", "proxima"). E o
+"manda = fora" outra vez — molde de superficie larga rouba de outra ferramenta.
+
+E houve ganho, que e honesto registrar: `perguntar -> executar_comando` caiu de 29
+para 17, e `perguntar -> rede` de 16 para 4. O -2,58 e o liquido.
+
+**Para a fusao**, que era o motivo de medir: uma ferramenta custou ~2,6 pontos, o
+mecanismo e conhecido, e o conserto e o metodo do 3.2 — forma de frase, nao
+arquitetura. Bate com o precedente de 10->19, que caiu e depois passou do ponto de
+partida. O proximo passo obvio e estreitar a superficie do `atalho` e remedir.
 
 ### Quanto custa a ferramenta 20 — REGISTRADO EM 2026-09-07, ANTES DE RODAR
 
