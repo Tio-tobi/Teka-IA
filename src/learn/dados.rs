@@ -513,14 +513,37 @@ const MOLDES: &[Molde] = &[
             //
             // O modelo não aprendeu "isto está fora"; aprendeu "manda = fora",
             // "amanha = fora". Verbo compartilhado vira sinal, e o sinal vaza.
-            "toca uma musica ai",
-            "poe um som pra tocar",
-            "quero ouvir podcast",
+            // AQUI FICAVAM quatro pedidos de MUSICA, escritos quando tocar musica
+            // nao era capacidade dela. `atalho` chegou em 4c02b67 e envelheceu os
+            // quatro de uma vez:
+            //
+            //   "toca uma musica ai"    -> tocar_faixa
+            //   "poe um som pra tocar"  -> tocar_faixa    (gatilho "poe pra tocar")
+            //   "quero ouvir podcast"   -> tocar_faixa
+            //   "aumenta o volume"      -> aumentar_volume
+            //
+            // O teste acusou uma quinta, "seria bom uma radio tocando", e ela era
+            // FALSO POSITIVO: o gatilho "toca" casava dentro de "tocando", porque o
+            // casamento nao respeitava fronteira de palavra. Consertei o medidor
+            // antes de mexer no dado, e a frase ficou onde estava. Quase "consertei"
+            // dado bom por causa de bug no instrumento.
+            //
+            // O ultimo e o caso puro: a MESMA string estava no poco de `atalho`
+            // rotulada `atalho` e aqui rotulada `perguntar`. Dois rotulos para uma
+            // frase; o modelo nao aprende a fronteira, aprende que ali e sorteio.
+            //
+            // Trocados um por um, e nao apagados, para o tamanho do poco nao mudar
+            // junto — o que muda e QUAIS frases, nao QUANTAS.
+            //
+            // `nenhum_fora_de_escopo_e_coisa_que_ela_faz` percebe da proxima vez.
+            "pede um uber pra mim",
+            "acende a luz da sala",
+            "regula o ar condicionado",
             "entra no youtube",
             "liga pro joao",
             "responde no whatsapp",
             "tira uma selfie",
-            "aumenta o volume",
+            "reserva uma mesa no restaurante",
             "traduz isso pro ingles",
             "inventa um poema",
             "canta pra mim",
@@ -2362,6 +2385,40 @@ mod testes_destilacao {
             );
         }
         println!("\n  {} casos de teste, nenhum no conjunto escrito a mao", casos.len());
+    }
+
+    /// Nenhum exemplo FORA DE ESCOPO pode ser um pedido que ela sabe atender.
+    ///
+    /// Quatro deles eram, e ficaram meses assim porque `atalho` chegou depois deles:
+    ///
+    /// ```text
+    /// "aumenta o volume"      -> aumentar_volume   (e gatilho LITERAL da tabela)
+    /// "toca uma musica ai"    -> tocar_faixa
+    /// "poe um som pra tocar"  -> tocar_faixa
+    /// "quero ouvir podcast"   -> tocar_faixa
+    /// ```
+    ///
+    /// "aumenta o volume" e o caso puro: a MESMA string aparece no poco de `atalho`
+    /// (moldura `{0}`) rotulada `atalho`, e aqui rotulada `perguntar`. Dois rotulos
+    /// para uma frase — o modelo nao aprende a fronteira, aprende que ali e sorteio.
+    ///
+    /// E o comentario que avisa disto esta escrito tres linhas acima da lista. Saber
+    /// a regra nao basta: **capacidade nova envelhece o fora-de-escopo antigo**, e
+    /// so um teste percebe.
+    #[test]
+    fn nenhum_fora_de_escopo_e_coisa_que_ela_faz() {
+        let tab = crate::tools::gatilhos::tabela();
+        let mut presos = Vec::new();
+        for m in MOLDES.iter().filter(|m| m.ferramenta == "perguntar") {
+            for f in m.frases {
+                if let Some((a, _)) = crate::tools::gatilhos::casar_em(&tab, f) {
+                    presos.push(format!("{f:?} e ensinado como `perguntar`, mas a tabela faz {a}"));
+                }
+            }
+        }
+        assert!(presos.is_empty(), "fora-de-escopo que ela sabe atender:
+  {}", presos.join("
+  "));
     }
 
     /// Nenhuma frase do benchmark pode ser capturada pela tabela de gatilhos.

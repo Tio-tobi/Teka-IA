@@ -92,6 +92,28 @@ fn palavras(texto: &str) -> Vec<String> {
         .collect()
 }
 
+/// O texto contém o trecho como PALAVRA INTEIRA?
+///
+/// Sem isto, o gatilho "toca" casa com *"seria bom uma radio tocando"* e com
+/// *"poe um som pra tocar"* — e casa no nível literal, 1,00, que vence tudo.
+/// Descoberto quando um teste acusou aquelas duas frases de serem coisa que ela
+/// sabe fazer: não eram, o medidor é que estava largo.
+///
+/// O mesmo defeito estragava o alvo: *"poe um som pra tocar"* devolvia
+/// `"poe um som pra r"`, porque `sobra` recortava "toca" de dentro de "tocar".
+///
+/// Trabalha sobre a forma normalizada, onde toda fronteira já virou espaço — então
+/// basta procurar o trecho cercado de espaços.
+fn contem_inteiro(texto_norm: &str, trecho_norm: &str) -> Option<usize> {
+    if trecho_norm.is_empty() {
+        return None;
+    }
+    let h = format!(" {texto_norm} ");
+    let n = format!(" {trecho_norm} ");
+    // O índice devolvido é o do texto original normalizado, sem o espaço que eu pus.
+    h.find(&n).map(|i| i)
+}
+
 /// Quanto este gatilho casa com o pedido. `0.0` = não casa.
 ///
 /// Os três níveis são os da Nyxara. A cobertura de 0,66 também: exigir todas as
@@ -102,12 +124,12 @@ pub fn pontuacao(gatilho: &str, pedido: &str, pedido_norm: &str) -> f64 {
     if g.is_empty() {
         return 0.0;
     }
-    if pedido.to_lowercase().contains(&g.to_lowercase()) {
-        return 1.0;
-    }
+    // Palavra inteira nos dois niveis: ver `contem_inteiro`.
     let gn = normalizar(g);
-    if !gn.is_empty() && pedido_norm.contains(&gn) {
-        return 0.95;
+    if contem_inteiro(pedido_norm, &gn).is_some() {
+        // Literal (1,00) se aparece tal e qual no texto cru; normalizado (0,95) se
+        // so aparece depois de tirar acento e pontuacao.
+        return if pedido.to_lowercase().contains(&g.trim().to_lowercase()) { 1.0 } else { 0.95 };
     }
     // A cobertura olha so as palavras FORTES: ver `VAZIAS`.
     //
@@ -240,7 +262,8 @@ pub fn casar_em(tab: &[Entrada], pedido: &str) -> Option<(String, Option<String>
 fn sobra(pedido: &str, gatilho: &str) -> Option<String> {
     let pn = normalizar(pedido);
     let gn = normalizar(gatilho);
-    let resto = match pn.find(&gn) {
+    // `contem_inteiro` devolve o indice dentro de " {pn} ", entao desconto o espaco.
+    let resto = match contem_inteiro(&pn, &gn).map(|i| i.saturating_sub(1)) {
         Some(i) => format!("{} {}", &pn[..i], &pn[i + gn.len()..]),
         // Casou por cobertura de palavras: tira as palavras do gatilho uma a uma.
         None => {
@@ -258,6 +281,29 @@ fn sobra(pedido: &str, gatilho: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Gatilho e palavra inteira, nao pedaco de palavra.
+    #[test]
+    fn gatilho_nao_casa_pedaco_de_palavra() {
+        let t = tabela();
+        // "toca" dentro de "tocando" nao pode disparar nada.
+        for fora in ["seria bom uma radio tocando", "quem e o tocador de violao"] {
+            let r = casar_em(&t, fora);
+            assert!(r.is_none(), "{fora:?} casou pedaco de palavra: {r:?}");
+        }
+        // Mas "poe um som pra tocar" NAO e pedaco de palavra: e o gatilho inteiro
+        // "poe pra tocar" casando por cobertura. Aquilo e pedido de musica mesmo, e
+        // tem de continuar casando — foi por confundir os dois que eu quase
+        // "consertei" o codigo certo.
+        assert_eq!(
+            casar_em(&t, "poe um som pra tocar").map(|(a, _)| a),
+            Some("tocar_faixa".to_string())
+        );
+        // E o de verdade continua casando.
+        let (a, alvo) = casar_em(&t, "toca deslocado do napa").unwrap();
+        assert_eq!(a, "tocar_faixa");
+        assert_eq!(alvo.as_deref(), Some("deslocado do napa"));
+    }
 
     #[test]
     fn normaliza_como_a_nyxara() {

@@ -481,6 +481,51 @@ de disparar, o que quer dizer que nao a pesei quando devia.
 Custo em tempo, se um dia interessar, pede corrida propria: os dois binarios
 alternados na mesma sessao, sob a mesma carga.
 
+### A INTERVENCAO MUDOU antes de rodar — e por que (2026-09-08)
+
+O plano de ontem era acrescentar a FORMA que falta (curta, imperativa) ao poco do
+`perguntar`. Antes de escrever uma linha, reli a minha propria memoria
+`teka-fronteira-do-perguntar`, de 04/09, que diz o contrario com dado:
+
+> `perguntar` e aprendida como o COMPLEMENTO das superficies dos moldes, nao como
+> conceito. Ampliar o poco fora-de-escopo nao funciona; e a regra do proprio
+> `dados.rs` proibe exemplo fora-de-escopo de compartilhar verbo com ferramenta
+> real — o poco esta proibido de cobrir a regiao onde as falhas vivem.
+
+Entao fui olhar o poco em vez de ampliar. **Quatro exemplos fora-de-escopo eram
+pedidos que ela hoje ATENDE:**
+
+```
+"aumenta o volume"      -> aumentar_volume    (e gatilho LITERAL da tabela)
+"toca uma musica ai"    -> tocar_faixa
+"poe um som pra tocar"  -> tocar_faixa
+"quero ouvir podcast"   -> tocar_faixa
+```
+
+O primeiro e o caso puro: **a mesma string** estava no poco de `atalho` rotulada
+`atalho` e no fora-de-escopo rotulada `perguntar`. Dois rotulos para uma frase. O
+modelo nao aprende a fronteira ali — aprende que ali e sorteio.
+
+Foram escritos quando tocar musica nao era capacidade dela. **Capacidade nova
+envelhece o fora-de-escopo antigo**, e nada percebia.
+
+**A NOVA INTERVENCAO** e trocar esses quatro por pedidos de dominios que ela
+realmente nao tem (uber, luz da sala, ar condicionado, mesa em restaurante),
+**um por um**, para o tamanho do poco nao mudar junto: o que muda e QUAIS frases,
+nao QUANTAS. Nao e ampliar o poco — e tirar contradicao. Intervencao diferente da
+que a memoria enterrou.
+
+**O INSTRUMENTO CONTINUA O MESMO**, e continua apontando para a mudanca: frases de
+`perguntar` e `hora` que viram `atalho`, por semente, excluindo a linha 117. Base:
+1,67 por semente.
+
+**E o teste que achou isso quase me fez consertar dado bom.** Ele acusou uma quinta
+frase, "seria bom uma radio tocando" — falso positivo: o gatilho "toca" casava
+dentro de "tocando", porque o casamento nao respeitava fronteira de palavra. O
+mesmo defeito estragava o alvo ("poe um som pra tocar" devolvia "poe um som pra r").
+**Consertei o medidor antes de agir sobre o que ele dizia**, e a frase ficou onde
+estava.
+
 ### PROXIMO: estreitar a fronteira do `atalho` — REGISTRADO EM 2026-09-07, ANTES
 
 A medicao do custo entregou a familia de erro inteira, com nome:
