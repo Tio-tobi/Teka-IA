@@ -98,6 +98,9 @@ impl Exemplo {
             peso: 1.0,
             apenas_intencao: false,
             alvo_valor: None,
+            // Supervisionado: o critico aprende a prever a PROPRIA correcao. Ver
+            // `Alvo::auto_critico` — a cabeca existia e nunca era alimentada aqui.
+            auto_critico: true,
         })
     }
 }

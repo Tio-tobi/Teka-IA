@@ -72,6 +72,34 @@ pub const MAX_SLOTS: usize = 4;
 /// prever recompensa em vez de entender pedidos.
 pub const COEF_CRITICO: f64 = 0.5;
 
+/// Erro quadrático do crítico contra um alvo 0/1, e o gradiente que vai com ele.
+///
+/// Vive fora do laço porque é chamado de DOIS lugares: nos alvos `apenas_intencao`
+/// a chamada inteira é a ferramenta, e nos completos a correção só é conhecida
+/// depois do ponteiro. Duplicar as quatro linhas era como as duas versões
+/// divergiriam.
+///
+/// Regressão simples, e não sigmoide com entropia cruzada: é o mesmo caminho de
+/// gradiente que o reforço já usa e que o gradcheck já cobre. Alvo 0/1 numa
+/// regressão dá uma estimativa de probabilidade que basta para ordenar — e ordenar
+/// é tudo que `sep_critico` pede.
+fn critico<T: Float>(
+    cache: &mut CabecasCache<T>,
+    b: usize,
+    certo: bool,
+    inv_b: T,
+    com_grad: bool,
+) -> f64 {
+    let alvo = if certo { T::ONE } else { T::ZERO };
+    let d = cache.valor[b] - alvo;
+    if com_grad {
+        // `=` e nao `+=`: o bloco de `alvo_valor` la em cima e o reforco, e um alvo
+        // nunca e os dois (`auto_critico` e falso quando ha recompensa observada).
+        cache.dvalor[b] = d * T::from_f64(COEF_CRITICO) * inv_b;
+    }
+    COEF_CRITICO * 0.5 * (d * d).to_f64()
+}
+
 /// O que se quer que a Teka responda a um pedido.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Alvo {
@@ -97,6 +125,42 @@ pub struct Alvo {
     /// `None` em exemplos supervisionados: não houve ação no mundo, então não há
     /// retorno a prever.
     pub alvo_valor: Option<f32>,
+    /// Treinar o crítico com a **própria correção deste passo** como alvo.
+    ///
+    /// ## Por que existe
+    ///
+    /// A cabeça de crítico tinha ZERO referências em `supervisionado.rs` — só
+    /// `reforco.rs` a alimentava, e a corrida padrão é supervisionada. Ela tinha
+    /// parâmetros e produzia ruído, e o benchmark já media isso sem ninguém notar:
+    ///
+    /// ```text
+    /// margem     melhor limiar   0.70  saldo +11
+    /// critico    melhor limiar  -0.30  saldo  +0     em 12 de 12 sementes
+    /// ```
+    ///
+    /// ## O que ela passa a prever
+    ///
+    /// Não a recompensa do mundo (não houve ação), e sim **"a minha própria escolha
+    /// vai estar certa?"** — 1 se a chamada que ela emitiria bate com o rótulo, 0
+    /// se não. Alvo discreto, calculado no mesmo passo, sem forward extra.
+    ///
+    /// Isso é um sinal de **capacidade**, não de superfície. Hoje ela abstém porque
+    /// o verbo é estranho (medido: `perguntar` é aprendida como o complemento das
+    /// superfícies dos moldes). Com o crítico treinado ela pode abster porque
+    /// **prevê que vai errar** — que é outra coisa.
+    ///
+    /// ## Por que um campo novo em vez de reusar `alvo_valor`
+    ///
+    /// `e_reforco = alvo_valor.is_some()` governa a contabilidade do placar. Encher
+    /// `alvo_valor` no supervisionado ligaria aquele caminho e corromperia as
+    /// métricas reportadas, silenciosamente.
+    ///
+    /// ## O alvo se move
+    ///
+    /// É a correção do modelo ATUAL, então ele muda enquanto o modelo aprende: cedo
+    /// no treino quase tudo é 0. É o normal de cabeça de calibração, e o preço é
+    /// convergir mais devagar que o resto.
+    pub auto_critico: bool,
     /// Quando `true`, só a intenção entra na perda.
     ///
     /// Passar `None` para ponteiro e presença ensinaria "este pedido não tem
@@ -123,6 +187,7 @@ impl Alvo {
             peso: 1.0,
             apenas_intencao: false,
             alvo_valor: None,
+            auto_critico: true,
         }
     }
 
@@ -135,6 +200,9 @@ impl Alvo {
             peso: vantagem,
             apenas_intencao: true,
             alvo_valor: Some(recompensa),
+            // No reforco o alvo e a recompensa OBSERVADA, que e melhor: ela mede o
+            // que aconteceu no mundo, nao o que o proprio modelo acha.
+            auto_critico: false,
             ..Self::vazio(acao)
         }
     }
@@ -559,6 +627,10 @@ impl<T: Float> Cabecas<T> {
                 if int_ok {
                     placar.tudo_certo += 1;
                 }
+                // Aqui a chamada inteira E a ferramenta: nao ha argumento a conferir.
+                if alvo.auto_critico {
+                    perda += critico(cache, b, int_ok, inv_b, grad.is_some());
+                }
                 continue;
             }
 
@@ -665,6 +737,12 @@ impl<T: Float> Cabecas<T> {
             placar.n += 1;
             if int_ok && tudo_ok {
                 placar.tudo_certo += 1;
+            }
+            // So aqui a correcao COMPLETA e conhecida — ferramenta e argumento. Por
+            // isso o critico automatico fica no fim do laco, e nao junto do bloco de
+            // `alvo_valor` la em cima.
+            if alvo.auto_critico {
+                perda += critico(cache, b, int_ok && tudo_ok, inv_b, grad.is_some());
             }
         }
         perda /= batch as f64;
@@ -891,4 +969,55 @@ fn argmax<T: Float>(row: &[T]) -> usize {
         }
     }
     melhor
+}
+
+#[cfg(test)]
+mod testes_critico {
+    use super::*;
+
+    /// O supervisionado alimenta o critico; o reforco usa a recompensa observada.
+    ///
+    /// Este teste existe porque a cabeca ficou com ZERO referencias em
+    /// `supervisionado.rs` por meses. Ela tinha parametros, produzia numero, e o
+    /// numero era ruido -- e o benchmark ja media aquilo (saldo +0 em 12 de 12
+    /// sementes) sem ninguem ler.
+    #[test]
+    fn so_o_supervisionado_usa_o_alvo_automatico() {
+        let sup = Alvo::vazio(0);
+        assert!(sup.auto_critico, "supervisionado tem de alimentar o critico");
+        assert!(sup.alvo_valor.is_none(), "nao ha recompensa observada aqui");
+
+        let rf = Alvo::reforco(0, 1.0, 0.7);
+        assert!(!rf.auto_critico, "no reforco o alvo e a recompensa do mundo");
+        assert_eq!(rf.alvo_valor, Some(0.7));
+    }
+
+    /// A perda cai quando a previsao se aproxima, e o gradiente aponta pra la.
+    #[test]
+    fn o_critico_persegue_a_propria_correcao() {
+        let mut c = CabecasCache::<f64>::new();
+        c.valor = vec![0.0];
+        c.dvalor = vec![0.0];
+        let mut medir = |c: &mut CabecasCache<f64>, previsao: f64, certo: bool| {
+            c.valor[0] = previsao;
+            critico(c, 0, certo, 1.0, true)
+        };
+
+        // Acertou: o alvo e 1. Prever 0,9 doi menos que prever 0,1.
+        let longe = medir(&mut c, 0.1, true);
+        let perto = medir(&mut c, 0.9, true);
+        assert!(perto < longe, "perto={perto} deveria doer menos que longe={longe}");
+
+        // O gradiente empurra a previsao PARA CIMA quando ela esta baixa e o alvo e 1.
+        medir(&mut c, 0.1, true);
+        assert!(c.dvalor[0] < 0.0, "dvalor={} deveria ser negativo", c.dvalor[0]);
+
+        // Errou: o alvo e 0, e agora o gradiente empurra para BAIXO.
+        medir(&mut c, 0.9, false);
+        assert!(c.dvalor[0] > 0.0, "dvalor={} deveria ser positivo", c.dvalor[0]);
+
+        // Previsao exata nao doi nem empurra.
+        assert_eq!(medir(&mut c, 1.0, true), 0.0);
+        assert_eq!(c.dvalor[0], 0.0);
+    }
 }
