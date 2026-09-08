@@ -2229,6 +2229,18 @@ fn rodar_pulso(args: &Args) {
                 rel.segundos
             );
         }
+        // A REGRA QUE AGIU tem de aparecer.
+        //
+        // `vigiar` e o unico ponto do tick que age no mundo, e a doc dela diz
+        // "regra que age em silencio e regra que ninguem consegue depurar quando
+        // der errado". Eu escrevi a frase e nao liguei o fio: `Relatorio.vigia`
+        // ficou um dia inteiro sendo preenchido e lido por ninguem.
+        //
+        // Fora da linha do tick de proposito: nao acontece todo tick, e afogada no
+        // meio dela passaria batido justamente quando importa.
+        if let Some(v) = &rel.vigia {
+            println!("       regra: {v}");
+        }
 
         if args.ticks > 0 && pulso.ticks() >= args.ticks {
             println!("
