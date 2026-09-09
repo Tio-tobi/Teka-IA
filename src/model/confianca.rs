@@ -168,7 +168,19 @@ impl Separacao {
             return Vec::new();
         }
         todos.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        let mut fora = Vec::with_capacity(n);
+        // PRIMEIRO CANDIDATO: ABAIXO DE TUDO — a opcao de NAO ABSTER.
+        //
+        // Sem ela a grade obriga a abster em alguma coisa, e o "melhor" limiar vira
+        // o menos ruim em vez do melhor. Medido: o braco do critico deu saldo -4,17
+        // contra +0 do base, e aquilo nao media o critico -- media a grade. O base
+        // tinha a opcao (limiar abaixo de todos os valores) e o tratado nao.
+        //
+        // Nao abster tem saldo 0 por definicao: zero erro evitado, zero acerto
+        // perdido. E o piso honesto de qualquer regra de abstencao, e toda
+        // comparacao precisa dele dos dois lados.
+        let mut fora = Vec::with_capacity(n + 1);
+        let menor = todos[0];
+        fora.push(menor - 1.0);
         for i in 1..=n {
             // Quantis internos: o 0 e o 1 nao servem de limiar (abstem nada ou tudo).
             let q = i as f64 / (n + 1) as f64;
@@ -212,6 +224,29 @@ impl Separacao {
 mod tests {
     use super::*;
 
+    /// Sinal que NAO separa nao pode dar saldo negativo: nao abster e sempre opcao.
+    ///
+    /// Foi o defeito que invalidou o primario do passo 1 do critico. A grade por
+    /// quantil comecava DENTRO da distribuicao, entao toda opcao abstinha em alguma
+    /// coisa, e o melhor de um conjunto de escolhas ruins parece uma escolha ruim.
+    #[test]
+    fn nao_abster_e_sempre_uma_opcao() {
+        let mut s = Separacao::default();
+        // Sinal INVERTIDO de proposito: o erro pontua ALTO e o acerto pontua baixo.
+        // Como `em` abstem no que fica ABAIXO do limiar, aqui abster sempre pega
+        // acerto antes de pegar erro — nenhum limiar compensa.
+        for i in 0..50 {
+            s.anotar(true, 0.50 + i as f64 * 0.01);
+        }
+        for i in 0..10 {
+            s.anotar(false, 1.20 + i as f64 * 0.01);
+        }
+        let cand = s.candidatos_dos_dados(7);
+        let (limiar, saldo) = s.melhor_limiar(&cand);
+        assert_eq!(saldo, 0, "com sinal invertido o melhor e nao abster, e nao {saldo}");
+        assert!(limiar < 0.50, "o limiar de nao abster tem de ficar abaixo de tudo");
+    }
+
     /// A grade sai dos dados, entao nao tem como ficar fora de escala.
     ///
     /// O caso que motivou: valores perto de 0,97 contra uma grade que ia ate 0,10.
@@ -231,6 +266,9 @@ mod tests {
             cand.iter().any(|c| *c > 0.96 && *c <= 0.976),
             "a grade {cand:?} nao alcanca os valores"
         );
+        // E TEM DE OFERECER NAO ABSTER, senao o "melhor" limiar e so o menos ruim.
+        let (_, saldo) = s.melhor_limiar(&cand);
+        assert!(saldo >= 0, "sem a opcao de nao abster, o saldo virou {saldo}");
         // E o limiar entre os dois grupos separa mesmo: evita os 10 erros sem
         // perder nenhum acerto.
         let (evitados, perdidos) = s.em(0.970);
