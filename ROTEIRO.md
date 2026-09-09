@@ -518,6 +518,58 @@ critico    melhor limiar  -0.30  saldo  +0     em 12 de 12 sementes
 
 **Ela tem dois orgaos de raciocinio: um desligado e outro nunca alimentado.**
 
+### FECHADO: o critico saiu do zero, mas nao paga como abstencao (2026-09-09)
+
+```
+PRIMARIO (corrigido)   saldo do critico    base 0,00  ->  0,67
+                       10 de 12 sementes dao ZERO, ou seja "nao abster"
+A CABECA SAIU DO ZERO  separacao bruta     0,000  ->  0,850
+                       normalizada (d')            0,62
+GUARDA                 benchmark de 150    113,50 ->  116,17   (+2,67, t=1,88)
+```
+
+**Funcionou como mecanismo e falhou como ferramenta.** A cabeca estava morta —
+previa `0,000` para tudo, em 12 de 12. Agora discrimina, com d' ~ 0,62. E a primeira
+vez que ela faz alguma coisa no caminho supervisionado.
+
+**Mas como regra de abstencao nao paga.** Em 10 das 12 sementes o melhor limiar e
+"nao abster". A margem, que ja existia, rende +5 por semente. d' de 0,62 nao e
+sobreposicao pequena o bastante: para evitar um erro, destroi mais de um acerto.
+
+A regra de parada NAO disparou — o benchmark nao desabou, entao a suspeita do
+clipping esta descartada. Ele ate subiu 2,67, o que eu **nao previ** (eu previa risco
+de queda). Nao e significativo em n=12 e nao tenho explicacao; fica como **nao
+explicado**, e nao como vitoria.
+
+**O PRIMARIO BRUTO ESTAVA INVALIDO, e o defeito era meu.** Ele deu -4,17 com
+t=-3,07. Comparando as duas tabelas:
+
+```
+MARGEM    comeca em 0,05 -> saldo 0   (a grade OFERECE nao abster) e sobe a +5
+CRITICO   comeca em 2,93 -> saldo -5  (a grade comeca DENTRO da distribuicao)
+```
+
+A grade por quantil nunca oferecia "nao abster". O base tinha essa opcao (limiar
+abaixo dos zeros de uma cabeca morta) e o tratado nao. O -4,17 media A GRADE.
+Corrigido em `candidatos_dos_dados`, com teste.
+
+**TERCEIRA VEZ que o instrumento morde neste mesmo experimento:** grade fora de
+escala, critico saturado, grade sem o piso. As tres vezes eu quase li o defeito da
+regua como resposta do modelo. Vira regra: **regua nova erra mais que o codigo
+medido** — sonda curta antes de corrida longa, sempre que o instrumento for novo.
+
+### O QUE ISSO FAZ COM O PLANO
+
+Pelo que estava registrado antes de rodar: *"se o saldo continuar em zero, a fusao
+sobe na fila"*. O saldo e zero. **A fusao sobe.** Ela ja tem o portao cruzado (4.5) e
+as tres pecas de plumbing construidas (4.9).
+
+**Ressalva que nao pode se perder:** a medicao mata a abstencao POR LIMIAR, nao o
+RANQUEAMENTO. O passo 2 era top-3 intencoes, pontuar, escolher ou abster. Ordenar
+candidatos DENTRO do mesmo pedido e tarefa diferente e mais facil que um limiar
+global — a sobreposicao entre pedidos nao atrapalha. Continua nao testado e continua
+plausivel.
+
 ### PASSO 1 DO CRITICO — REGISTRADO EM 2026-09-08, ANTES DE RODAR
 
 **A MUDANCA.** `Alvo::auto_critico`, ligado em todo alvo supervisionado. O critico
