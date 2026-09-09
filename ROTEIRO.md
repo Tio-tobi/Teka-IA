@@ -518,6 +518,80 @@ critico    melhor limiar  -0.30  saldo  +0     em 12 de 12 sementes
 
 **Ela tem dois orgaos de raciocinio: um desligado e outro nunca alimentado.**
 
+### PROVADO: a Teka pode usar as ferramentas do Harness sem o LLM (2026-09-09)
+
+O John perguntou se nao dava para importar as ferramentas do Harness, "o legal e
+ela usar para realizar o pedido melhor". Fui verificar, e da.
+
+**O problema que isso resolve.** O protocolo SDK deles tem cinco metodos
+(`initialize`, `session/prompt`, `shutdown`, e duas notificacoes) e **todos passam
+por um agente com LLM decidindo**. Nao existe "execute esta ferramenta". Pela porta
+do SDK, quem escolhe a ferramenta e o LLM deles — a cabeca de intencao da Teka fica
+de fora. A divisao que estava escrita aqui nao cabia por ali, e eu tinha documentado
+sem conferir a lista de metodos.
+
+**A porta que existe.** `ctx.tools` e servico publico, e o
+`ToolExecutionInput.agent` e **opcional** ("set by the agent loop"). Entao um plugin
+comum, montado no `cordis.yml`, ve e executa.
+
+**Medido, com um plugin de 100 linhas (`teka-ponte.mjs`):**
+
+```
+ctx.tools.schemas()   ->  25 ferramentas
+   grep · glob · read · write · edit · str_replace_editor · read_image
+   web_search · pwsh · todo_write · skill
+   job_list · job_output · job_kill
+   subagent · subagent_fork · workflow · ralph · send_message
+   get_goal · create_goal · update_goal · list_agents · interrupt_agent
+
+ctx.tools.execute()   ->  `glob` rodou SEM agente e devolveu arquivos de verdade
+   { isError: false, content: [...], meta: {...}, value: {...} }
+```
+
+Basta `callId`, `name`, `arguments` e `signal`. **Sem chave de API, sem token por
+acao, sem latencia de rede** — e com a pipeline de seguranca deles inteira no
+caminho (politica, guardas, tempo-limite).
+
+**TRES TROPECOS, e o terceiro e o que ensina.**
+
+```
+0 ferramentas no apply   era ORDEM, nao escopo. O Cordis monta em PARALELO, e
+                         `inject` espera o SERVICO existir, nao o conteudo chegar.
+                         Amostrar ao longo do tempo separou as duas explicacoes:
+                         0 no apply, 25 em 0,25s
+
+signal faltando          `callerCancelled` lia `.aborted` de undefined
+
+CONTROLE POSITIVO        `*.json` num diretorio COM package.json devolveu "No
+FALHOU                   files found". Fui ler o contrato em vez de chutar:
+                         `path` "defaults to the session workspace", e nao havia
+                         sessao. Com caminho explicito, achou tudo
+```
+
+O terceiro quase passou: **a primeira execucao devolveu vazio e eu quase li como
+sucesso.** Sem o controle positivo eu teria concluido que executava quando so estava
+devolvendo nada.
+
+### O DESENHO NOVO DA FUSAO
+
+```
+MCP/ferramentas   a Teka decide (103 ms, local) e as ferramentas DELES executam
+                  -- sem LLM, sem custo por acao
+LLM               so quando falta SENTIDO: "toca algo pra me animar" virando busca
+```
+
+Isso entrega o que o John decidiu como alvo — **as ferramentas do Harness** — sem
+terceirizar a decisao, que era o preco da porta do SDK.
+
+**O que falta:** trocar o plugin de diagnostico por um servidor de linha
+(`tools/list`, `tools/call`) e ligar o cliente que ja existe do lado da Teka
+(`json.rs`, `harness.rs`, `harness_proc.rs`). O transporte e o mesmo; muda so o
+vocabulario.
+
+**E a regua nova continua pendente**, e ela nao e trabalho meu sozinho:
+[[teka-regua-independente]] registra que treino e benchmark meus ja compartilharam
+um ponto cego de 24 pontos.
+
 ### FECHADO: o critico saiu do zero, mas nao paga como abstencao (2026-09-09)
 
 ```
