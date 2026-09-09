@@ -16,6 +16,7 @@ pub mod prim;
 pub mod diario;
 pub mod execucao;
 pub mod gatilhos;
+pub mod harness;
 pub mod oficina;
 pub mod ponte;
 pub mod regras;
