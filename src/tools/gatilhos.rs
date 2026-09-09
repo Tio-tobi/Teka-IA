@@ -258,6 +258,38 @@ pub fn casar_em(tab: &[Entrada], pedido: &str) -> Option<(String, Option<String>
     Some((atalho.to_string(), com_alvo.then(|| sobra(pedido, gatilho)).flatten()))
 }
 
+/// Palavras genéricas que abrem um alvo sem fazer parte dele.
+///
+/// *"toca uma musica triste"* devolvia o alvo `"uma musica triste"`, e é isso que vai
+/// para o campo de busca do Spotify — ela procurava a **string literal**, não uma
+/// música triste. O nome da faixa é `"triste"`; o resto é o pedido, não o alvo.
+///
+/// Só corta no COMEÇO, e só enquanto sobrar coisa. Cortar no meio destruiria
+/// *"cansaço do alec"*, e cortar até o fim deixaria a busca vazia — pior que a busca
+/// larga.
+///
+/// O risco assumido é faixa que comece com uma destas palavras (*"Uma Noite"*).
+/// Aceito porque a busca do Spotify ainda acha por aproximação, enquanto
+/// `"uma musica triste"` não acha nada.
+const GENERICOS: &[&str] = &[
+    "uma", "um", "algo", "alguma", "coisa", "musica", "musicas", "som", "sons",
+    "faixa", "cancao", "playlist", "pra", "para", "essa", "esse", "aquela", "aquele",
+];
+
+/// Tira as genéricas do começo do alvo, sem nunca esvaziá-lo.
+fn enxugar_alvo(resto: &str) -> Option<String> {
+    let mut p: Vec<&str> = resto.split_whitespace().collect();
+    while p.len() > 1 && GENERICOS.contains(&p[0]) {
+        p.remove(0);
+    }
+    // Se sobrou UMA palavra e ela é genérica, não há alvo: "toca uma musica" é o
+    // pedido inteiro, sem alvo nenhum.
+    if p.len() == 1 && GENERICOS.contains(&p[0]) {
+        return None;
+    }
+    (!p.is_empty()).then(|| p.join(" "))
+}
+
 /// O que resta do pedido depois de tirar o gatilho.
 fn sobra(pedido: &str, gatilho: &str) -> Option<String> {
     let pn = normalizar(pedido);
@@ -275,7 +307,10 @@ fn sobra(pedido: &str, gatilho: &str) -> Option<String> {
         }
     };
     let resto = resto.split_whitespace().collect::<Vec<_>>().join(" ");
-    (!resto.is_empty()).then_some(resto)
+    if resto.is_empty() {
+        return None;
+    }
+    enxugar_alvo(&resto)
 }
 
 #[cfg(test)]
@@ -438,6 +473,24 @@ mod tests {
             casar_em(&t, "pula essa musica ai").map(|(a, _)| a),
             Some("proxima_musica".to_string())
         );
+    }
+
+    /// O alvo que vai para a busca nao pode carregar o pedido junto.
+    #[test]
+    fn o_alvo_nao_leva_palavra_generica() {
+        let t = tabela();
+        let alvo = |p: &str| casar_em(&t, p).and_then(|(_, a)| a);
+
+        // O caso que motivou: "uma musica" e pedido, "triste" e alvo.
+        assert_eq!(alvo("toca uma musica triste").as_deref(), Some("triste"));
+        assert_eq!(alvo("quero ouvir algo pra relaxar").as_deref(), Some("relaxar"));
+
+        // Nome proprio nao e tocado, nem quando contem generica no MEIO.
+        assert_eq!(alvo("toca deslocado do napa").as_deref(), Some("deslocado do napa"));
+        assert_eq!(alvo("toca a playlist animada").as_deref(), Some("animada"));
+
+        // Sem alvo de verdade: o pedido inteiro era generico.
+        assert_eq!(alvo("toca uma musica"), None);
     }
 
     /// Conversa nao pode virar atalho. A tabela e um filtro, nao um ima.
