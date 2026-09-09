@@ -18,6 +18,7 @@ pub mod execucao;
 pub mod gatilhos;
 pub mod harness;
 pub mod harness_proc;
+pub mod harness_tcp;
 pub mod oficina;
 pub mod ponte;
 pub mod regras;

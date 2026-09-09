@@ -1,0 +1,11 @@
+# Perfil da Teka: as ferramentas do Harness e mais nada.
+#
+# So o bundle `dsh-base`, sem aplicativo. O `headless` roda uma tarefa e SAI; o
+# `web` sobe um servidor mas so registra ferramenta quando nasce uma sessao. Aqui
+# nao ha nem tarefa nem sessao -- so o registro e a ponte, e o socket dela e o que
+# segura o processo vivo.
+- insert:
+    - id: teka-ponte
+      # `file://` obrigatorio no Windows: o carregador ESM recusa caminho
+      # absoluto cru ("Received protocol 'c:'").
+      name: file:///C:/Users/User/Projetos/Assistente/DeepSeek-Harness/teka-ponte.mjs

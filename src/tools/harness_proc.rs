@@ -25,7 +25,7 @@
 //! a Teka diria só "EOF" e a pessoa ficaria sem saber por quê.
 
 use super::harness::Protocolo;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader, Read};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
