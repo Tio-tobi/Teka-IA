@@ -156,6 +156,10 @@ mod imp {
     ///
     /// `spec` terminado em `.exe` casa pelo executável; qualquer outra coisa casa
     /// por trecho do título. Ver a nota do módulo sobre por que os dois existem.
+    pub fn janela_de(spec: &str) -> Option<isize> {
+        janela(spec)
+    }
+
     fn janela(spec: &str) -> Option<isize> {
         *PROCURA.lock().unwrap() = spec.to_string();
         *ALVO.lock().unwrap() = 0;
@@ -719,7 +723,7 @@ mod imp {
 }
 
 #[cfg(windows)]
-pub use imp::{acionar_botao, alternar, escrever, listar, listar_uma_vez, Foco, Resultado};
+pub use imp::{acionar_botao, alternar, escrever, janela_de, listar, listar_uma_vez, Foco, Resultado};
 
 #[cfg(not(windows))]
 pub struct Resultado { pub antes: i32, pub depois: i32 }

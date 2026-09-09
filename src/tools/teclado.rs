@@ -339,8 +339,13 @@ pub fn mandar_com(nome: &str, alvo: Option<&str>) -> Result<String, String> {
     }
 }
 
+/// Manda as teclas cruas por `SendInput`, para a janela EM FOCO.
+///
+/// Publica para a sonda `sonda_tecla_sem_foco` poder usar como CONTROLE: sem um
+/// controle positivo, um teste negativo nao distingue "nao funciona" de "meu
+/// codigo de tecla estava errado".
 #[cfg(windows)]
-fn mandar_teclas(nome: &str, teclas: &[u16]) -> Result<String, String> {
+pub fn mandar_teclas(nome: &str, teclas: &[u16]) -> Result<String, String> {
     let mut entradas: Vec<win::Input> = Vec::with_capacity(teclas.len() * 2);
     for &vk in teclas {
         entradas.push(win::Input { tipo: win::INPUT_KEYBOARD, vk, ..Default::default() });
