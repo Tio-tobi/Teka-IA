@@ -2237,6 +2237,28 @@ fn rodar_pulso(args: &Args) {
                 rel.segundos
             );
         }
+        // O ESTADO INTERNO tambem tem de aparecer, e pelo mesmo motivo.
+        //
+        // `surpresa`, `afeto` e `esquecendo` eram calculados TODO TICK e lidos por
+        // ninguem — a varredura de 08/09 achou os tres junto com o `vigia`. Nao sao
+        // acao no mundo, entao a gravidade e menor; mas o afeto mexe na temperatura
+        // do devaneio e na plasticidade da consolidacao, e a surpresa alimenta o
+        // afeto. Sao os numeros que explicam por que ela aprendeu mais ou menos
+        // neste tick, e ficavam invisiveis.
+        //
+        // Numa segunda linha, e so quando ha o que dizer: afogados na linha do tick
+        // eles virariam ruido, e o `vigia` -- que e acao -- ficaria menos visivel.
+        if rel.surpresa.is_finite() && (rel.surpresa > 0.0 || rel.esquecendo > 0) {
+            let mut estado = format!("       surpresa {:.2} b/B", rel.surpresa);
+            if rel.esquecendo > 0 {
+                estado.push_str(&format!(", esquecendo {}", rel.esquecendo));
+            }
+            if !rel.afeto.is_empty() {
+                estado.push_str(&format!("  [{}]", rel.afeto));
+            }
+            println!("{estado}");
+        }
+
         // A REGRA QUE AGIU tem de aparecer.
         //
         // `vigiar` e o unico ponto do tick que age no mundo, e a doc dela diz
@@ -2260,13 +2282,44 @@ fn rodar_pulso(args: &Args) {
 }
 
 /// HH:MM:SS sem dependencia. So para o log do pulso ter hora.
+/// A hora LOCAL, para o carimbo do pulso.
+///
+/// Antes ela era o segundo-do-dia direto do epoch, ou seja **UTC**. Rodando o laço às
+/// 02h da manhã, o log dizia `[05:00:14]`. Num arquivo que existe para responder
+/// *"quando a regra agiu?"*, três horas de erro não é cosmético: é enganar quem for
+/// depurar, inclusive eu.
+///
+/// Achado rodando o laço de verdade — nenhum teste pegaria, porque nenhum teste sabe
+/// que horas são para o John.
+///
+/// `GetLocalTime` do Win32, na mão, como o resto do projeto. Fora do Windows continua
+/// UTC, e ali o desvio é conhecido em vez de silencioso.
 fn chrono_simples() -> String {
-    let s = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    let d = s % 86_400;
-    format!("{:02}:{:02}:{:02}", d / 3600, (d % 3600) / 60, d % 60)
+    #[cfg(windows)]
+    {
+        #[repr(C)]
+        #[derive(Default)]
+        struct SystemTime {
+            ano: u16, mes: u16, dia_semana: u16, dia: u16,
+            hora: u16, minuto: u16, segundo: u16, ms: u16,
+        }
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn GetLocalTime(t: *mut SystemTime);
+        }
+        let mut t = SystemTime::default();
+        unsafe { GetLocalTime(&mut t) };
+        return format!("{:02}:{:02}:{:02}", t.hora, t.minuto, t.segundo);
+    }
+    #[cfg(not(windows))]
+    {
+        let s = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let d = s % 86_400;
+        format!("{:02}:{:02}:{:02}", d / 3600, (d % 3600) / 60, d % 60)
+    }
 }
 
 /// Exporta os pesos em safetensors, para inspecionar fora do Rust.
