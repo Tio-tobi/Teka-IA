@@ -878,6 +878,66 @@ escolha estiver aberto, e subir trocaria uma linha `rc` por uma `alpha`. Quando 
 fusão começar, o alvo é a tag `dsh-v0.1.2-rc.1`, com a `instalacao-funcionando`
 intacta como rede.
 
+#### O protocolo já existe — levantado em 2026-09-09
+
+A suposição do documento era *"vira uma pasta, dois processos, protocolo por stdio"*.
+Fui ler o Harness e **o protocolo já está escrito lá**, feito exatamente para isso:
+
+```
+packages/sdk/server/    "serves newline-delimited JSON-RPC over stdio so
+                         out-of-process SDK clients can drive harness agents"
+packages/acp/           Agent Client Protocol, transporte de interoperabilidade
+packages/examples/jsonrpc-demo/   o `cordis.yml` de exemplo, com o bin
+                                  `dsh-jsonrpc-agent`
+```
+
+Isso muda o trabalho de **inventar um protocolo** para **falar um que existe**.
+
+**O contrato, como está documentado:**
+
+```
+bin            dsh-jsonrpc-agent, com o cordis.yml em $DSH_CORDIS_CONFIG ou argv[2]
+               (se nao existir, imprime uso no stderr e sai 1 — sem fallback)
+initialize     fronteira de prontidao; espera a arvore de plugins assentar antes de
+               responder, entao a primeira chamada ja enxerga MCP descoberto
+session/prompt enfileira UMA mensagem e devolve `{ messageId }` NA HORA
+notificacoes   `session.event` para cada fato duravel, `session.status` para cada
+               transicao de ciclo de vida
+shutdown       responde, descarrega, sai 0. EOF no stdin e SIGTERM fazem o mesmo
+```
+
+**Duas regras do lado deles que o lado da Teka precisa respeitar:**
+
+- **stdout é só protocolo.** Diagnóstico vai para stderr, e a configuração não pode
+  compor logger de stdout. Se a Teka misturar as duas coisas na leitura, o parser
+  quebra em texto que não é frame.
+- **`session/prompt` é assíncrono.** Ele devolve `messageId` imediatamente e os fatos
+  chegam depois, em notificação. Não existe "resposta da chamada" — existe um fluxo.
+
+**O que falta construir do lado da Teka, e é pouco:**
+
+```
+lancar com stdio ligado    `CreateProcessW` com pipes — `tela.rs` ja faz
+                           `CreateProcessW`, falta so redirecionar
+ler linha, escrever linha  JSON delimitado por nova linha
+laco de eventos            `ponte.rs` ja tem essa forma para o WebSocket
+JSON                       ela ja emite chamada em JSON e ja le campo
+                           (`teclado::campo_json`)
+```
+
+Nenhuma peça nova de arquitetura. É plumbing, e plumbing conhecido.
+
+**O primeiro passo continua sendo o somente-leitura** (`grep`, `glob`, `read`,
+`lsp`): mede a acurácia dela comandando ferramenta alheia com risco zero. E agora ele
+tem forma concreta — um `cordis.yml` mínimo com o servidor JSON-RPC e só as
+ferramentas de leitura montadas.
+
+**Como medir**, e isto precisa estar decidido antes de escrever a primeira linha: o
+benchmark de 150 não serve, porque nenhuma das frases dele é sobre ferramenta do
+Harness. Precisa de uma régua nova, escrita à mão, que **nunca entre no gerador** —
+a mesma disciplina de `frases_teste.txt`. Sem isso a fusão vira trabalho sem placar,
+que é como o registro cresceu de 10 para 19 e ninguém viu a acurácia cair.
+
 **Um caminho lateral que apareceu em 09/09 e vale guardar:** `Mineflayer` é uma
 biblioteca **Node** que controla um jogador de Minecraft por protocolo. O Harness é
 um monorepo Node com LLM atrás, e o `Mindcraft` já fala DeepSeek. Se um dia interessar,
