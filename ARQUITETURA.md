@@ -392,6 +392,7 @@ Não são estilo. São o que separa medição de ilusão, e todas custaram caro.
 | 4.6 | Importação da Nyxara | integração | — | **por último, sempre** |
 | 4.7 | ~~Contradição no fora-de-escopo~~ | dados | — | **FECHADO: +3,17** |
 | 4.8 | Crítico prevê a própria correção | código | — | medindo (09/09) |
+| 4.9 | Plumbing da ponte (JSON, protocolo, processo) | código | — | **FEITO em 2026-09-09** |
 
 A ordem é por retorno medido, não por interesse. O padrão histórico é inequívoco:
 **arquitetura não moveu nada, dado moveu tudo** (ver §5).
@@ -926,6 +927,54 @@ JSON                       ela ja emite chamada em JSON e ja le campo
 ```
 
 Nenhuma peça nova de arquitetura. É plumbing, e plumbing conhecido.
+
+#### As três peças de plumbing — CONSTRUÍDAS em 2026-09-09
+
+```
+crate::json              JSON mínimo, std puro. Aninhado, com caminho por ponto
+tools::harness           Protocolo JSON-RPC sobre BufRead/Write — testável EM
+                         MEMÓRIA, sem subir nada
+tools::harness_proc      sobe o processo, liga os canos, drena stderr, tem prazo
+src/bin/falso_harness    um Harness de mentira, para os testes não precisarem de
+                         Node nem de `cordis.yml`
+```
+
+**Por que o protocolo está separado do processo.** `Protocolo` fala com qualquer
+`BufRead`/`Write`. É o que permite testar enquadramento, casamento de `id`, fila de
+notificação e erros na suíte comum, em milissegundos. Se estivesse junto, a lógica só
+seria testável com Node instalado — e teste que precisa de ambiente é teste que não
+roda.
+
+**O caso que decidiu o desenho.** `session/prompt` devolve `{ messageId }` na hora e
+os fatos chegam depois. Então notificação que aparece **enquanto espero a resposta**
+não pode ser descartada — é guardada, e `colher()` tira da fila. O `falso_harness`
+manda duas notificações **antes** da resposta justamente para provar isso.
+
+**Três armadilhas de processo, todas presas por teste:**
+
+```
+stderr entupido   cano nao lido enche (~64 KB) e o filho BLOQUEIA NA ESCRITA,
+                  em silencio, parecendo lentidao -> drenado numa thread
+sem prazo         `read_line` num cano espera para sempre -> `LinhasComPrazo`
+                  transforma silencio em erro
+filho zumbi       Teka cai, Node fica vivo segurando porta -> `Drop` mata
+```
+
+**E os testes foram verificados por sabotagem**, que é o que separa teste com dentes
+de teste decorativo. Removendo a drenagem de stderr:
+
+```
+fechando o cano          -> "o harness fechou a saida (EOF)"
+cano aberto e NAO lido   -> travou, e o prazo pegou: "ficou 20s sem falar"
+```
+
+A segunda é a fiel, e confirma a afirmação escrita no comentário. Dupla confirmação:
+o impasse é real **e** o prazo o transformou em erro em vez de travamento eterno.
+
+**O que falta para a ponte funcionar de verdade:** montar o `cordis.yml` mínimo com o
+servidor JSON-RPC e as ferramentas de leitura, e a régua nova. O código da Teka está
+pronto e testado contra um Harness de mentira; falta o Harness de verdade do outro
+lado.
 
 **O primeiro passo continua sendo o somente-leitura** (`grep`, `glob`, `read`,
 `lsp`): mede a acurácia dela comandando ferramenta alheia com risco zero. E agora ele
