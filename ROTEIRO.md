@@ -19,8 +19,9 @@ A seção "O que já foi tentado e não vale repetir" é a mais valiosa dele.
 ## 1. Onde ela está
 
 ```
-benchmark de 150     110,33         com as 20 ferramentas (12 sementes, s19-30)
-                     112,92         com 19, mesmas sementes, mesma regua
+benchmark de 150     113,50         20 ferramentas, sem a contradicao (s19-30)
+                     110,33         20 ferramentas, com a contradicao
+                     112,92         19 ferramentas
                      114,58 ± 3,55  com --patcher entropia (opcional)
 argumento condicional  ~92%        (quando a ferramenta sai certa)
 ferramentas             20         `atalho` custou -2,58 (t=-1,84, nao
@@ -593,6 +594,66 @@ de um leitor, e o leitor e a fusao.
 
 **Decisao do John (08/09): fazer o passo 1 assim que o experimento do fora-de-escopo
 fechar.**
+
+### FECHADO: a contradicao envenenava os VERBOS, nao a fronteira (2026-09-08)
+
+```
+INSTRUMENTO (registrado)   falsos `atalho`    -0,08/semente   t=-0,23   4/12
+                           base 1,08  ->  tratado 1,00
+
+GUARDA                     benchmark de 150   +3,17           t=+2,55
+                           base 110,33  ->  tratado 113,50
+```
+
+**A hipotese registrada MORREU.** O mecanismo que eu afirmei — menos falsos
+`atalho` — nao aconteceu. E ruido.
+
+**A intervencao funcionou por outro caminho**, e o caminho esta documentado no
+proprio `dados.rs`:
+
+```
+  ferramenta esperada   base  trat   dif
+  procurar_arquivo        81    66   -15
+  escrever_arquivo        61    51   -10
+  listar_pasta            35    28    -7
+  memoria                 40    33    -7
+  disco                   36    30    -6
+  perguntar              135   141    +6     <- PIOROU
+  TOTAL                  476   438   -38
+```
+
+Os quatro exemplos ensinavam **`poe`, `quero`, `aumenta`, `toca` = fora de escopo**,
+e esses verbos aparecem em pedido de ferramenta REAL. A contradicao nao envenenava
+so a fronteira do `atalho`: envenenava os verbos das ferramentas. E o comentario do
+proprio arquivo ja dizia — *"o modelo nao aprendeu 'isto esta fora'; aprendeu
+'manda = fora'"*.
+
+**Duas ressalvas sobre o +3,17.** Ele estava pre-registrado, mas como GUARDA: eu
+disse "nao pode cair" e ele subiu — nao e garimpo, mas a minha previsao sobre ele
+estava errada. E foram DUAS comparacoes declaradas; corrigindo, o limiar sobe de
+2,20 para ~2,56 e o t=2,55 fica na linha. Sozinho o numero e marginal.
+
+O que sustenta nao e o t: e a **coerencia do mecanismo** — 38 erros a menos,
+concentrados nas ferramentas reais, com a abstencao piorando, exatamente como a
+falha documentada preve. Numero marginal com mecanismo coerente vale mais que
+numero forte com mecanismo inventado.
+
+**Consequencia:** 113,50 esta ACIMA do braco de 19 ferramentas (112,92). O custo de
+-2,58 da ferramenta 20 nao so foi pago — sobrou.
+
+### A SEGUNDA VEZ que eu registro a superficie errada
+
+```
+05/09  variedade de verbo   registrei a direcao errada  (falsa acao, nao abstencao)
+08/09  fora-de-escopo       registrei a superficie errada (fronteira, nao verbos)
+```
+
+Nas duas eu previ QUAL superficie a mudanca de dado ia tocar, e errei. Nao e falta
+de cuidado — e que **eu nao sei prever isso**, e o historico agora tem dois pontos.
+
+**Regra:** ao mudar DADO, o primario e a medida AMPLA (benchmark de 150). O
+mecanismo estreito entra como secundario e como explicacao, nunca como o numero que
+decide. O inverso — estreito primario, amplo como guarda — ja falhou duas vezes.
 
 ### A INTERVENCAO MUDOU antes de rodar — e por que (2026-09-08)
 
