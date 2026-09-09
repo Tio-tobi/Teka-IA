@@ -17,7 +17,7 @@
 ## 1. Sumário executivo
 
 A Teka é um agente **byte a byte** escrito em Rust sem dependências externas, que roda
-em CPU. Ela lê um pedido em português, escolhe uma entre 19 ferramentas, extrai os
+em CPU. Ela lê um pedido em português, escolhe uma entre 20 ferramentas, extrai os
 argumentos do próprio texto do pedido e executa — com confirmação antes de qualquer
 ação que deixe marca.
 
@@ -29,12 +29,30 @@ Três propriedades definem o projeto e restringem todas as decisões abaixo:
    que torna o custo por byte pagável numa CPU — a barreira que historicamente
    inviabilizou modelos byte-level foi exatamente o custo quadrático da atenção.
 3. **Segurança por construção, não por instrução.** O modo sandbox é o padrão, a
-   confinação de escrita é verificada depois de normalizar `..`, e a interface web
-   nasce somente-leitura porque não existe canal de confirmação nela.
+   confinação de escrita é verificada depois de normalizar `..`, e o que age sobre
+   OUTRA PESSOA não sai de casamento aproximado de nome — a árvore de UI não tem
+   identidade, só rótulo (ver 2.5.1).
 
-O gargalo medido hoje **não é a arquitetura**. É a escolha da ferramenta (~76%)
+O gargalo medido hoje **não é a arquitetura**. É a escolha da ferramenta (75,7%)
 contra a extração do argumento (~92%). O plano da seção 4 ataca isso na ordem em que
 o retorno foi medido, não na ordem em que é interessante de programar.
+
+**O que mudou entre 30/08 e 09/09**, e vale para ler o resto do documento:
+
+```
+ferramentas    19 -> 20      `atalho`: música, volume e mudo sem sair do jogo
+benchmark      110,67 -> 113,50
+4.1 e 4.3      FECHADOS      poços de fora-de-escopo; canal de confirmação
+o tick         medido        o "pensamento" é ruído e ninguém o lê (2.5.4)
+o crítico      alimentado    tinha ZERO referências no supervisionado
+```
+
+E um padrão que apareceu três vezes em dois dias, registrado aqui porque é o tipo de
+defeito que nem o compilador nem a suíte pegam: **o comentário sabia e o código não
+sabia.** "Regra que age em silêncio não se depura" estava escrito e o fio não estava
+ligado; "o crítico fica fora do gradcheck" estava escrito e a flag entrou assim
+mesmo; e o "0,000" do crítico estava neste documento desde o começo. Requisito em
+prosa não se cumpre sozinho — os três viraram `assert`.
 
 ---
 
@@ -43,17 +61,24 @@ o retorno foi medido, não na ordem em que é interessante de programar.
 ### 2.1 Números
 
 ```
-benchmark de 150       110,67 ± 4,48   padrão (por_palavra, 12 sementes)
-                       114,58 ± 3,55   com --patcher entropia (flag opcional)
+benchmark de 150       113,50 ± 3,97   20 ferramentas, 12 sementes (s19-30)
+                       110,33          as mesmas 20, ANTES do conserto do
+                                       fora-de-escopo — ver 4.7
+                       112,92          19 ferramentas, mesma régua
 argumento condicional  ~92%            quando a ferramenta sai certa
-ferramenta correta     ~76%            ← o gargalo
+ferramenta correta     75,7%           ← o gargalo
 parâmetros             1,6 M           preset "pequeno"
 footprint de execução  ~24 MB          binário 1,6 + modelo 6,2 + n-grama 16
 latência               ~103 ms         CPU, incluindo carregar do disco
 corpus                 69,87 MB        9,7x o inicial
-código                 23.016 linhas   Rust, 0 dependências
-testes                 247             `#[test]`, todos passando
+código                 30.057 linhas   Rust, 0 dependências
+testes                 331             `#[test]`, suíte verde
 ```
+
+**A ferramenta 20 está paga.** `atalho` custou −2,58 (t=−1,84, não significativo)
+quando entrou; consertar a contradição do fora-de-escopo devolveu +3,17 (t=+2,55), e
+o número final ficou **acima** do catálogo de 19. Isso era o portão que eu tinha
+proposto para começar a fusão, e ele foi cruzado em 2026-09-08.
 
 ### 2.2 Mapa de módulos
 
@@ -143,7 +168,7 @@ ficaria bonito e mentiroso.
 | **intenção** | 20 classes (19 ferramentas + `Perguntar`) | o que fazer |
 | **ponteiro** | `(byte_inicial, byte_final)` por slot | **decide se a chamada funciona** |
 | **presença** | por slot | este argumento existe? |
-| **crítico** | escalar | linha de base do REINFORCE |
+| **crítico** | escalar | linha de base do REINFORCE — e, desde 09/09, prevê a própria correção |
 
 `Perguntar` **não é uma ferramenta** — é a classe que permite não agir. Ela existe
 porque foi medido que duvidar precisa ser **aprendido**, não medido depois: com
@@ -151,34 +176,154 @@ abstenção por limiar de confiança, nenhum dos três sinais separava acerto de
 margem dos erros era 0,833 — ela erra convicta; o crítico saía 0,000 num modelo sem
 reforço; e o tamanho do argumento separava na direção invertida).
 
+**Aquele "0,000" ficou escrito aqui desde o começo e ninguém o leu como defeito** — inclusive
+eu, que o redescobri em 2026-09-08 medindo do zero. A cabeça de crítico tinha ZERO
+referências em `supervisionado.rs`: só o reforço a alimentava, e a corrida padrão é
+supervisionada. Ela tinha parâmetros e produzia ruído.
+
+Desde 09/09 ela é treinada com alvo auto-supervisionado — *"a minha própria escolha
+vai estar certa?"* — pelo `Alvo::auto_critico`. É um sinal de **capacidade** e não de
+superfície: hoje ela abstém porque o verbo é estranho; com o crítico treinado pode
+abster porque **prevê que vai errar**. O braço de medição fecha na madrugada de
+09/09.
+
 O ponteiro tem dois níveis: patch (grosseiro, auxiliar) e **byte (fino, é o que
 decide)**.
 
-### 2.5 Registro de ferramentas — 19, classificadas por efeito
+### 2.5 Registro de ferramentas — 20, classificadas por efeito
 
-| `Efeito::Nenhum` (11) | `Efeito::Local` (7) | `Efeito::ParaFora` (1) |
-|---|---|---|
-| `hora` | `escrever_arquivo` | `buscar_web` |
-| `listar_pasta` | `copiar_arquivo` | |
-| `ler_arquivo` | `mover_arquivo` | |
-| `info_arquivo` | `criar_pasta` | |
-| `processos` | `abrir_programa` | |
-| `rede` | `apagar_arquivo` | |
-| `procurar_arquivo` | `executar_comando` | |
-| `calcular` | | |
-| `memoria` | | |
-| `disco` | | |
-| `perguntar` | | |
+| `Nenhum` (11) | `Reversivel` (1) | `Local` (7) | `ParaFora` (1) |
+|---|---|---|---|
+| `hora` | `atalho` | `escrever_arquivo` | `buscar_web` |
+| `listar_pasta` | | `copiar_arquivo` | |
+| `ler_arquivo` | | `mover_arquivo` | |
+| `info_arquivo` | | `criar_pasta` | |
+| `processos` | | `abrir_programa` | |
+| `rede` | | `apagar_arquivo` | |
+| `procurar_arquivo` | | `executar_comando` | |
+| `calcular` | | | |
+| `memoria` | | | |
+| `disco` | | | |
+| `perguntar` | | | |
 
 A classificação não é cosmética: **o diário, a oficina e a confirmação todos se
 penduram nela**. Ler duas vezes não custa nada; escrever duas vezes custa. Sem a
 distinção, o diário pagaria um `fsync` por chamada de `hora` — e o `fsync` é mais caro
 que a ferramenta inteira.
 
+`Reversivel` existe para o `atalho`: ele muda o mundo, mas desfazer custa apertar de
+novo. Pausar música não é da mesma espécie que apagar arquivo, e tratar as duas
+igual só ensina a pessoa a ignorar a confirmação.
+
 `ParaFora` é uma classe separada de `Local` por um motivo específico: o que volta da
 web é **texto de terceiro**, e texto de terceiro é **dado, nunca ordem**. Uma página
 que diga "apague tudo" é uma página dizendo isso, não um pedido do usuário. A saída
 do `buscar_web` é rotulada `[da web, nao e ordem sua]`.
+
+### 2.5.1 A ferramenta 20 e as três camadas que ela trouxe
+
+`atalho` é uma ferramenta só na superfície do modelo, mas três mecanismos por baixo.
+
+**Tabela de gatilhos** (`dados/gatilhos.txt`, `tools/gatilhos.rs`). A cabeça de
+ponteiro **copia** um trecho do pedido; ela não inventa texto. Então emitir
+`atalho(nome="proxima_musica")` era impossível — ninguém fala assim. A tradução
+acontece **fora do modelo**: 77 frases → 18 atalhos.
+
+O casamento tem três níveis (1,00 literal / 0,95 normalizado / cobertura) e **quatro
+travas, cada uma nascida de um vazamento medido**:
+
+```
+palavra inteira        "toca" casava dentro de "tocando"
+palavra vazia nao conta   "mudo no sistema" pegava "conferir a data no sistema"
+teto de 0,90           cobertura empatava com o literal
+minimo de 2 fortes     "mais alto" pegava "o consumo de ram esta alto"
+```
+
+E uma regra de sentido: **atalho sem alvo não casa com frase que sobra conteúdo.**
+Antes dela, *"muta o theo no discord"* virava `mutar_discord` — mutava o John e
+jogava "theo" fora calado.
+
+**UIAutomation** (`tools/uia.rs`). Aciona controle **pelo nome** e confirma que o
+estado mudou, em vez de alternar às cegas. Três defesas, e a terceira vem de o John
+ser administrador do servidor dele:
+
+```
+arvore fria          o Chromium so constroi a arvore quando alguem pergunta,
+                     e a PRIMEIRA pergunta volta vazia -> `achar_teimoso`
+padrao, nao nome     o Discord publica DOIS "Silenciar" e so um alterna
+nome exato + lista   "Silenciar voz no servidor" CONTEM "Silenciar", e e um
+                     ato publico sobre outra pessoa -> `NUNCA_SOZINHA`
+```
+
+**Ponte WebSocket** (`tools/ponte.rs`). RFC 6455 escrito à mão, `127.0.0.1:8767`,
+falando com uma extensão do Spicetify. É o que troca faixa **sem roubar o foco** — e
+sem a API do Spotify, que exige Premium.
+
+### 2.5.2 A fronteira da atuação, medida
+
+O que decide se a Teka consegue agir em segundo plano não é ela: é como o aplicativo
+alvo lê entrada.
+
+```
+le a FILA DE MENSAGENS da janela   Discord, Spotify, Chromium   2o plano FUNCIONA
+le ENTRADA BRUTA do dispositivo    Minecraft, jogos em geral    precisa do FOCO
+```
+
+Medido em 2026-09-09 com controle positivo (`examples/sonda_tecla_sem_foco.rs`):
+`SendInput` com o jogo em foco funciona; `PostMessage` sem foco entra na fila e o
+jogo ignora.
+
+E a tela virtual **não contorna isso**: `SendInput` só é aceito quando a thread está
+no desktop de **entrada** — o que recebe o teclado físico. Num desktop escondido ele
+devolve `ACCESS_DENIED` (`examples/sonda_tela_virtual.rs`). Tela virtual esconde
+janela; não dirige nada escondido.
+
+### 2.5.3 Regras permanentes
+
+`tools/regras.rs` e `dados/regras.txt`. Ligadas **pela fala** ("toda vez que a música
+parar, você retoma"), não por configuração. `Vigia::olhar` roda no topo de cada tick,
+com teto de 3 ações seguidas e espaço de 3s entre elas, e desiste se o dono pausou
+de propósito.
+
+Desligadas por padrão. E o resultado aparece no relatório do tick — o que **não**
+acontecia até 2026-09-08: a regra agia e nada mostrava, contrariando a própria doc
+dela.
+
+### 2.5.4 O tick, e o que ele NÃO faz
+
+`pulso.rs` roda um laço de fundo com esta forma:
+
+```
+PERCEBER    quantos episódios novos
+VIGIAR      as regras permanentes — o ÚNICO ponto que age no mundo
+PENSAR      gera bytes a partir do "fio", com temperatura vinda do afeto
+REVER       quantos fatos estão prestes a ser esquecidos
+CONSOLIDAR  re-treina sobre memória REAL
+```
+
+Parece um laço cognitivo inteiro. **Medido em 2026-09-08, não é** — e a diferença
+importa para quem for mexer aqui:
+
+```
+o pensamento não é lido    fora do módulo, o único consumidor é `rel.pensamento.len()`
+                           — o TAMANHO, não o conteúdo
+e o pensamento é ruído     byte solto, nem palavra (`examples/sonda_pensamento.rs`).
+                           Ela nunca foi treinada a gerar texto livre, só a emitir
+                           chamada
+```
+
+**Ensiná-la a escrever não a faria pensar**: pré-treinar tronco em corpus já foi
+medido e não transferiu para acurácia de ferramenta (ver §5).
+
+O caminho é o **crítico** (4.8), não o pensamento: fazer o modelo prever a própria
+correção dá um sinal de **capacidade**, e sobre ele cabe deliberação de verdade —
+top-3 intenções, pontuar, escolher ou abster. Isso muda o resultado por causa de uma
+avaliação interna, que é o que "raciocinar" significa aqui.
+
+**O teto, dito antes de tentar:** isso faz ela **deliberar**, não **entender**. Ela
+passa a saber quando não sabe — enorme, porque 53% dos erros envolvem `perguntar`.
+Mas continua sem entender que *"estou desanimado"* pede música animada. Semântica
+precisa de um leitor, e o leitor é a fusão (4.5).
 
 ### 2.6 Camada de segurança
 
@@ -243,11 +388,18 @@ Não são estilo. São o que separa medição de ilusão, e todas custaram caro.
 | 4.2 | ~~Escolha de ferramenta — variedade de verbo~~ | dados | — | **FECHADO: não confirmado** |
 | 4.3 | ~~Canal de confirmação na interface web~~ | código | — | **FEITO em 2026-09-05** |
 | 4.4 | Argumento de restrição múltipla | **arquitetura** | semanas | só com medição na mão |
-| 4.5 | Fusão COMPLETA com o DeepSeek-Harness | integração | 20–40 sessões | depois de 4.2 |
+| 4.5 | Fusão COMPLETA com o DeepSeek-Harness | integração | 20–40 sessões | **portão cruzado** |
 | 4.6 | Importação da Nyxara | integração | — | **por último, sempre** |
+| 4.7 | ~~Contradição no fora-de-escopo~~ | dados | — | **FECHADO: +3,17** |
+| 4.8 | Crítico prevê a própria correção | código | — | medindo (09/09) |
 
 A ordem é por retorno medido, não por interesse. O padrão histórico é inequívoco:
 **arquitetura não moveu nada, dado moveu tudo** (ver §5).
+
+**O portão da 4.5 foi cruzado.** Ele estava escrito assim: *"a ferramenta 20 estar
+paga — o benchmark voltar a ≥112,9, o nível de 19 ferramentas"*. Fechou em 113,50,
+com a mesma régua e as mesmas 12 sementes. O critério existia justamente porque
+"estar boa" não tem definição, e enquanto a régua fosse essa a fusão nunca começaria.
 
 ---
 
@@ -581,6 +733,31 @@ diretorio de trabalho  chega certo (lpCurrentDirectory), provado com caminho rel
 | mover app que já está rodando | Discord: 6 processos antes, 6 depois; janela ficou na tela do John |
 | conter risco | mesmo token do usuário — `del` continua apagando, rede continua aberta |
 | esconder app single-instance | lançar o Discord entrega o pedido à instância existente |
+| **receber tecla injetada** | `SendInput` devolve `ACCESS_DENIED` (5) num desktop escondido |
+
+**A última linha entrou em 2026-09-09 e encerra uma ideia inteira.** A esperança era
+rodar um jogo numa tela virtual e dirigi-lo lá, com a tela do John livre — a única
+configuração que juntaria "personagem dele, mundo dele, PC liberado".
+
+`examples/sonda_tela_virtual.rs`:
+
+```
+0. tela criada                    OK
+1. processo lancado nela          OK
+2. thread atachada no desktop     OK
+3. SendInput                      0 de 2, GetLastError = 5 (ACCESS_DENIED)
+```
+
+`SendInput` só é aceito quando a thread está no desktop de **entrada** — o que recebe
+o teclado físico. Escondido não é. Para virar o de entrada precisaria `SwitchDesktop`,
+que **toma a tela** — o oposto do objetivo.
+
+**Não há meio-termo: ou o desktop recebe entrada e está visível, ou está escondido e
+não recebe.** Tela virtual esconde janela; não dirige nada escondido.
+
+A sonda usa Bloco de Notas e não um jogo de propósito: desktop escondido ninguém vê,
+então ela manda texto e **lê de volta pela árvore de acessibilidade** — a verificação
+não depende de alguém olhar.
 
 A segunda linha é a que mais engana. A tela virtual **não é fronteira de
 segurança**; ela é uma cortina. Quem contém é a lista negra, a raiz, o
@@ -674,8 +851,39 @@ LLM que **leia** o resultado.
 
 **Estimativa: 20 a 40 sessões**, já corrigida por um otimismo medido de ~1,5x. A ponte
 é trabalho conhecido; o imprevisível é **recuperar a acurácia** depois de o registro
-crescer de 19 para ~32 ferramentas. Precedente que dimensiona: 10 → 19 derrubou de
+crescer de 20 para ~32 ferramentas. Precedente que dimensiona: 10 → 19 derrubou de
 108,3 para 107,0, e só voltou a 112,7 depois do conserto dos poços.
+
+**E agora há um segundo precedente, com o preço de UMA ferramenta isolado**
+(2026-09-07/08): `atalho` custou **−2,58** ao entrar, e o custo tinha dono — ela
+disparando quando não devia, em frase curta e imperativa. Consertar a contradição do
+fora-de-escopo devolveu **+3,17**. Ou seja: **o custo de uma ferramenta nova é da
+ordem de 2 a 3 pontos, e é recuperável por trabalho de poço.** Doze ferramentas de
+uma vez não escalam linearmente, mas o mecanismo agora é conhecido e o instrumento
+existe.
+
+**O estado do upstream, medido em 2026-09-07.** A cópia local está presa em
+`dsh-0.1.1-rc.2` (21/08) **de propósito**, com a árvore limpa. O upstream já estava
+2512 commits à frente, em `0.1.3-alpha.2` — 9727 arquivos, +514k/−191k, com 167
+commits só em `core`.
+
+**E mesmo assim os pacotes `tool-*` foram de 23 para 22**: nenhum entrou, só saiu
+`subagent/tool-subagent-report`. Toda a movimentação é interna. Como a fusão fala com
+as ferramentas por protocolo, **o contrato está parado** — a premissa de ~32
+ferramentas no registro unido continua valendo.
+
+Decisão do John: não subir agora. A instalação funciona (há uma pasta
+`instalacao-funcionando` com lock próprio), o ganho seria zero enquanto o gargalo de
+escolha estiver aberto, e subir trocaria uma linha `rc` por uma `alpha`. Quando a
+fusão começar, o alvo é a tag `dsh-v0.1.2-rc.1`, com a `instalacao-funcionando`
+intacta como rede.
+
+**Um caminho lateral que apareceu em 09/09 e vale guardar:** `Mineflayer` é uma
+biblioteca **Node** que controla um jogador de Minecraft por protocolo. O Harness é
+um monorepo Node com LLM atrás, e o `Mindcraft` já fala DeepSeek. Se um dia interessar,
+a fusão deixa de comprar só ferramentas e passa a comprar **um corpo num mundo** — que
+é um lugar bem mais interessante para medir se ela decide bem do que 150 frases. Fora
+do roteiro por enquanto; anotado em `Projetos/Assistente/MINECRAFT_AUTOMACAO.md`.
 
 ---
 
@@ -704,6 +912,69 @@ Conceito + RELACIONADO_A    veio do grafo da Nyxara
 superado_por                veio do SUPERSEDED_BY dela
 Fonte::Importado(String)    "a migração da Nyxara cai aqui"
 ```
+
+---
+
+### 4.7 ~~Contradição no fora-de-escopo~~ — FECHADO em 2026-09-08
+
+Quatro exemplos ensinados como `perguntar` eram pedidos que ela **atende**:
+
+```
+"aumenta o volume"      -> aumentar_volume   (é gatilho LITERAL da tabela)
+"toca uma musica ai"    -> tocar_faixa
+"poe um som pra tocar"  -> tocar_faixa
+"quero ouvir podcast"   -> tocar_faixa
+```
+
+O primeiro é o caso puro: **a mesma string** estava no poço de `atalho` rotulada
+`atalho` e no fora-de-escopo rotulada `perguntar`. Dois rótulos para uma frase — ali
+o modelo não aprende a fronteira, aprende que é sorteio.
+
+Foram escritos quando tocar música não era capacidade dela. **Capacidade nova
+envelhece o fora-de-escopo antigo**, e nada percebia. Hoje
+`nenhum_fora_de_escopo_e_coisa_que_ela_faz` percebe.
+
+Trocados um por um, para o tamanho do poço não mudar junto.
+
+```
+INSTRUMENTO (registrado)   falsos `atalho`    -0,08/semente   t=-0,23
+GUARDA                     benchmark de 150   +3,17           t=+2,55
+```
+
+**A hipótese registrada morreu e a intervenção funcionou** — por um caminho que o
+próprio `dados.rs` já descrevia. O ganho caiu nas ferramentas REAIS
+(`procurar_arquivo` −15, `escrever_arquivo` −10) e a abstenção piorou (+6). Aqueles
+quatro exemplos ensinavam `poe`, `quero`, `aumenta`, `toca` **= fora de escopo**, e
+esses verbos aparecem em pedido de ferramenta real. Envenenavam os verbos, não a
+fronteira.
+
+Foi a **segunda vez** que eu pré-registrei a superfície errada (a primeira foi a
+direção, em 05/09). A regra que saiu: ao mudar **dado**, o primário é a medida
+**ampla**; o mecanismo estreito entra como explicação, nunca como juiz.
+
+### 4.8 O crítico prevê a própria correção — medindo em 09/09
+
+A cabeça de crítico tinha **zero referências** em `supervisionado.rs`. Agora
+`Alvo::auto_critico` a treina com alvo auto-supervisionado: *"a minha própria escolha
+vai estar certa?"* — ferramenta E argumento, alvo 0/1, no mesmo passo, sem forward
+extra.
+
+Três coisas ditas antes de medir:
+
+```
+o alvo se MOVE           é a correção do modelo atual; cedo no treino quase tudo é 0
+porta lateral do clip    o gradiente do crítico não vai ao tronco, mas o clipping do
+                         Adam é de NORMA GLOBAL -> pode estrangular a tarefa
+                         principal por fora. REGRA DE PARADA própria.
+pode nao haver sinal     prever a própria correção em 1,6 M é mais difícil que
+                         classificar. Nulo aqui empurra a fusão para cima da fila.
+```
+
+E a régua quase me enganou: a grade de limiares do crítico ia até 0,10, escrita para
+o crítico do **reforço**, que prevê recompensa perto de zero. O crítico novo prevê
+perto de 0,97 — **todo limiar abaixo de todo valor**, saldo `+0` por construção. Eu
+quase li aquele zero como "a hipótese morreu". Hoje a grade sai dos próprios dados,
+por quantil.
 
 ---
 
