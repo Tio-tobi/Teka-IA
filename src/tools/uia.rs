@@ -261,7 +261,10 @@ mod imp {
     /// Spotify ficava na frente.
     ///
     /// Quem chama uma operacao de varios passos segura isto do comeco ao fim.
-    pub struct Foco(GuardaFoco);
+    /// O campo nao e lido de proposito: quem trabalha e o `Drop` da guarda. Marcado
+    /// para o aviso nao ficar de pe para sempre — aviso permanente ensina a ignorar
+    /// aviso, e ai o dia em que aparecer um de verdade ninguem ve.
+    pub struct Foco(#[allow(dead_code)] GuardaFoco);
 
     impl Foco {
         pub fn guardar() -> Self { Foco(GuardaFoco::novo()) }
@@ -688,7 +691,9 @@ mod imp {
     pub fn listar_uma_vez(spec: &str, tipo: i32, trecho: &str) -> Result<(Vec<String>, i32), String> {
         let s = abrir(spec)?;
         let mut fora = Vec::new();
-        let mut total = 0i32;
+        // Sem valor inicial: o compilador confere que todo caminho de saida atribui,
+        // e o aviso de "valor nunca lido" some junto.
+        let total;
         unsafe {
             let ct: extern "system" fn(*mut c_void, *mut *mut c_void) -> i32 =
                 std::mem::transmute(vt(s.aut, 21));

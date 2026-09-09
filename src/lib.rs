@@ -13,6 +13,7 @@ pub mod coletor;
 pub mod servidor;
 pub mod gerador;
 pub mod grammar;
+pub mod json;
 pub mod learn;
 pub mod memory;
 pub mod model;
