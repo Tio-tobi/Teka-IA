@@ -79,10 +79,27 @@ pub const COEF_CRITICO: f64 = 0.5;
 /// depois do ponteiro. Duplicar as quatro linhas era como as duas versões
 /// divergiriam.
 ///
-/// Regressão simples, e não sigmoide com entropia cruzada: é o mesmo caminho de
-/// gradiente que o reforço já usa e que o gradcheck já cobre. Alvo 0/1 numa
-/// regressão dá uma estimativa de probabilidade que basta para ordenar — e ordenar
-/// é tudo que `sep_critico` pede.
+/// ## Sigmoide com entropia cruzada, e não regressão — e por quê
+///
+/// A primeira versão era regressão quadrática direto na saída linear. Medido na
+/// semente 19: o crítico saiu de morto (0,000 para tudo) para vivo — e **saturado**.
+///
+/// ```text
+/// previsão média:  acertos 0,976   erros 0,964     separação 0,012
+/// ```
+///
+/// Ele prevê "vou acertar" quase sempre, inclusive quando erra. A causa é o
+/// desequilíbrio de classe: o alvo é a correção do modelo **nos exemplos de treino,
+/// que ele já ajustou** — então o alvo é 1 na esmagadora maioria, e a saída que
+/// minimiza o erro quadrático é a taxa-base.
+///
+/// Duas mudanças, e as duas atacam isso:
+///
+/// - **sigmoide + entropia cruzada**: a saída fica em `[0,1]` por construção, e o
+///   gradiente não desaparece quando a previsão está saturada — que é justamente
+///   onde a regressão quadrática desiste.
+/// - **peso pela classe rara**: o erro (alvo 0) pesa `PESO_ERRO` vezes mais. Sem
+///   isto, prever 1 sempre continua sendo a melhor aposta bruta.
 fn critico<T: Float>(
     cache: &mut CabecasCache<T>,
     b: usize,
@@ -90,15 +107,35 @@ fn critico<T: Float>(
     inv_b: T,
     com_grad: bool,
 ) -> f64 {
-    let alvo = if certo { T::ONE } else { T::ZERO };
-    let d = cache.valor[b] - alvo;
+    let x = cache.valor[b].to_f64();
+    // Sigmoide estável: para x muito negativo, `exp(x)` não estoura.
+    let p = if x >= 0.0 { 1.0 / (1.0 + (-x).exp()) } else { let e = x.exp(); e / (1.0 + e) };
+    let w = if certo { 1.0 } else { PESO_ERRO };
+    // −ln σ(x) ou −ln σ(−x), na forma que não perde precisão longe de zero.
+    let perda = if certo { softplus(-x) } else { softplus(x) };
     if com_grad {
+        // d/dx da entropia cruzada com sigmoide é `σ(x) − alvo`. Limpo assim
+        // justamente por causa da forma escolhida.
+        let alvo = if certo { 1.0 } else { 0.0 };
         // `=` e nao `+=`: o bloco de `alvo_valor` la em cima e o reforco, e um alvo
         // nunca e os dois (`auto_critico` e falso quando ha recompensa observada).
-        cache.dvalor[b] = d * T::from_f64(COEF_CRITICO) * inv_b;
+        cache.dvalor[b] = T::from_f64((p - alvo) * w * COEF_CRITICO) * inv_b;
     }
-    COEF_CRITICO * 0.5 * (d * d).to_f64()
+    COEF_CRITICO * w * perda
 }
+
+/// `ln(1 + e^x)`, sem estourar para `x` grande.
+fn softplus(x: f64) -> f64 {
+    if x > 0.0 { x + (-x).exp().ln_1p() } else { x.exp().ln_1p() }
+}
+
+/// Quanto o exemplo ERRADO pesa a mais na perda do crítico.
+///
+/// O modelo acerta a maioria dos exemplos de treino, então o alvo é 1 quase sempre e
+/// prever 1 direto minimiza a perda sem discriminar nada. Medido antes deste peso:
+/// 0,976 contra 0,964. Cinco é a razão aproximada entre as classes num modelo que
+/// acerta ~80% do treino.
+pub const PESO_ERRO: f64 = 5.0;
 
 /// O que se quer que a Teka responda a um pedido.
 #[derive(Clone, Debug, PartialEq)]
@@ -993,31 +1030,41 @@ mod testes_critico {
     }
 
     /// A perda cai quando a previsao se aproxima, e o gradiente aponta pra la.
+    ///
+    /// `cache.valor` agora e LOGIT, nao probabilidade: a perda e entropia cruzada
+    /// com sigmoide. Entao ela nunca chega a zero exato com logit finito -- so
+    /// encolhe. O teste anterior exigia zero e falhou quando a forma mudou, que e
+    /// exatamente o que ele tinha de fazer.
     #[test]
     fn o_critico_persegue_a_propria_correcao() {
         let mut c = CabecasCache::<f64>::new();
         c.valor = vec![0.0];
         c.dvalor = vec![0.0];
-        let mut medir = |c: &mut CabecasCache<f64>, previsao: f64, certo: bool| {
-            c.valor[0] = previsao;
+        let mut medir = |c: &mut CabecasCache<f64>, logit: f64, certo: bool| {
+            c.valor[0] = logit;
             critico(c, 0, certo, 1.0, true)
         };
 
-        // Acertou: o alvo e 1. Prever 0,9 doi menos que prever 0,1.
-        let longe = medir(&mut c, 0.1, true);
-        let perto = medir(&mut c, 0.9, true);
+        // Acertou: logit alto doi menos que logit baixo.
+        let longe = medir(&mut c, -3.0, true);
+        let perto = medir(&mut c, 3.0, true);
         assert!(perto < longe, "perto={perto} deveria doer menos que longe={longe}");
+        assert!(perto < 0.05, "logit 3 com alvo 1 deveria quase nao doer, deu {perto}");
 
-        // O gradiente empurra a previsao PARA CIMA quando ela esta baixa e o alvo e 1.
-        medir(&mut c, 0.1, true);
+        // Gradiente empurra o logit PARA CIMA quando ele esta baixo e o alvo e 1.
+        medir(&mut c, -3.0, true);
         assert!(c.dvalor[0] < 0.0, "dvalor={} deveria ser negativo", c.dvalor[0]);
 
-        // Errou: o alvo e 0, e agora o gradiente empurra para BAIXO.
-        medir(&mut c, 0.9, false);
+        // Errou: alvo 0, e agora empurra para BAIXO.
+        medir(&mut c, 3.0, false);
         assert!(c.dvalor[0] > 0.0, "dvalor={} deveria ser positivo", c.dvalor[0]);
 
-        // Previsao exata nao doi nem empurra.
-        assert_eq!(medir(&mut c, 1.0, true), 0.0);
-        assert_eq!(c.dvalor[0], 0.0);
+        // E o ERRO pesa mais que o acerto, que e o conserto da saturacao.
+        let no_erro = medir(&mut c, 3.0, false);
+        let no_acerto = medir(&mut c, -3.0, true);
+        assert!(
+            (no_erro / no_acerto - PESO_ERRO).abs() < 1e-6,
+            "o erro deveria pesar {PESO_ERRO}x: {no_erro} contra {no_acerto}"
+        );
     }
 }

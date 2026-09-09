@@ -121,11 +121,24 @@ fn gradiente_do_agente_confere() {
         // Peso != 1 no segundo exemplo: exercita o caminho de reforco (entropia
         // cruzada pesada, que e como REINFORCE entra aqui).
         //
-        // `alvo_valor` fica em None de proposito. O critico NAO propaga para o
-        // tronco, e um caminho destacado e invisivel para diferencas finitas —
-        // perturbar um peso do tronco muda `V` mesmo com o gradiente cortado, entao
-        // o numerico veria uma contribuicao que o analitico (corretamente) nao tem.
-        // A corretude da cabeca de valor vem do gradcheck do `Linear`.
+        // O CRITICO FICA FORA DAQUI, e agora e explicito.
+        //
+        // Ele NAO propaga para o tronco, e caminho destacado e invisivel para
+        // diferencas finitas: perturbar um peso do tronco muda `V` mesmo com o
+        // gradiente cortado, entao o numerico veria uma contribuicao que o analitico
+        // (corretamente) nao tem. A corretude da cabeca de valor vem do gradcheck do
+        // `Linear`, que e o que ela e.
+        //
+        // Isto era so um comentario, e por isso quase se perdeu: quando
+        // `Alvo::auto_critico` nasceu ligado por padrao, o critico entrou neste
+        // teste sem ninguem notar. Ele continuou verde -- por tolerancia, nao por
+        // desenho. Desligar aqui, com asserto, e o que impede de acontecer de novo.
+        alvo.auto_critico = false;
+        alvo.alvo_valor = None;
+        assert!(
+            !alvo.auto_critico && alvo.alvo_valor.is_none(),
+            "o critico tem de ficar fora do gradcheck"
+        );
         if b == 1 {
             alvo.peso = -0.8;
         }

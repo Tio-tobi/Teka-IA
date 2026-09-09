@@ -141,6 +141,46 @@ impl Separacao {
         melhor
     }
 
+    /// Limiares tirados dos PRÓPRIOS valores, e não de uma grade escrita à mão.
+    ///
+    /// ## Por que isto existe
+    ///
+    /// A grade do crítico era `[-0,30 … 0,10]`, feita para o crítico do reforço, que
+    /// prevê recompensa perto de zero. Quando o crítico passou a prever "vou
+    /// acertar?", os valores foram para perto de 0,97 — **todos acima do maior
+    /// candidato**. Nenhum limiar abstinha nada, e a tabela imprimia saldo `+0` em
+    /// todas as sementes.
+    ///
+    /// Aquele zero não era resultado: era a régua não alcançando o objeto. E eu quase
+    /// li como "a hipótese morreu".
+    ///
+    /// Grade fixa é uma suposição sobre a escala do sinal, escrita meses antes de o
+    /// sinal existir. Quantis não supõem nada.
+    pub fn candidatos_dos_dados(&self, n: usize) -> Vec<f64> {
+        let mut todos: Vec<f64> = self
+            .margens_certas
+            .iter()
+            .chain(self.margens_erradas.iter())
+            .copied()
+            .filter(|v| v.is_finite())
+            .collect();
+        if todos.is_empty() || n == 0 {
+            return Vec::new();
+        }
+        todos.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let mut fora = Vec::with_capacity(n);
+        for i in 1..=n {
+            // Quantis internos: o 0 e o 1 nao servem de limiar (abstem nada ou tudo).
+            let q = i as f64 / (n + 1) as f64;
+            let idx = ((todos.len() - 1) as f64 * q).round() as usize;
+            let v = todos[idx];
+            if !fora.contains(&v) {
+                fora.push(v);
+            }
+        }
+        fora
+    }
+
     pub fn media(v: &[f64]) -> f64 {
         if v.is_empty() {
             return f64::NAN;
@@ -171,6 +211,31 @@ impl Separacao {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A grade sai dos dados, entao nao tem como ficar fora de escala.
+    ///
+    /// O caso que motivou: valores perto de 0,97 contra uma grade que ia ate 0,10.
+    /// Saldo +0 em toda semente, e o zero era a regua nao alcancando o objeto.
+    #[test]
+    fn a_grade_acompanha_a_escala_do_sinal() {
+        let mut s = Separacao::default();
+        for _ in 0..90 {
+            s.anotar(true, 0.976);
+        }
+        for _ in 0..10 {
+            s.anotar(false, 0.964);
+        }
+        let cand = s.candidatos_dos_dados(7);
+        assert!(!cand.is_empty(), "grade vazia");
+        assert!(
+            cand.iter().any(|c| *c > 0.96 && *c <= 0.976),
+            "a grade {cand:?} nao alcanca os valores"
+        );
+        // E o limiar entre os dois grupos separa mesmo: evita os 10 erros sem
+        // perder nenhum acerto.
+        let (evitados, perdidos) = s.em(0.970);
+        assert_eq!((evitados, perdidos), (10, 0));
+    }
 
     #[test]
     fn a_margem_e_a_diferenca_para_o_segundo() {

@@ -891,19 +891,27 @@ fn rodar_agente(args: &Args) {
         // margem nao separa acerto de erro neste modelo, e abster so trocaria erro
         // por silencio.
         const CANDIDATOS: &[f64] = &[0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70];
-        const CAND_CRIT: &[f64] = &[-0.30, -0.20, -0.10, -0.05, 0.0, 0.05, 0.10];
         const CAND_ARG: &[f64] = &[0.02, 0.04, 0.06, 0.08, 0.10, 0.15, 0.20];
+        // O CRITICO TIRA A GRADE DOS PROPRIOS VALORES.
+        //
+        // A grade fixa era `[-0,30 ... 0,10]`, feita para o critico do reforco, que
+        // preve recompensa perto de zero. Quando ele passou a prever "vou acertar?",
+        // os valores foram para perto de 0,97 -- todos acima do maior candidato.
+        // Nenhum limiar abstinha nada e a tabela dava saldo +0 em toda semente.
+        //
+        // Aquele zero nao era resultado: era a regua nao alcancando o objeto.
+        let cand_crit = sep_critico.candidatos_dos_dados(7);
 
         println!("\n  ABSTENCAO — qual sinal separa acerto de erro?\n");
         println!("  [1] MARGEM (p1 - p2)");
         print!("{}", sep.tabela(CANDIDATOS));
         println!("\n  [2] CRITICO V(s)");
-        print!("{}", sep_critico.tabela(CAND_CRIT));
+        print!("{}", sep_critico.tabela(&cand_crit));
         println!("\n  [3] MENOR ARGUMENTO / TAMANHO DO PEDIDO");
         print!("{}", sep_arg.tabela(CAND_ARG));
         for (nome, s, cand) in [
             ("margem", &sep, CANDIDATOS),
-            ("critico", &sep_critico, CAND_CRIT),
+            ("critico", &sep_critico, &cand_crit[..]),
             ("argumento", &sep_arg, CAND_ARG),
         ] {
             let (l, saldo) = s.melhor_limiar(cand);
