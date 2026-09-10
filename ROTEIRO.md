@@ -19,18 +19,29 @@ A seção "O que já foi tentado e não vale repetir" é a mais valiosa dele.
 ## 1. Onde ela está
 
 ```
-benchmark de 150     113,50         20 ferramentas, sem a contradicao (s19-30)
-                     110,33         20 ferramentas, com a contradicao
+benchmark de 150     116,17         20 ferramentas, COM o critico (s19-30)
+                       ?            22 ferramentas — MEDINDO AGORA
+                     113,50         20 ferramentas, sem a contradicao
+                     110,33         20 ferramentas, COM a contradicao
                      112,92         19 ferramentas
-                     114,58 ± 3,55  com --patcher entropia (opcional)
 argumento condicional  ~92%        (quando a ferramenta sai certa)
-ferramentas             20         `atalho` custou -2,58 (t=-1,84, nao
-                                    significativo). Ver secao 4.
+ferramenta certa       ~77%        <- o gargalo
+ferramentas             22         20 + `buscar_no_conteudo` + `ler_imagem`,
+                                    as duas vindas da ponte do Harness.
+                                    `editar_arquivo` foi descartada por medicao:
+                                    tres argumentos custaram 3 pontos.
+                                    O custo das duas esta SENDO MEDIDO.
 parâmetros            1,6 M
 para rodar            ~24 MB       binário 1,6 + modelo 6,2 + n-grama 16
 latência              ~103 ms      na CPU, incluindo carregar do disco
 corpus                69,87 MB     9,7x o inicial
 ```
+
+**A parte dificil da fusao esta feita.** A ponte com o Harness foi construida,
+provada e testada em 09/09: a Teka enxerga as 25 ferramentas deles e executa **sem
+agente e sem LLM**, pela pipeline de seguranca deles. O que sobrou do bloco 3.5 e
+incremental — mais ferramentas e a regua —, e nao mais as 20 a 40 sessoes estimadas,
+cujo imprevisivel era justamente a ponte.
 
 **Usável hoje**, sem terminal, para as onze ferramentas de leitura:
 
