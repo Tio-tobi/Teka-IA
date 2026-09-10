@@ -22,14 +22,22 @@ while tasklist //FI "IMAGENAME eq cargo.exe" 2>/dev/null | grep -q cargo.exe; do
 echo "### inicio $(date +%H:%M)  HEAD=$(git rev-parse --short HEAD) (+ mudancas nao commitadas)" >> suite.log
 cargo test --release --no-fail-fast >> suite.log 2>&1
 echo "### codigo=$? — $(date +%H:%M)" >> suite.log
+# CONTAR ANTES DE ANEXAR. A primeira versao contava em cima de `suite.log` DEPOIS
+# de escrever o resumo nele -- e o resumo repete as linhas de `test result`, entao
+# cada teste era contado duas vezes. Deu 742 onde eram 371. Regua nova errando no
+# primeiro uso, que e o assunto do commit que a criou.
+resumo=$(grep -aE '^\s*Running|^\s*Doc-tests|test result:' suite.log | sed 's/^ *//')
+passados=$(grep -aoE '[0-9]+ passed' suite.log | awk '{s+=$1} END {print s+0}')
+falhados=$(grep -aoE '[0-9]+ failed' suite.log | awk '{s+=$1} END {print s+0}')
+vermelhos=$(grep -aE '^\s{4}[a-z_:]+$' suite.log | sort -u | sed 's/^/  /')
 {
   echo
   echo "===================== RESUMO ====================="
-  grep -aE '^\s*Running|^\s*Doc-tests|test result:' suite.log | sed 's/^ *//'
+  echo "$resumo"
   echo
   echo "vermelhos:"
-  grep -aE '^\s{4}[a-z_:]+$' suite.log | sort -u | sed 's/^/  /'
-  echo "total passados: $(grep -aoE '[0-9]+ passed' suite.log | awk '{s+=$1} END {print s}')"
-  echo "total falhados: $(grep -aoE '[0-9]+ failed' suite.log | awk '{s+=$1} END {print s}')"
+  echo "$vermelhos"
+  echo "total passados: $passados"
+  echo "total falhados: $falhados"
 } >> suite.log
 echo "### FIM $(date +%H:%M)" >> suite.log
