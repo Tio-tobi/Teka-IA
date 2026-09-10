@@ -1357,6 +1357,84 @@ const EXPRESSOES: &[&str] = &[
     "75% de 400",
 ];
 
+/// TODOS os pocos, num lugar so.
+///
+/// Existe porque a lista estava escrita a mao dentro dos testes, e quem acrescenta
+/// poco tem de lembrar de entrar la. Em 2026-09-10 eu acrescentei `IMAGENS` e
+/// `PADROES` e nao lembrei — o teste do span caiu, e caiu CERTO. Foi a segunda vez
+/// no mesmo dia que uma lista manual cobrou memoria de quem edita: a outra foi o
+/// `match` do [`valor_para`], que deixou duas ferramentas sem poco por nove dias.
+///
+/// Poco novo entra AQUI e os testes o enxergam sozinhos.
+pub(crate) const POCOS: &[&[&str]] = &[
+    PASTAS, ARQUIVOS, IMAGENS, DISCOS, NOMES, EXPRESSOES, TEXTOS, PADROES, COMANDOS,
+    PROGRAMAS, CONSULTAS, NOMES_DE_ATALHO,
+];
+
+/// Caminhos de IMAGEM, para `ler_imagem`.
+///
+/// Nao existia. Medido em 2026-09-10: `ler_imagem` aprendia o `caminho` dela a
+/// partir de `TEXTOS`, o poco de recado — os 7 valores que ela via eram "ola",
+/// "lembrete", "comprar pao", "reuniao amanha", "senha antiga", "teste" e
+/// "anotacao rapida". **A ferramenta que le imagem nunca tinha visto um `.png`.**
+///
+/// A causa e mecanica: `valor_para` casa por (ferramenta, parametro), e as duas
+/// ferramentas que entraram em `033d533` nao ganharam braco. Cairam no `_ =>
+/// TEXTOS`. A doc de `valor_para` explica por que isso importa: o poco E o sinal —
+/// e o que ensina que "notas.md" pede `ler_arquivo` e "src" pede `listar_pasta`.
+///
+/// Extensao sempre presente, e de proposito: e a pista que separa imagem de
+/// arquivo qualquer, do mesmo jeito que a extensao em `ARQUIVOS` separa arquivo de
+/// pasta.
+const IMAGENS: &[&str] = &[
+    "print.png",
+    "foto.jpg",
+    "captura.png",
+    "diagrama.png",
+    "recibo.jpg",
+    "tela_do_erro.png",
+    "grafico.png",
+    "assinatura.png",
+    "C:\\Users\\User\\Imagens\\ferias.jpg",
+    "C:\\Users\\User\\Downloads\\comprovante.png",
+    "fotos\\2026\\aniversario.jpg",
+    "fotos\\viagem\\praia.jpeg",
+    "capturas\\erro_build.png",
+    "documentos\\scan_rg.jpg",
+    "screenshot_2026_09_10.png",
+    "logo.svg",
+    "banner.webp",
+    "icone.ico",
+    "planta_baixa.png",
+    "print da tela.png",
+];
+
+/// Trechos que se PROCURA dentro de arquivo, para `buscar_no_conteudo`.
+///
+/// Tambem nao existia: o `padrao` vinha de `TEXTOS`, e "comprar pao" nao e o que
+/// alguem procura dentro de um codigo. Quem busca conteudo busca nome de funcao,
+/// mensagem de erro, chave de configuracao.
+const PADROES: &[&str] = &[
+    "TODO",
+    "FIXME",
+    "fn main",
+    "senha",
+    "panic!",
+    "unwrap",
+    "import react",
+    "console.log",
+    "SELECT",
+    "erro fatal",
+    "deprecated",
+    "api_key",
+    "localhost",
+    "version",
+    "def __init__",
+    "null pointer",
+    "timeout",
+    "token",
+];
+
 const TEXTOS: &[&str] = &[
     "ola",
     "lembrete",
@@ -1878,6 +1956,19 @@ fn valor_para(ferramenta: &str, nome_param: &str, rng: &mut Rng) -> &'static str
         (_, "nome") => NOMES,
         (_, "expressao") => EXPRESSOES,
         (_, "comando") => COMANDOS,
+        // As duas que entraram em `033d533` e nao tinham braco. Sem isto elas caiam
+        // no `_ => TEXTOS` e aprendiam caminho a partir de recado.
+        ("ler_imagem", _) => IMAGENS,
+        ("buscar_no_conteudo", "padrao") => PADROES,
+        // REDE POR NOME DE PARAMETRO, e nao so por ferramenta.
+        //
+        // Os bracos acima sao por (ferramenta, parametro), entao TODA ferramenta
+        // nova precisa lembrar de entrar aqui — e foi exatamente isso que ninguem
+        // lembrou. Estes dois ultimos pegam pelo NOME: qualquer ferramenta futura
+        // com `raiz` ou `caminho` ja nasce com valor plausivel em vez de recado.
+        // O teste `todo_caminho_parece_caminho` cobra isso.
+        (_, "raiz") => PASTAS,
+        (_, "caminho") => ARQUIVOS,
         _ => TEXTOS,
     };
     escolher(pool, rng)
@@ -2717,6 +2808,74 @@ mod testes_destilacao {
     /// simplesmente ensina a apontar errado.
     ///
     /// A verificacao e exata de proposito: o trecho apontado tem que ser
+    /// TODO parametro de tipo `Caminho` tem de receber valor que PARECE caminho.
+    ///
+    /// Esta e a trava que faltava. `valor_para` casa por (ferramenta, parametro), e
+    /// quem adiciona ferramenta tem de lembrar de entrar la — em 2026-09-09 duas
+    /// entraram e ninguem lembrou. Resultado medido no dia seguinte:
+    ///
+    /// ```text
+    /// ler_imagem          caminho -> "ola" | "lembrete" | "comprar pao"   (7 valores)
+    /// buscar_no_conteudo  raiz    -> os mesmos 7
+    /// ler_arquivo         caminho -> "notas.md" | "Cargo.toml" | ...     (59 valores)
+    /// ```
+    ///
+    /// A ferramenta que le IMAGEM nunca tinha visto um `.png`. E nao foi descuido de
+    /// quem escreveu: o `_ => TEXTOS` aceita em silencio, e nada apontava.
+    ///
+    /// O teste nao confere lista de ferramenta — confere a PROPRIEDADE. Ferramenta
+    /// nova com parametro de caminho cai aqui sozinha, sem ninguem lembrar de nada.
+    #[test]
+    fn todo_caminho_parece_caminho() {
+        let reg = Registro::padrao();
+        let patcher = PorPalavra::default();
+        let mut rng = Rng::new(11);
+        let exs = gerar(&reg, &patcher, 6000, &mut rng);
+
+        // A propriedade e "veio de um poco de CAMINHO", e nao "tem cara de caminho".
+        //
+        // A primeira versao deste teste cobrava extensao ou separador, e caiu em
+        // `makefile` -- que e nome de arquivo de verdade, sem extensao nenhuma. A
+        // heuristica era proxy; a pertinencia ao poco e a propriedade. Regua errada
+        // no primeiro uso, de novo, e desta vez o dado e que estava certo.
+        let caminhos: Vec<&str> = PASTAS
+            .iter()
+            .chain(ARQUIVOS)
+            .chain(IMAGENS)
+            .chain(DISCOS)
+            .copied()
+            .collect();
+        let parece = |v: &str| caminhos.contains(&v);
+
+        let mut conferidos = 0usize;
+        let mut faltas: Vec<String> = Vec::new();
+        for e in &exs {
+            let f = &reg.ferramentas[e.ferramenta];
+            for &(slot, (a, b)) in &e.args {
+                let Some(p) = f.params.get(slot) else { continue };
+                if p.tipo != crate::tools::TipoParam::Caminho {
+                    continue;
+                }
+                conferidos += 1;
+                let v = &e.pedido[a..b];
+                if !parece(v) {
+                    let q = format!("{}.{} = {v:?}", f.nome, p.nome);
+                    if !faltas.contains(&q) {
+                        faltas.push(q);
+                    }
+                }
+            }
+        }
+        assert!(conferidos > 1000, "poucos caminhos conferidos: {conferidos}");
+        assert!(
+            faltas.is_empty(),
+            "parametro de CAMINHO recebendo valor que nao parece caminho              (falta braco em `valor_para`?):
+  {}",
+            faltas.join("
+  ")
+        );
+    }
+
     /// IDENTICO a um valor de algum pool. Um byte de deslize e o teste cai.
     #[test]
     fn o_span_sobrevive_a_variacao_de_superficie() {
@@ -2726,7 +2885,7 @@ mod testes_destilacao {
         let exs = gerar(&reg, &patcher, 6000, &mut rng);
 
         let mut todos: Vec<&str> = Vec::new();
-        for p in [PASTAS, ARQUIVOS, DISCOS, NOMES, EXPRESSOES, TEXTOS, COMANDOS, PROGRAMAS, CONSULTAS, NOMES_DE_ATALHO] {
+        for p in POCOS {
             todos.extend_from_slice(p);
         }
 
