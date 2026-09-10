@@ -297,16 +297,6 @@ impl Registro {
                     P::Grep,
                 ),
                 f(
-                    "editar_arquivo",
-                    "troca um trecho por outro dentro de um arquivo",
-                    vec![
-                        Param::obrigatorio("caminho", Caminho),
-                        Param::obrigatorio("de", Texto),
-                        Param::obrigatorio("para", Texto),
-                    ],
-                    P::Editar,
-                ),
-                f(
                     "ler_imagem",
                     "abre uma imagem e descreve o que ela contem",
                     vec![Param::obrigatorio("caminho", Caminho)],
@@ -426,7 +416,7 @@ mod tests {
         // Decisao do John em 09/09, depois de eu mostrar que das 25 da ponte, 16 so
         // servem dentro de um laco de LLM, 5 ela ja tem, e 1 (web_search) exige
         // chave paga -- que ele cortou, mantendo a busca no DuckDuckGo.
-        assert_eq!(r.n(), 23);
+        assert_eq!(r.n(), 22);
         assert_eq!(
             r.ferramentas[0].nome, "perguntar",
             "perguntar tem de ser a primeira: e o que ela escolhe quando nada encaixa"

@@ -785,25 +785,6 @@ const MOLDES: &[Molde] = &[
         ],
     },
     Molde {
-        // Tres argumentos, e os tres LITERAIS no pedido: o ponteiro copia trecho.
-        // "troca X por Y em Z" e a unica forma em que os tres cabem na fala.
-        ferramenta: "editar_arquivo",
-        frases: &[
-            "no {0} troca {1} por {2}",
-            "substitui {1} por {2} no {0}",
-            "em {0} muda {1} para {2}",
-            "troca {1} por {2} dentro de {0}",
-            "no arquivo {0} corrige {1} para {2}",
-            "edita {0} trocando {1} por {2}",
-            "em {0} poe {2} no lugar de {1}",
-            "quero trocar {1} por {2} no {0}",
-            "no {0} substitui {1} por {2}",
-            "muda {1} para {2} no arquivo {0}",
-            "conserta {0}: {1} vira {2}",
-            "atualiza {0} trocando {1} por {2}",
-        ],
-    },
-    Molde {
         // A marca aqui e a palavra IMAGEM/FOTO/PRINT junto da extensao. Sem ela,
         // "abre o foto.png" cai em `ler_arquivo`, que e o que ela faria hoje.
         ferramenta: "ler_imagem",
@@ -2831,12 +2812,32 @@ mod testes_destilacao {
         let exs = gerar(&reg, &patcher, 20000, &mut rng);
 
         let mut por: std::collections::BTreeMap<&str, [usize; 4]> = Default::default();
+        // Quantos exemplos PODIAM receber maiuscula inicial, por ferramenta.
+        let mut elegiveis: std::collections::BTreeMap<&str, usize> = Default::default();
         for e in &exs {
             let nome = reg.ferramentas[e.ferramenta].nome.as_str();
             let c = por.entry(nome).or_insert([0; 4]);
             c[0] += 1;
-            if e.pedido.chars().next().map(|x| x.is_uppercase()).unwrap_or(false) {
-                c[1] += 1;
+            // MAIUSCULA SO CONTA ENTRE OS ELEGIVEIS.
+            //
+            // `variar_superficie` pula a maiuscula inicial quando o pedido COMECA
+            // pelo argumento, e pula de proposito: capitalizar dentro de um caminho
+            // daria "Notas.md" e o arquivo nao existe.
+            //
+            // Entao contar sobre TODOS os exemplos compara taxas que estruturalmente
+            // nao podem ser iguais. Medido no `atalho`: 13,7% dos exemplos comecam no
+            // argumento, e a taxa dele saiu 29,3% -- que dividido por 86,3% da 34%,
+            // exatamente a probabilidade do codigo. Nao havia desbalanceamento
+            // nenhum; havia denominador errado.
+            //
+            // Isto apareceu quando eu removi uma ferramenta e a sequencia do sorteio
+            // andou. O teste vinha passando por pouco, medindo a coisa errada.
+            let comeca_no_arg = e.args.iter().any(|&(_, (a, _))| a == 0);
+            if !comeca_no_arg {
+                elegiveis.entry(nome).and_modify(|n| *n += 1).or_insert(1usize);
+                if e.pedido.chars().next().map(|x| x.is_uppercase()).unwrap_or(false) {
+                    c[1] += 1;
+                }
             }
             if e.pedido.chars().any(|x| "áàâãéêíóôõúçÁÉÍÓÚÃÇ".contains(x)) {
                 c[2] += 1;
@@ -2846,13 +2847,18 @@ mod testes_destilacao {
             }
         }
         let taxa = |c: &[usize; 4], i: usize| 100.0 * c[i] as f64 / c[0] as f64;
+        // A de maiuscula tem denominador proprio: so os elegiveis.
+        let taxa_mai = |nome: &str, c: &[usize; 4]| {
+            let n = *elegiveis.get(nome).unwrap_or(&0);
+            if n == 0 { 0.0 } else { 100.0 * c[1] as f64 / n as f64 }
+        };
         println!("
   ferramenta         n   maiuscula   acento   pontuacao");
         println!("  ---------------------------------------------------------");
         for (nome, c) in &por {
             println!(
                 "  {:<16} {:>5}   {:>7.1}%  {:>6.1}%   {:>7.1}%",
-                nome, c[0], taxa(c, 1), taxa(c, 2), taxa(c, 3)
+                nome, c[0], taxa_mai(nome, c), taxa(c, 2), taxa(c, 3)
             );
         }
 
@@ -2864,10 +2870,10 @@ mod testes_destilacao {
             // Maiuscula e pontuacao nao dependem de tabela: tem de sair praticamente
             // iguais. Uma folga de 8 pontos ja e generosa.
             assert!(
-                (taxa(c, 1) - taxa(&neg, 1)).abs() < 8.0,
-                "maiuscula desbalanceada: {nome} {:.1}% contra perguntar {:.1}%",
-                taxa(c, 1),
-                taxa(&neg, 1)
+                (taxa_mai(nome, c) - taxa_mai("perguntar", &neg)).abs() < 8.0,
+                "maiuscula desbalanceada entre os ELEGIVEIS: {nome} {:.1}% contra                  perguntar {:.1}%",
+                taxa_mai(nome, c),
+                taxa_mai("perguntar", &neg)
             );
             assert!(
                 (taxa(c, 3) - taxa(&neg, 3)).abs() < 8.0,
