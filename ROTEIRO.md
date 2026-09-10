@@ -19,8 +19,8 @@ A seção "O que já foi tentado e não vale repetir" é a mais valiosa dele.
 ## 1. Onde ela está
 
 ```
-benchmark de 150     116,17         20 ferramentas, COM o critico (s19-30)
-                       ?            22 ferramentas — MEDINDO AGORA
+benchmark de 150     113,42         22 ferramentas (s19-30) <- ESTADO DE HOJE
+                     116,17         20 ferramentas, COM o critico (s19-30)
                      113,50         20 ferramentas, sem a contradicao
                      110,33         20 ferramentas, COM a contradicao
                      112,92         19 ferramentas
@@ -30,7 +30,8 @@ ferramentas             22         20 + `buscar_no_conteudo` + `ler_imagem`,
                                     as duas vindas da ponte do Harness.
                                     `editar_arquivo` foi descartada por medicao:
                                     tres argumentos custaram 3 pontos.
-                                    O custo das duas esta SENDO MEDIDO.
+                                    Custo das duas MEDIDO: -2,75 (t=-1,79, n=12).
+                                    Decisao do John em 10/09: FICAM.
 parâmetros            1,6 M
 para rodar            ~24 MB       binário 1,6 + modelo 6,2 + n-grama 16
 latência              ~103 ms      na CPU, incluindo carregar do disco
@@ -132,6 +133,10 @@ medir ruido.
 ### 3.2 O gargalo atual é ESCOLHER a ferramenta (dias)
 
 O argumento está em ~92% condicional; a ferramenta em ~76%. É ali que está o ganho.
+
+**Atualizado em 10/09:** a guarda das 22 ferramentas mediu onde o erro caiu, e as
+famílias que mais pioraram sao `escrever_arquivo` (+14), `listar_pasta` (+14) e
+`memoria` (+11) — nao as tres de baixo. Comecar por elas.
 
 A análise de erro apontou as atrativas: `abrir_programa`, `executar_comando`,
 `procurar_arquivo`. O método é o que funcionou três vezes seguidas — **poço de valor e
@@ -625,6 +630,66 @@ Consertado o teste, e nao o dado: a taxa de maiuscula agora tem denominador prop
 
 Quatro vezes em tres dias. **Regua nova erra mais que o codigo medido** — e sonda
 curta antes de corrida longa e o que separa "medi" de "achei que medi".
+
+### FECHADO: as duas ferramentas da ponte custaram -2,75, e FICAM (2026-09-10)
+
+A guarda de 12 sementes registrada em `exp_22.sh` fechou. Base: braco `cr_*`, 20
+ferramentas com o critico.
+
+```
+PRIMARIO   ferramenta certa de 150
+           116,17  ->  113,42     delta -2,75   t=-1,79   n=12
+           caiu em 7, subiu em 3, empatou em 2
+           chao de ruido: 1,2
+
+           argumento condicional  -1,27 pontos  (t=-1,92)
+```
+
+**O custo e real mas nao e conclusivo.** -2,75 e 2,3x o chao de ruido e cai em 7 de
+12, com o argumento apontando junto — mas t=-1,79 com 11 graus de liberdade da p~0,10,
+e o corte pedia |t| > 2,20. "Provavelmente custou", nao "custou".
+
+**DECISAO DO JOHN, 10/09: as duas FICAM.**
+
+Vale registrar a tensao, porque ela e legitima: `editar_arquivo` foi descartada por
+custar 3 pontos de argumento, e estas custam 2,75 de ferramenta mais 1,27 de
+argumento. A diferenca que sustenta as duas decisoes: a `editar_arquivo` DERRUBAVA o
+teste de integracao (85,0% contra limiar de 88%) e estas passam; e estas trazem
+capacidade que a Teka nao tinha.
+
+E o numero e piso, nao teto: ele mede ACURACIA, e o custo das mesmas duas aparecia
+tambem na geometria da assinatura, com acuracia identica (ver a entrada anterior).
+
+#### A SUSPEITA PRE-REGISTRADA ESTAVA ERRADA — QUARTA VEZ
+
+O `exp_22.sh` nomeou `procurar_arquivo` de antemao, por ser vizinha semantica de
+`buscar_no_conteudo`. Ela MELHOROU.
+
+```
+escrever_arquivo   +14        procurar_arquivo   -7   <- a suspeita nomeada
+listar_pasta       +14        ler_arquivo        -3
+memoria            +11        perguntar, disco    0
+hora                +3        executar_comando   +1
+```
+
+Os erros somam exatamente os 33 do primario: o secundario explica o primario inteiro.
+
+O custo caiu na familia de CAMINHO DE ARQUIVO, e nao na de busca. Faz sentido depois
+do fato — `buscar_no_conteudo` e `ler_imagem` carregam ambas um caminho — mas *depois
+do fato* e a parte que importa: isto e historia pos-hoc, e vale como hipotese para a
+proxima sonda, nao como achado. Ver [[teka-patch-por-entropia]] para o precedente de
+efeito pos-hoc que encolheu pela metade na confirmacao.
+
+Placar de prever qual superficie uma mudanca de dado toca: **quatro tentativas, zero
+acertos** (verbos 05/09, fora-de-escopo 08/09, geometria da assinatura 10/09, e esta).
+Ver [[teka-registrar-a-medida-ampla]]. A licao nao e "prever melhor" — e registrar a
+medida AMPLA e deixar o secundario dizer onde caiu.
+
+#### O QUE ISSO ABRE
+
+O secundario aponta onde trabalhar no 3.2: `escrever_arquivo`, `listar_pasta` e
+`memoria`, e nao as tres que a analise de erro antiga sugeria. Poco de valor e forma
+de frase, o metodo que funcionou tres vezes.
 
 ### A SUITE ESTAVA VERMELHA, E OS TESTES E QUE ESTAVAM CERTOS (2026-09-10)
 
