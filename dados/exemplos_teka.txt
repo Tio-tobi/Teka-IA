@@ -906,3 +906,49 @@ atalho | manda diminuir_volume rapido | diminuir_volume
 atalho | aciona mudo pra mim | mudo
 atalho | dispara o atalho mutar_discord | mutar_discord
 atalho | usa ensurdecer_discord | ensurdecer_discord
+
+# --------------------------------------------------------- buscar_no_conteudo
+#
+# A distincao contra `procurar_arquivo` esta na SUPERFICIE, e nao so no conceito:
+# medido em 04/09, ela aprende superficie. Toda frase daqui carrega marca de
+# CONTEUDO -- "dentro", "mencionam", "onde aparece", "no codigo". Sem essa marca,
+# as duas ferramentas viram a mesma coisa para o modelo.
+buscar_no_conteudo | procura Registro dentro dos arquivos | Registro
+buscar_no_conteudo | quais arquivos mencionam Politica | Politica
+buscar_no_conteudo | onde aparece a palavra sandbox no codigo | sandbox
+buscar_no_conteudo | acha o trecho fn main dentro dos fontes | fn main
+buscar_no_conteudo | quero achar TODO no meio do codigo | TODO
+buscar_no_conteudo | vasculha o conteudo atras de senha | senha
+buscar_no_conteudo | que arquivo tem escrito Cargo dentro | Cargo
+buscar_no_conteudo | procura por deprecated no texto dos arquivos | deprecated
+buscar_no_conteudo | me mostra onde o codigo cita unwrap | unwrap
+buscar_no_conteudo | busca dentro dos arquivos por panic | panic
+buscar_no_conteudo | quais fontes falam de patcher | patcher
+buscar_no_conteudo | localiza a expressao fixme no conteudo | fixme
+
+# -------------------------------------------------------------- editar_arquivo
+#
+# Tres argumentos, e os tres tem de estar LITERAIS no pedido: a cabeca de ponteiro
+# COPIA trecho, nao inventa. Por isso as frases sao do tipo "troca X por Y em Z" --
+# a unica forma em que os tres cabem na fala.
+editar_arquivo | no notas.md troca rascunho por versao final | notas.md | rascunho | versao final
+editar_arquivo | substitui debug por release no config.ini | config.ini | debug | release
+editar_arquivo | em README.md troca antigo por novo | README.md | antigo | novo
+editar_arquivo | no script.py muda print por log | script.py | print | log
+editar_arquivo | troca porta por endereco dentro de app.js | app.js | porta | endereco
+editar_arquivo | em dados.json substitui teste por producao | dados.json | teste | producao
+editar_arquivo | no estilo.css troca azul por verde | estilo.css | azul | verde
+editar_arquivo | corrige agenda.md trocando segunda por terca | agenda.md | segunda | terca
+
+# ------------------------------------------------------------------ ler_imagem
+#
+# Ela nao lia imagem de jeito nenhum. A marca de superficie aqui e a EXTENSAO e a
+# palavra imagem/foto/print -- sem isso, "abre o foto.png" cairia em ler_arquivo.
+ler_imagem | descreve pra mim a imagem foto.png | foto.png
+ler_imagem | o que tem nessa imagem captura.png | captura.png
+ler_imagem | abre a foto ferias.jpg e me conta | ferias.jpg
+ler_imagem | olha o print erro.png e diz o que deu | erro.png
+ler_imagem | que imagem e essa diagrama.png | diagrama.png
+ler_imagem | me explica a figura grafico.jpg | grafico.jpg
+ler_imagem | ve essa imagem tela.png pra mim | tela.png
+ler_imagem | analisa a captura de tela bug.png | bug.png

@@ -279,6 +279,39 @@ impl Registro {
                 // música, mutar o microfone, mexer no volume sem alt-tab. O nome do
                 // atalho vem de uma lista fechada (`teclado::ATALHOS`), então o
                 // argumento não é texto livre — é um de dez.
+                // --- as tres que vieram pela PONTE do Harness ---
+                //
+                // O NOME importa tanto quanto a ferramenta. `buscar_no_conteudo` e
+                // lexicalmente distante de `procurar_arquivo`, e essa distancia e
+                // parte do que a torna aprendivel: medido em 04/09, a Teka aprende
+                // SUPERFICIE, nao conceito. Chamar de "grep" nao ajudaria ninguem
+                // que fala portugues, e chamar de "procurar_conteudo" colidiria com
+                // a que ja existe.
+                f(
+                    "buscar_no_conteudo",
+                    "procura um trecho DENTRO dos arquivos, nao pelo nome deles",
+                    vec![
+                        Param::obrigatorio("padrao", Texto),
+                        Param::opcional("raiz", Caminho),
+                    ],
+                    P::Grep,
+                ),
+                f(
+                    "editar_arquivo",
+                    "troca um trecho por outro dentro de um arquivo",
+                    vec![
+                        Param::obrigatorio("caminho", Caminho),
+                        Param::obrigatorio("de", Texto),
+                        Param::obrigatorio("para", Texto),
+                    ],
+                    P::Editar,
+                ),
+                f(
+                    "ler_imagem",
+                    "abre uma imagem e descreve o que ela contem",
+                    vec![Param::obrigatorio("caminho", Caminho)],
+                    P::LerImagem,
+                ),
                 f(
                     "atalho",
                     "manda um atalho de teclado (musica, volume, mudo)",
@@ -376,13 +409,24 @@ mod tests {
     #[test]
     fn registro_padrao_esta_consistente() {
         let r = Registro::padrao();
-        // 19 ferramentas de verdade + `perguntar`, que é a ação de NÃO agir.
+        // 22 ferramentas de verdade + `perguntar`, que é a ação de NÃO agir.
         //
-        // Foram 19 ate 2026-09-06, quando entrou `atalho`. Este numero e conferido
-        // de proposito: crescer o registro custa acuracia (10->19 derrubou de 108,3
-        // para 107,0 e so voltou depois do conserto dos pocos), entao ferramenta
-        // nova tem de ser uma decisao, nunca um efeito colateral de um commit.
-        assert_eq!(r.n(), 20);
+        // Este numero e conferido de proposito: crescer o registro CUSTA ACURACIA, e
+        // ferramenta nova tem de ser uma decisao, nunca efeito colateral de um
+        // commit. O historico:
+        //
+        //   10 -> 19   derrubou de 108,3 para 107,0, e so voltou a 112,7 depois do
+        //              conserto dos pocos
+        //   19 -> 20   `atalho`, em 06/09: -2,58 (t=-1,84), pago depois pelo
+        //              conserto da contradicao do fora-de-escopo
+        //   20 -> 23   `buscar_no_conteudo`, `editar_arquivo` e `ler_imagem`, em
+        //              09/09 -- as tres que vieram pela ponte do Harness. O custo
+        //              esta SENDO MEDIDO com o benchmark de 150 como guarda
+        //
+        // Decisao do John em 09/09, depois de eu mostrar que das 25 da ponte, 16 so
+        // servem dentro de um laco de LLM, 5 ela ja tem, e 1 (web_search) exige
+        // chave paga -- que ele cortou, mantendo a busca no DuckDuckGo.
+        assert_eq!(r.n(), 23);
         assert_eq!(
             r.ferramentas[0].nome, "perguntar",
             "perguntar tem de ser a primeira: e o que ela escolhe quando nada encaixa"

@@ -753,6 +753,75 @@ const MOLDES: &[Molde] = &[
             "poe na tela o conteudo de {0}",
         ],
     },
+    // As tres da PONTE. Ver `Primitiva::Grep` para por que so estas tres.
+    Molde {
+        // A MARCA DE CONTEUDO E OBRIGATORIA EM TODA FRASE DAQUI.
+        //
+        // `procurar_arquivo` ja ocupa "procura {0}". Sem "dentro", "mencionam",
+        // "onde aparece" ou "no codigo", as duas ferramentas viram a mesma coisa
+        // para o modelo — que aprende superficie, e nao conceito (medido em 04/09,
+        // sobre 447 erros).
+        //
+        // E o oposto tambem vale: nenhuma frase daqui pode ser so "procura {0}",
+        // porque ai eu estaria ensinando a contradicao em vez de evita-la.
+        ferramenta: "buscar_no_conteudo",
+        frases: &[
+            "procura {0} dentro dos arquivos",
+            "quais arquivos mencionam {0}",
+            "onde aparece {0} no codigo",
+            "acha o trecho {0} dentro dos fontes",
+            "busca {0} no conteudo dos arquivos",
+            "que arquivo tem {0} escrito dentro",
+            "vasculha o conteudo atras de {0}",
+            "me mostra onde o codigo cita {0}",
+            "localiza a expressao {0} no texto dos arquivos",
+            "quais fontes falam de {0}",
+            "procura pela palavra {0} dentro dos arquivos",
+            "em que arquivo aparece {0}",
+            "caca {0} no meio do codigo",
+            "peneira o conteudo dos arquivos por {0}",
+            "quero achar {0} dentro dos arquivos",
+            "olha dentro dos arquivos por {0}",
+        ],
+    },
+    Molde {
+        // Tres argumentos, e os tres LITERAIS no pedido: o ponteiro copia trecho.
+        // "troca X por Y em Z" e a unica forma em que os tres cabem na fala.
+        ferramenta: "editar_arquivo",
+        frases: &[
+            "no {0} troca {1} por {2}",
+            "substitui {1} por {2} no {0}",
+            "em {0} muda {1} para {2}",
+            "troca {1} por {2} dentro de {0}",
+            "no arquivo {0} corrige {1} para {2}",
+            "edita {0} trocando {1} por {2}",
+            "em {0} poe {2} no lugar de {1}",
+            "quero trocar {1} por {2} no {0}",
+            "no {0} substitui {1} por {2}",
+            "muda {1} para {2} no arquivo {0}",
+            "conserta {0}: {1} vira {2}",
+            "atualiza {0} trocando {1} por {2}",
+        ],
+    },
+    Molde {
+        // A marca aqui e a palavra IMAGEM/FOTO/PRINT junto da extensao. Sem ela,
+        // "abre o foto.png" cai em `ler_arquivo`, que e o que ela faria hoje.
+        ferramenta: "ler_imagem",
+        frases: &[
+            "descreve a imagem {0}",
+            "o que tem na imagem {0}",
+            "abre a foto {0} e me conta",
+            "olha o print {0} e diz o que deu",
+            "que imagem e essa {0}",
+            "me explica a figura {0}",
+            "ve essa imagem {0} pra mim",
+            "analisa a captura de tela {0}",
+            "da uma olhada na foto {0}",
+            "o que aparece na imagem {0}",
+            "interpreta a figura {0}",
+            "me diz o que mostra a imagem {0}",
+        ],
+    },
     Molde {
         ferramenta: "procurar_arquivo",
         frases: &[

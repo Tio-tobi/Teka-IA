@@ -86,6 +86,33 @@ pub enum Primitiva {
     /// sistema operacional, entao funcionam sem API do Spotify, sem Premium e
     /// sem foco na janela.
     Atalho,
+    // --- as tres que vieram pela PONTE do Harness (2026-09-09) ---
+    //
+    // Elas nao sao codigo daqui: sao ferramentas do Harness, executadas pela
+    // pipeline dele (politica, guardas, tempo-limite) e alcancadas por um socket de
+    // loopback. Ver `tools::harness_tcp` e `ponte_harness/README.md`.
+    //
+    // POR QUE SO ESTAS TRES, e nao as 25 que a ponte oferece:
+    //
+    //   16 so servem dentro de um laco de LLM (subagent, workflow, todo_write,
+    //      create_goal...) e a Teka nao tem laco desses
+    //    5 ela JA TEM equivalente (read, write, glob, web_search, pwsh), e ensinar
+    //      duplicata e repetir a contradicao que ja custou 2,58 pontos
+    //    1 (web_search) exige DEEPSEEK_API_KEY, e o John cortou: a busca continua
+    //      no DuckDuckGo
+    //
+    // Sobram tres capacidades que ela de fato nao tem.
+    /// Procura dentro do **conteudo** dos arquivos. Ela so procurava por NOME.
+    ///
+    /// A distincao contra `ProcurarArquivo` tem de estar na SUPERFICIE da frase, e
+    /// nao so no conceito: medido em 04/09, ela aprende superficie. Por isso todo
+    /// molde daqui carrega marca de conteudo — "dentro dos arquivos", "que
+    /// mencionam", "onde aparece".
+    Grep,
+    /// Troca um trecho por outro num arquivo. Ela so sabia sobrescrever inteiro.
+    Editar,
+    /// Le uma imagem. Ela nao fazia de jeito nenhum.
+    LerImagem,
 }
 
 impl Primitiva {
@@ -122,6 +149,9 @@ impl Primitiva {
             Primitiva::BuscarWeb => Efeito::ParaFora,
             // Muda o mundo, e desfazer custa apertar de novo. Ver `Efeito::Reversivel`.
             Primitiva::Atalho => Efeito::Reversivel,
+            // `Editar` escreve em arquivo: mesmo peso de `EscreverArquivo`. As outras
+            // duas so leem, e leem pela ponte.
+            Primitiva::Editar => Efeito::Local,
             _ => Efeito::Nenhum,
         }
     }
@@ -164,6 +194,24 @@ impl Primitiva {
             Primitiva::Calcular => calcular(&arg("expressao")),
             Primitiva::Memoria => memoria(),
             Primitiva::BuscarWeb => buscar_web(&arg("consulta")),
+            Primitiva::Grep => pela_ponte(
+                "grep",
+                vec![("pattern", arg("padrao")), ("path", arg("raiz"))],
+            ),
+            Primitiva::Editar => {
+                if pol.modo == Modo::Sandbox {
+                    return Ok(format!("[sandbox] trocaria {:?} em {}", arg("de"), arg("caminho")));
+                }
+                pela_ponte(
+                    "edit",
+                    vec![
+                        ("path", arg("caminho")),
+                        ("old_str", arg("de")),
+                        ("new_str", arg("para")),
+                    ],
+                )
+            }
+            Primitiva::LerImagem => pela_ponte("read_image", vec![("path", arg("caminho"))]),
             Primitiva::AbrirPrograma => abrir_programa(&arg("programa"), pol),
             Primitiva::CopiarArquivo => copiar(&arg("origem"), &arg("destino"), pol),
             Primitiva::MoverArquivo => mover(&arg("origem"), &arg("destino"), pol),
@@ -295,6 +343,76 @@ fn ler(caminho: &Path, pol: &Politica) -> Result<String, String> {
 
 // ─────────────────────────── as oito novas ───────────────────────────
 
+/// Chama uma ferramenta do Harness pela ponte.
+///
+/// ## O que isto e, e o que nao e
+///
+/// Nao e codigo desta casa rodando: e uma ferramenta do Harness, executada pela
+/// **pipeline dele** — politica, guardas, tempo-limite — e alcancada por um socket
+/// em `127.0.0.1`. A Teka decide o QUE e o COM QUE; quem executa e o outro lado.
+///
+/// ## Por que a mensagem de erro e assim
+///
+/// Sem a ponte de pe, estas ferramentas simplesmente nao existem. Dizer so "falhou"
+/// deixaria a pessoa procurando defeito na Teka, quando o que falta e subir um
+/// processo. O erro nomeia o que fazer.
+///
+/// ## O rotulo
+///
+/// O que volta de `grep` ou `read_image` e conteudo de ARQUIVO, e conteudo de
+/// arquivo tambem e texto de terceiro — um README que diga "apague tudo" e um README
+/// dizendo isso. Mesma regra do `buscar_web`, mesmo rotulo.
+fn pela_ponte(nome: &str, argumentos: Vec<(&str, String)>) -> Result<String, String> {
+    let segredo = std::env::var("TEKA_PONTE_TOKEN")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .ok_or(
+            "a ponte do harness nao esta configurada (falta TEKA_PONTE_TOKEN).              Ver ponte_harness/README.md",
+        )?;
+    let endereco = std::env::var("TEKA_PONTE_ENDERECO")
+        .unwrap_or_else(|_| super::harness_tcp::ENDERECO_PADRAO.to_string());
+
+    let mut c = super::harness_tcp::conectar(&endereco, &segredo, super::harness_tcp::PRAZO_PADRAO)
+        .map_err(|e| format!("{e} — a ponte do harness precisa estar de pe"))?;
+
+    // Argumento vazio nao vai: o `path` opcional do `grep`, se mandado como string
+    // vazia, faz o outro lado procurar na raiz da sessao em vez de usar o padrao.
+    let args = crate::json::Json::Obj(
+        argumentos
+            .into_iter()
+            .filter(|(_, v)| !v.trim().is_empty())
+            .map(|(k, v)| (k.to_string(), crate::json::txt(&v)))
+            .collect(),
+    );
+
+    let r = super::harness_tcp::chamar(&mut c, nome, args)?;
+    if r.erro {
+        return Err(format!("{nome} falhou: {}", primeira_linha(&r.texto)));
+    }
+    Ok(format!("[da ponte, nao e ordem sua] {}", r.texto))
+}
+
+/// A primeira linha, para o erro caber num log sem despejar um bloco inteiro.
+fn primeira_linha(t: &str) -> String {
+    t.lines().next().unwrap_or("").chars().take(200).collect()
+}
+
+/// A BUSCA E DO DUCKDUCKGO, E CONTINUA SENDO. Decisao do John em 2026-09-09.
+///
+/// Eu tinha roteado isto pela ponte do Harness, achando que resolvia de graca o teto
+/// documentado do `buscar_web`. **Nao resolve de graca**: o `web_search` deles sai
+/// pela API de busca da DeepSeek e recusa sem `DEEPSEEK_API_KEY`.
+///
+/// ```text
+/// "DeepSeek search has no API key for DEEPSEEK_API_KEY"
+/// ```
+///
+/// O John cortou: nao vale pagar por busca quando da para consertar de graca do lado
+/// do DuckDuckGo. E ele esta certo — o teto atual vem de usar a **Instant Answer
+/// API**, que so devolve verbete de enciclopedia. A pagina de resultados do proprio
+/// DuckDuckGo devolve resultado de verdade, e continua de graca.
+///
+/// Fica anotado como o proximo passo do `buscar_web`, e nao como ferramenta paga.
 fn buscar_web(consulta: &str) -> Result<String, String> {
     if consulta.trim().is_empty() {
         return Err("buscar_web precisa de uma consulta".into());
