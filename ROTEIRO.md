@@ -35,7 +35,13 @@ parâmetros            1,6 M
 para rodar            ~24 MB       binário 1,6 + modelo 6,2 + n-grama 16
 latência              ~103 ms      na CPU, incluindo carregar do disco
 corpus                69,87 MB     9,7x o inicial
+suite                 371 testes   10 binarios, 0 falhas (2026-09-10)
 ```
+
+**A suite ficou VERMELHA por commits sem ninguem ver.** Tres testes de integracao
+caidos, descobertos so em 10/09. Rodar so a lib nao e rodar a suite, e `cargo test`
+sem `--no-fail-fast` para no primeiro binario vermelho — foi assim que `modelo` e
+`reforco` nunca chegaram a executar. Use `./roda_suite.sh`.
 
 **A parte dificil da fusao esta feita.** A ponte com o Harness foi construida,
 provada e testada em 09/09: a Teka enxerga as 25 ferramentas deles e executa **sem
@@ -146,9 +152,21 @@ ponteiro copia **um** span. Não é falta de treino, é o modelo de saída. Reso
 mais de um span por chamada — mudança real de arquitetura, e a primeira que teria
 justificativa medida.
 
-**Teto do `buscar_web`.** A API de Instant Answer da DuckDuckGo só responde termo
-único de enciclopédia; frase composta devolve vazio. Quem pede conselho de
-configuração recebe verbete. Nenhum treino resolve — só trocar a fonte.
+**~~Teto do `buscar_web`~~ FECHADO em 2026-09-10 (e522bdc).** Estava escrito aqui
+como limite estrutural: a API de Instant Answer da DuckDuckGo so responde termo unico
+de enciclopedia, e "nenhum treino resolve — so trocar a fonte". A parte certa era a
+ultima. O John apontou o conserto: nao vale pagar API quando a PAGINA de resultados
+do proprio DuckDuckGo responde, sem chave e sem cota.
+
+```
+"capital do Brasil"                       Instant Answer VAZIO   pagina 10 resultados
+"melhor configuracao de RAM p/ Ryzen 5"   Instant Answer VAZIO   pagina  9 resultados
+```
+
+E raspagem, entao quebra sem aviso — mas quebra VISIVEL: o extrator e testado contra
+um recorte real da pagina (`dados/fixtures/ddg_resultados.html`), entao mudanca de
+layout vira teste vermelho em vez de busca que silenciosamente para de achar. A
+Instant Answer fica como reserva.
 
 ### 3.4 ~~Interface: falta o canal de confirmação~~ FECHADO em 2026-09-05 (e6d4801)
 
@@ -161,9 +179,11 @@ confirmação é por pedido, identificada, de uso único e com prazo de 120s.
 
 A ordem do John: Teka boa primeiro, junção depois. Continua certa.
 
-**O argumento a favor melhorou esta semana** e não é "mais ferramentas": é que o teto
-do `buscar_web` é verbete, e o que falta para responder "que configuração usar" é um
-LLM que **leia** o resultado. A divisão natural:
+**Este argumento ENFRAQUECEU em 10/09, e vale dizer.** Ele era: o teto do
+`buscar_web` e verbete, e so um LLM lendo o resultado responde "que configuracao
+usar". Metade caiu — a pagina de resultados ja devolve conteudo de verdade, de graca
+(ver 3.3). O que sobra do argumento e mais estreito e ainda de pe: a Teka traz os
+resultados, mas nao os SINTETIZA. A divisão natural:
 
 ```
 Teka     decide O QUE fazer e QUANDO buscar     (rápida, local, 24 MB)
@@ -605,6 +625,124 @@ Consertado o teste, e nao o dado: a taxa de maiuscula agora tem denominador prop
 
 Quatro vezes em tres dias. **Regua nova erra mais que o codigo medido** — e sonda
 curta antes de corrida longa e o que separa "medi" de "achei que medi".
+
+### A SUITE ESTAVA VERMELHA, E OS TESTES E QUE ESTAVAM CERTOS (2026-09-10)
+
+Tres testes de integracao caidos ha commits, em silencio. O motivo de ninguem ver e
+mecanico: a suite exige `--release` e leva ~50 min, entao os commits foram assinados
+olhando so a lib. O `983b60e` diz no proprio corpo "Suite: 304 na lib, verdes".
+
+E eu quase repeti o erro maior. Reportei "suite inteira verde, 360 testes" e commitei
+em cima disso. Eram 371 e tres vermelhos. Duas causas somadas:
+
+```
+sem --no-fail-fast   o cargo para no 1o BINARIO vermelho.  `memoria` caiu,
+                     `modelo` e `reforco` NUNCA rodaram
+saida em tarefa      o laco de espera da tarefa quebrou e ela saiu ANTES do
+de fundo             cargo, levando o resto da saida junto
+```
+
+As 7 linhas de `test result` que sobraram tinham cara de suite completa. **Ausencia
+de falha nao e prova de passagem** — a suite tem 10 binarios, e um resumo com menos
+de 10 linhas esta incompleto, nao verde. `roda_suite.sh` conta isso agora.
+
+#### A TENTACAO, e por que ela estava errada
+
+Os tres pediam limiar afrouxado: subir as epocas do `memoria`, afrouxar o `0.5` do
+`reforco`. Os dois comentarios dos proprios testes ate sugeriam o caminho — o do
+`memoria` diz "e o terceiro teste a cair pelo mesmo motivo... o modelo demora mais
+para assentar".
+
+**Os tres testes estavam certos.** Eram dois bugs de codigo, e nenhum limiar foi
+tocado.
+
+#### Bug 1: uma cabeca respondendo duas perguntas em escalas diferentes
+
+`cache.valor` era ao mesmo tempo `V(s)` do reforco e o auto-critico do supervisionado:
+
+```
+valor   V(s)    previsao da RECOMPENSA    ~ -0,5 a 0
+auto    sigma   "acertei?"                logit, ~ +-3
+```
+
+O `983b60e` passou a treinar o auto-critico. Dai `V(s)` vivia em espaco de LOGIT e
+`vantagem = r - V(s)` nunca dava zero — contrariando a propriedade que a doc de
+`learn::reforco` declara como projeto ("a ferramenta infalivel nao acumula credito").
+
+```
+                              antes    depois
+sucesso silencioso      48/48 nao-nulas   0/48
+laco fechado                     1/6      4/6   no ambiente
+erro do critico                0,544    0,044   corte de 0,5, intocado
+```
+
+O laco de reforco estava TRAVADO em 1/6 desde `983b60e`. De brinde, um bug que
+ninguem tinha visto: rodar o reforco sobrescrevia a cabeca que `model::confianca` le
+para decidir se pergunta.
+
+A bisseccao (`roda_biss_reforco.sh`) nomeou o suspeito antes de rodar e confirmou —
+`sucesso_silencioso` falha em `983b60e` com os MESMOS 48. E mostrou o outro lado:
+`983b60e` CONSERTOU o `a_ancora`, que era vermelho antes. Por isso a cabeca foi
+separada, e nao o commit desfeito.
+
+#### Bug 2: a assinatura lia so o fim da frase
+
+`assinatura()` devolvia o estado do ultimo patch. O argumento parecia bom — backbone
+recorrente, no fim ja passou tudo — mas o estado tem porta e DECAI, e o assunto esta
+no meio: *"como esta a ram do computador"* termina em "computador".
+
+```
+                 certo   distratores      recuperou
+ultimo patch     0,043   0,079..0,158     ERRADO
+media da frase   0,612   0,370..0,465     certo
+```
+
+0,043 no certo nao e "quase": os quatro ficavam entre 0,04 e 0,16, argmax sobre
+ruido. Descartar os dois ultimos patches dava margem melhor (+0,217 contra +0,147),
+mas esse `k` seria constante escolhida em cima de UMA consulta — regua feita para o
+teste passar. Media simples, sem botao.
+
+#### O QUE ISSO DIZ SOBRE A GUARDA DE 22 FERRAMENTAS
+
+A bisseccao (`roda_bisseca.sh`) fixou a causa do bug 2 na entrada das duas
+ferramentas da ponte: verde em `aeacf77` (20), vermelho em `e355765` (22). **E a
+acuracia e IGUAL dos dois lados: intencao 53,9% contra 54,0%.**
+
+O custo do registro crescer NAO apareceu em acuracia. Apareceu na geometria da
+assinatura — cosseno do episodio certo caindo 59%, de 0,382 para 0,158.
+
+A guarda de 12 sementes mede `ferramenta certa` no benchmark de 150. **Ela nao pega
+isto.** O pre-registro do `exp_22.sh` chegou a nomear a suspeita de antemao:
+`procurar_arquivo` roubada pela vizinha `buscar_no_conteudo` — efeito de acuracia. O
+custo real caiu noutra superficie.
+
+Terceira vez que eu erro qual superficie uma mudanca de dado toca. Ver
+[[teka-registrar-a-medida-ampla]]: agora sao tres pontos e zero acertos.
+
+#### E a regua errou de novo, no mesmo dia
+
+O resumo que eu escrevi para impedir a proxima leitura errada anexava o resumo ao
+log e SO ENTAO contava, em cima do arquivo que agora repetia as linhas. 371 viraram
+742.
+
+```
+07/09  a grade do critico fora de escala      saldo +0 por construcao
+08/09  o critico saturado                     separacao 0,012
+09/09  a grade sem o piso de "nao abster"     -4,17 que media a grade
+09/09  o denominador da maiuscula             desbalanceamento que nao existia
+10/09  o resumo da suite contando dobrado     371 lidos como 742
+```
+
+**Mas 10/09 tem a excecao, e ela importa mais que a regra.** Nas quatro primeiras o
+instrumento estava errado e o codigo certo. Desta vez foi o contrario: os tres testes
+mediam propriedades quebradas de verdade, e a saida facil — afrouxar o limiar — teria
+escondido um laco de reforco travado em 1/6 e uma memoria recuperando por sorteio.
+
+"Regua nova erra mais que o codigo medido" e heuristica de onde OLHAR primeiro, nao
+licenca para desconfiar do teste. O que separa os dois casos e a mesma coisa de
+sempre: medir antes de consertar. A sonda previu cos 0,612 e o teste mediu 0,612.
+
+Commits: `e522bdc` (busca), `7ea0241` (os tres testes), `eb3c266` (a contagem dobrada).
 
 ### PROVADO: a Teka pode usar as ferramentas do Harness sem o LLM (2026-09-09)
 
