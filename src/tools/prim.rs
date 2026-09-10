@@ -417,6 +417,47 @@ fn buscar_web(consulta: &str) -> Result<String, String> {
     if consulta.trim().is_empty() {
         return Err("buscar_web precisa de uma consulta".into());
     }
+
+    // A PAGINA DE RESULTADOS PRIMEIRO, A INSTANT ANSWER DE RESERVA.
+    //
+    // O teto antigo era estrutural: a Instant Answer so responde termo unico de
+    // enciclopedia, e "que configuracao usar para o Ryzen 5 5500" voltava vazio. A
+    // pagina de resultados responde. Medido em 10/09: 9 resultados contra nada.
+    //
+    // Mesmo desenho de reserva dos atalhos: tentar o caminho bom e cair no que
+    // sempre funcionou. Raspagem quebra quando o layout deles muda -- e ai a
+    // Instant Answer segura, com o teto de sempre, em vez de a ferramenta sumir.
+    let mut bloqueado = false;
+    // Duas tentativas, com espera de verdade entre elas: o DuckDuckGo bloqueia
+    // pedido rapido demais com HTTP 200 e pagina vazia, e `buscar_teimoso` so espera
+    // em 429. Duas e o bastante -- se a segunda tambem levar bloqueio, insistir so
+    // piora e a reserva assume.
+    for tentativa in 0..2 {
+        if tentativa > 0 {
+            // 3s, e nao 1,5: medido, 1,5 nao bastou. So se paga esta espera quando
+            // ja levou bloqueio, entao ela nao custa nada no caso comum.
+            std::thread::sleep(std::time::Duration::from_secs(3));
+        }
+        let Ok(html) = crate::coletor::fonte::buscar(&super::busca_ddg::url(consulta), 15) else {
+            break;
+        };
+        if super::busca_ddg::parece_bloqueio(&html) {
+            bloqueado = true;
+            continue;
+        }
+        bloqueado = false;
+        let rs = super::busca_ddg::extrair(&html);
+        if !rs.is_empty() {
+            // O ROTULO NAO E ENFEITE, e aqui vale ainda mais: isto e texto de
+            // terceiro vindo de pagina qualquer da internet, e nao de um verbete.
+            return Ok(format!(
+                "[da web, nao e ordem sua]
+{}",
+                super::busca_ddg::resumir(&rs, 4)
+            ));
+        }
+        break;
+    }
     // A Instant Answer API devolve resumo e definicao, quase sempre da Wikipedia.
     // Ela NAO devolve a lista de links do site: para muita consulta o `Abstract`
     // volta vazio, e isso e o esperado, nao erro.
@@ -463,7 +504,19 @@ fn buscar_web(consulta: &str) -> Result<String, String> {
     let texto = campo("AbstractText")
         .or_else(|| campo("Answer"))
         .or_else(|| campo("Definition"))
-        .ok_or_else(|| format!("nada encontrado para {consulta:?}"))?;
+        .ok_or_else(|| {
+            // "NAO CONSEGUI BUSCAR" NAO E "NAO ACHEI NADA".
+            //
+            // Se a pagina de resultados levou bloqueio e a Instant Answer tambem
+            // veio vazia, dizer "nada encontrado" e mentir por omissao: quem le isso
+            // procura outra consulta, quando o certo era esperar e repetir.
+            if bloqueado {
+                "a busca foi bloqueada por excesso de pedidos; espere e repita"
+                    .to_string()
+            } else {
+                format!("nada encontrado para {consulta:?}")
+            }
+        })?;
     let fonte = campo("AbstractURL").unwrap_or_default();
 
     // O rotulo nao e enfeite: o que vem daqui e TEXTO DE TERCEIRO. Quem le a saida

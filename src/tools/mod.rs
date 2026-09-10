@@ -15,6 +15,7 @@
 pub mod prim;
 pub mod diario;
 pub mod execucao;
+pub mod busca_ddg;
 pub mod gatilhos;
 pub mod harness;
 pub mod harness_proc;

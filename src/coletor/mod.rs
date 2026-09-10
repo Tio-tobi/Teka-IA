@@ -51,6 +51,9 @@ pub const DOMINIOS: &[&str] = &[
     // seriam duas chances de esquecer uma — e a diferenca entre "busca" e "manda o
     // que voce digitou para qualquer lugar" e exatamente esta lista.
     "api.duckduckgo.com",
+    // A PAGINA de resultados, que a Instant Answer nao substitui: aquela so
+    // responde termo unico de enciclopedia. Ver `tools::busca_ddg`.
+    "html.duckduckgo.com",
     "pt.wikipedia.org",
     "pt.wikibooks.org",
     "docs.python.org",
