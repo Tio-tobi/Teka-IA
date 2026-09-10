@@ -518,6 +518,83 @@ critico    melhor limiar  -0.30  saldo  +0     em 12 de 12 sementes
 
 **Ela tem dois orgaos de raciocinio: um desligado e outro nunca alimentado.**
 
+### DUAS FERRAMENTAS NOVAS, E UMA DESCARTADA POR MEDICAO (2026-09-09)
+
+O John pediu para ensinar as ferramentas do Harness. A lista de NOVAS e bem menor
+que as 25 que a ponte oferece:
+
+```
+JA TEM EQUIVALENTE (5)   read, write, glob, web_search, pwsh
+SO SERVEM NUM LACO       job_*, subagent, workflow, ralph, todo_write,
+DE LLM (16)              create_goal, skill, exit_plan_mode, ...
+NOVAS DE VERDADE (3)     grep, edit, read_image
+```
+
+Ensinar as 16 seria ensinar ruido; ensinar as 5 duplicatas seria repetir a
+contradicao que ja custou 2,58 pontos.
+
+**A busca fica no DuckDuckGo.** Eu tinha roteado o `buscar_web` pela ponte achando
+que resolvia de graca o teto documentado. Nao resolve de graca: o `web_search` deles
+sai pela API da DeepSeek e recusa sem `DEEPSEEK_API_KEY`. Decisao do John — nao vale
+pagar por busca quando da para consertar do lado do DuckDuckGo, trocando a Instant
+Answer API pela pagina de resultados. **Eu tinha vendido isso como o ganho de custo
+zero, e era justamente o unico que custa.** As locais e que sao gratis.
+
+**`editar_arquivo` saiu, e saiu por medicao:**
+
+```
+COM ela    argumento em frases ineditas: 85,0%   FALHA (limiar 88%)
+SEM ela    passa
+```
+
+Era a UNICA de tres argumentos do registro inteiro, e argumento multiplo e o lugar
+dificil desta casa — o plato do laco fechado era o `escrever_arquivo`, "a unica de
+dois". E a fala "troca X por Y em Z" exige os tres LITERAIS, porque o ponteiro copia
+trecho: raro na fala, e ela ja tem `escrever_arquivo`.
+
+O gradcheck, que tinha falhado com 23 ferramentas (rel 1,5e-5 contra tolerancia de
+1e-5), **voltou a passar sozinho com 22**. Nao precisei relaxar nada.
+
+**O NOME E PARTE DA FERRAMENTA.** `buscar_no_conteudo` e lexicalmente distante de
+`procurar_arquivo` de proposito, e TODAS as 16 frases do molde carregam marca de
+conteudo — "dentro", "mencionam", "onde aparece". Sem isso as duas viram a mesma
+coisa para o modelo, que aprende superficie e nao conceito, e eu estaria ENSINANDO a
+contradicao em vez de evitando.
+
+### A TERCEIRA VEZ QUE A REGUA ERRA MAIS QUE O CODIGO (2026-09-09)
+
+Remover uma ferramenta quebrou `a_variacao_de_superficie_e_balanceada`:
+
+```
+atalho 29,3% de maiuscula contra perguntar 37,6%, limiar de 8 pontos
+```
+
+Fui medir antes de consertar. `variar_superficie` pula a maiuscula inicial quando o
+pedido COMECA pelo argumento, e pula de proposito: capitalizar dentro de um caminho
+daria "Notas.md", e o arquivo nao existe.
+
+```
+13,7% dos exemplos de `atalho` comecam no argumento
+29,3 / 86,3 = 34,0%  <- exatamente a probabilidade de 35% do codigo
+```
+
+**Nao havia desbalanceamento. Havia denominador errado.** O teste contava sobre todos
+os exemplos, incluindo aqueles em que a variacao e IMPOSSIVEL, comparando taxas que
+estruturalmente nao podem ser iguais. Ele vinha passando por pouco, medindo a coisa
+errada, e so apareceu porque remover uma ferramenta andou a sequencia do sorteio.
+
+Consertado o teste, e nao o dado: a taxa de maiuscula agora tem denominador proprio.
+
+```
+07/09  a grade do critico fora de escala      saldo +0 por construcao
+08/09  o critico saturado                     separacao 0,012
+09/09  a grade sem o piso de "nao abster"     -4,17 que media a grade
+09/09  o denominador da maiuscula             desbalanceamento que nao existia
+```
+
+Quatro vezes em tres dias. **Regua nova erra mais que o codigo medido** — e sonda
+curta antes de corrida longa e o que separa "medi" de "achei que medi".
+
 ### PROVADO: a Teka pode usar as ferramentas do Harness sem o LLM (2026-09-09)
 
 O John perguntou se nao dava para importar as ferramentas do Harness, "o legal e
