@@ -140,19 +140,62 @@ impl<T: Float> Agente<T> {
             .collect()
     }
 
-    /// A leitura que ela fez do pedido: o estado do backbone no último patch.
+    /// A leitura que ela fez do pedido: a média do estado do backbone sobre a
+    /// frase inteira.
     ///
     /// É a chave da memória episódica — dois pedidos que ela lê parecido têm
     /// assinaturas próximas, e é por cosseno entre elas que se recupera "o que já
     /// aconteceu parecido com isto". Vale para `batch = 1`.
+    ///
+    /// ## Por que a média, e não o último patch
+    ///
+    /// Era o último patch, e o argumento parecia bom: o backbone é recorrente,
+    /// então no fim já passou tudo. Mas o estado tem porta e **decai** — o último
+    /// patch pesa o FIM da frase, e o assunto costuma estar no meio:
+    ///
+    /// ```text
+    /// "como esta a ram do computador"   termina em "computador", assunto "ram"
+    /// "quanto de memoria esta em uso"   termina em "uso",        assunto "memoria"
+    /// ```
+    ///
+    /// Com 20 ferramentas isso dava certo; com 22 parou. Medido no mesmo modelo
+    /// treinado, cosseno com o episódio CERTO contra os três distratores:
+    ///
+    /// ```text
+    ///                        certo   distratores       recuperou
+    /// último patch           0,043   0,079..0,158      ERRADO
+    /// média da frase         0,612   0,370..0,465      certo
+    /// ```
+    ///
+    /// 0,043 no episódio certo não é "quase" — os quatro candidatos ficavam entre
+    /// 0,04 e 0,16, que é argmax sobre ruído. Não era falta de treino: a acurácia
+    /// era idêntica com 20 e com 22 ferramentas (53,9% contra 54,0%), então o que
+    /// mudou foi a geometria, não a competência.
+    ///
+    /// Média simples, sem descartar cauda. Descartar os dois últimos patches dava
+    /// margem melhor (+0,217 contra +0,147), mas esse `k` seria uma constante
+    /// escolhida em cima de uma consulta só — régua feita para o teste passar.
     pub fn assinatura(&self, cache: &AgenteCache<T>) -> Vec<f32> {
-        cache
-            .cabecas
-            .zf
-            .iter()
-            .take(self.cabecas.d)
-            .map(|v| v.to_f64() as f32)
-            .collect()
+        let d = self.cabecas.d;
+        let np = cache.cabecas.n_patches.first().copied().unwrap_or(0);
+        // Sem patches não há leitura; cair no `zf` mantém o contrato de devolver
+        // sempre `d` números em vez de um vetor vazio que viraria cosseno zero.
+        if np == 0 {
+            return cache.cabecas.zf.iter().take(d).map(|v| v.to_f64() as f32).collect();
+        }
+        let z = cache.modelo.z();
+        let mut m = vec![0.0f32; d];
+        for p in 0..np {
+            // `z` é `[p_max, batch, d]`; com `batch = 1` o patch `p` começa em `p·d`.
+            let ini = p * d;
+            for (i, x) in m.iter_mut().enumerate() {
+                *x += z[ini + i].to_f64() as f32;
+            }
+        }
+        for x in m.iter_mut() {
+            *x /= np as f32;
+        }
+        m
     }
 
     /// Um passo de compreensão: tronco → cabeças. Com `grad`, treina.

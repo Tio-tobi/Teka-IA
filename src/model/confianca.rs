@@ -77,7 +77,11 @@ impl Confianca {
             p1,
             p2: if p2.is_finite() { p2 } else { 0.0 },
             segunda: i2,
-            valor: cache.valor.get(b).map(|v| v.to_f64()).unwrap_or(0.0),
+            // `auto`, e nao `valor`: quem decide se pergunta e o AUTO-CRITICO
+            // ("acertei?"), nao o previsor de recompensa. Enquanto era uma cabeca
+            // so, um laco de reforco reescrevia isto como estimativa de recompensa
+            // e a abstencao passava a ler outra coisa.
+            valor: cache.auto.get(b).map(|v| v.to_f64()).unwrap_or(0.0),
         }
     }
 

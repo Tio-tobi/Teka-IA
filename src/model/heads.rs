@@ -107,7 +107,7 @@ fn critico<T: Float>(
     inv_b: T,
     com_grad: bool,
 ) -> f64 {
-    let x = cache.valor[b].to_f64();
+    let x = cache.auto[b].to_f64();
     // Sigmoide estável: para x muito negativo, `exp(x)` não estoura.
     let p = if x >= 0.0 { 1.0 / (1.0 + (-x).exp()) } else { let e = x.exp(); e / (1.0 + e) };
     let w = if certo { 1.0 } else { PESO_ERRO };
@@ -117,9 +117,7 @@ fn critico<T: Float>(
         // d/dx da entropia cruzada com sigmoide é `σ(x) − alvo`. Limpo assim
         // justamente por causa da forma escolhida.
         let alvo = if certo { 1.0 } else { 0.0 };
-        // `=` e nao `+=`: o bloco de `alvo_valor` la em cima e o reforco, e um alvo
-        // nunca e os dois (`auto_critico` e falso quando ha recompensa observada).
-        cache.dvalor[b] = T::from_f64((p - alvo) * w * COEF_CRITICO) * inv_b;
+        cache.dauto[b] = T::from_f64((p - alvo) * w * COEF_CRITICO) * inv_b;
     }
     COEF_CRITICO * w * perda
 }
@@ -270,6 +268,24 @@ pub struct Cabecas<T: Float> {
     /// aprendido a partir do estado, então **generaliza** para pedidos parecidos que
     /// nunca foram repetidos.
     pub valor: Linear<T>,
+    /// O **auto-crítico**: um logit para "a decisão que acabei de tomar está certa?".
+    ///
+    /// Cabeça separada de [`Cabecas::valor`], e a separação é o conserto de um bug
+    /// medido. As duas respondem perguntas diferentes em escalas diferentes:
+    ///
+    /// ```text
+    /// valor   V(s)     previsão da RECOMPENSA      ~ -0,5 a 0
+    /// auto    σ(x)     "acertei?"                  logit, ~ ±3
+    /// ```
+    ///
+    /// Enquanto era uma cabeça só, treinar o auto-crítico no supervisionado deixava
+    /// `V(s)` em espaço de logit, e `vantagem = r − V(s)` nunca dava zero. Sintoma
+    /// medido: 48 sucessos silenciosos geraram 48 vantagens não-nulas, quando a
+    /// propriedade declarada no topo de `learn::reforco` é que gerem ZERO — sucesso
+    /// sem retorno não pode mover a política. E o contrário também doía: rodar o
+    /// laço de reforço sobrescrevia a cabeça que `model::confianca` lê para decidir
+    /// se pergunta, porque virava previsor de recompensa.
+    pub auto: Linear<T>,
     /// `[2·MAX_SLOTS, d]` — uma consulta aprendida por (slot, extremidade).
     /// Somar um vetor por slot custa `8·d` parâmetros em vez dos `8·d²` de uma
     /// projeção por slot, e faz o mesmo trabalho.
@@ -286,6 +302,7 @@ pub struct CabecasGrad<T: Float> {
     pub presenca: LinearGrad<T>,
     pub consulta_byte: LinearGrad<T>,
     pub valor: LinearGrad<T>,
+    pub auto: LinearGrad<T>,
     pub demb_slot: Vec<T>,
     pub demb_byte: Vec<T>,
 }
@@ -298,6 +315,7 @@ impl<T: Float> CabecasGrad<T> {
         self.presenca.clear();
         self.consulta_byte.clear();
         self.valor.clear();
+        self.auto.clear();
         self.demb_slot.fill(T::ZERO);
         self.demb_byte.fill(T::ZERO);
     }
@@ -315,6 +333,8 @@ impl<T: Float> CabecasGrad<T> {
             &self.consulta_byte.db[..],
             &self.valor.dw[..],
             &self.valor.db[..],
+            &self.auto.dw[..],
+            &self.auto.db[..],
             &self.demb_slot[..],
             &self.demb_byte[..],
         ]
@@ -331,8 +351,16 @@ pub struct CabecasCache<T: Float> {
     pub score: Vec<T>,      // [2·MAX_SLOTS, batch, p_max]
     pub score_byte: Vec<T>, // [2·MAX_SLOTS, batch, seq]
     pub logit_pres: Vec<T>, // [batch, MAX_SLOTS]
-    pub valor: Vec<T>,      // [batch] — a previsão do crítico
+    pub valor: Vec<T>,      // [batch] — V(s), a previsão da recompensa
+    pub auto: Vec<T>,       // [batch] — logit de "acertei?"
+    /// `[batch]` — quantos patches cada pedido teve.
+    ///
+    /// Guardado porque [`Agente::assinatura`] agrupa a frase INTEIRA, e sem isto
+    /// nao ha como saber onde ela acaba dentro de `z`, que vem preenchido ate
+    /// `p_max`.
+    pub n_patches: Vec<usize>,
     dvalor: Vec<T>,
+    dauto: Vec<T>,
     dpres: Vec<T>,
     dlogits: Vec<T>,
     dscore: Vec<T>,
@@ -434,6 +462,9 @@ impl<T: Float> Cabecas<T> {
             // Nasce prevendo zero: sem experiência nenhuma, a melhor estimativa da
             // recompensa é "nada acontece".
             valor: Linear::nova_com_escala(d, 1, 0.0, rng),
+            // Zerada tambem: logit 0 e probabilidade 1/2, que e a ignorancia honesta
+            // de quem ainda nao viu correcao nenhuma.
+            auto: Linear::nova_com_escala(d, 1, 0.0, rng),
             emb_slot,
             emb_byte,
         }
@@ -447,6 +478,7 @@ impl<T: Float> Cabecas<T> {
             presenca: self.presenca.grad(),
             consulta_byte: self.consulta_byte.grad(),
             valor: self.valor.grad(),
+            auto: self.auto.grad(),
             demb_slot: vec![T::ZERO; self.emb_slot.len()],
             demb_byte: vec![T::ZERO; self.emb_byte.len()],
         }
@@ -477,6 +509,8 @@ impl<T: Float> Cabecas<T> {
             &mut self.consulta_byte.b[..],
             &mut self.valor.w[..],
             &mut self.valor.b[..],
+            &mut self.auto.w[..],
+            &mut self.auto.b[..],
             &mut self.emb_slot[..],
             &mut self.emb_byte[..],
         ]
@@ -489,6 +523,7 @@ impl<T: Float> Cabecas<T> {
         v.extend(self.presenca.descritores("cabecas.presenca"));
         v.extend(self.consulta_byte.descritores("cabecas.consulta_byte"));
         v.extend(self.valor.descritores("cabecas.valor"));
+        v.extend(self.auto.descritores("cabecas.auto"));
         v.push(("cabecas.emb_slot".into(), vec![self.emb_slot.len()]));
         v.push(("cabecas.emb_byte".into(), vec![self.emb_byte.len()]));
         v
@@ -517,7 +552,7 @@ impl<T: Float> Cabecas<T> {
         for b in [&mut c.logit_pres, &mut c.dpres] {
             b.resize(batch * MAX_SLOTS, T::ZERO);
         }
-        for b in [&mut c.valor, &mut c.dvalor] {
+        for b in [&mut c.valor, &mut c.dvalor, &mut c.auto, &mut c.dauto] {
             b.resize(batch, T::ZERO);
         }
     }
@@ -555,6 +590,8 @@ impl<T: Float> Cabecas<T> {
             let src = (up * batch + b) * d;
             cache.zf[b * d..(b + 1) * d].copy_from_slice(&z[src..src + d]);
         }
+        cache.n_patches.clear();
+        cache.n_patches.extend_from_slice(n_patches);
 
         self.intencao
             .forward(ops, &cache.zf, batch, &mut cache.logits_int);
@@ -564,6 +601,7 @@ impl<T: Float> Cabecas<T> {
         self.consulta_byte
             .forward(ops, &cache.zf, batch, &mut cache.qb_base);
         self.valor.forward(ops, &cache.zf, batch, &mut cache.valor);
+        self.auto.forward(ops, &cache.zf, batch, &mut cache.auto);
         self.chaves.forward(ops, z, p_max * batch, &mut cache.keys);
 
         let inv = T::from_f64(1.0 / (d as f64).sqrt());
@@ -622,6 +660,7 @@ impl<T: Float> Cabecas<T> {
             cache.dscore_byte.fill(T::ZERO);
             cache.dpres.fill(T::ZERO);
             cache.dvalor.fill(T::ZERO);
+            cache.dauto.fill(T::ZERO);
         }
 
         for b in 0..batch {
@@ -901,6 +940,8 @@ impl<T: Float> Cabecas<T> {
         // do `Linear`, que é o que ela é.
         self.valor
             .backward(ops, &cache.zf, &cache.dvalor, batch, None, false, &mut g.valor);
+        self.auto
+            .backward(ops, &cache.zf, &cache.dauto, batch, None, false, &mut g.auto);
         for b in 0..batch {
             let up = n_patches[b].saturating_sub(1);
             let dst = (up * batch + b) * d;
@@ -1038,10 +1079,10 @@ mod testes_critico {
     #[test]
     fn o_critico_persegue_a_propria_correcao() {
         let mut c = CabecasCache::<f64>::new();
-        c.valor = vec![0.0];
-        c.dvalor = vec![0.0];
-        let mut medir = |c: &mut CabecasCache<f64>, logit: f64, certo: bool| {
-            c.valor[0] = logit;
+        c.auto = vec![0.0];
+        c.dauto = vec![0.0];
+        let medir = |c: &mut CabecasCache<f64>, logit: f64, certo: bool| {
+            c.auto[0] = logit;
             critico(c, 0, certo, 1.0, true)
         };
 
@@ -1053,11 +1094,11 @@ mod testes_critico {
 
         // Gradiente empurra o logit PARA CIMA quando ele esta baixo e o alvo e 1.
         medir(&mut c, -3.0, true);
-        assert!(c.dvalor[0] < 0.0, "dvalor={} deveria ser negativo", c.dvalor[0]);
+        assert!(c.dauto[0] < 0.0, "dauto={} deveria ser negativo", c.dauto[0]);
 
         // Errou: alvo 0, e agora empurra para BAIXO.
         medir(&mut c, 3.0, false);
-        assert!(c.dvalor[0] > 0.0, "dvalor={} deveria ser positivo", c.dvalor[0]);
+        assert!(c.dauto[0] > 0.0, "dauto={} deveria ser positivo", c.dauto[0]);
 
         // E o ERRO pesa mais que o acerto, que e o conserto da saturacao.
         let no_erro = medir(&mut c, 3.0, false);
