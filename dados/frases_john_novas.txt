@@ -43,73 +43,205 @@
 #  procura na internet e traz um resumo
 #  argumentos: consulta:texto
 
-
+Teka, pesquisa ai pra mim como que faz pra reutilizar um html no python
+Teka, olha na internet qual jogo vai lançar na steam esse mês
+mano, vê ai como eu faço uma api em python do zero
+Teka, procura pra mim um tutorial de como instalar o node no windows
+Teka pesquisa ai qual a diferença entre sqlite e postgresql
+vê na internet como que faz um bot do discord tocar musica
+Teka, dá uma olhada quanto tá uma rx 580 usada hoje
+Teka, pesquisa ai se já saiu alguma notícia do minecraft novo
+mano, procura aquele erro de cors no express pra mim
+Teka, vê ai como funciona o ollama no windows
+Teka pesquisa sobre como fazer um site com html css e javascript
+olha ai na internet se tem algum curso bom de python pra iniciante
 
 ## abrir_programa   [0 frases]
 #  abre um programa no computador
 #  argumentos: programa:texto
 
-
+Teka abre o vscode ai
+Teka, abre o navegador pra mim
+Teka, liga o discord ai rapidão
+Teka abre o terminal
+Teka, abre o spotify
+Teka, pode abrir o python ai?
+Teka, abre o explorador de arquivos
+Teka, inicia o lm studio
+Teka, liga o ollama
+Teka, abre o bloco de notas ai
+Teka, liga o vscode que eu quero codar
+mano, abre o navegador ai
 
 ## copiar_arquivo   [0 frases]
 #  copia um arquivo para outro lugar
 #  argumentos: origem:caminho, destino:caminho
 
-
+Teka copia esse arquivo pra outra pasta
+Teka, pega esse txt e faz uma cópia dele
+Teka, copia o relatório da área de trabalho pra documentos
+Teka, joga uma cópia desse arquivo na pasta backup
+mano, copia esse projeto inteiro pra outra pasta
+Teka, faz uma cópia desse arquivo aqui rapidão
+Teka, duplica essa imagem pra mim
+Teka, copia o arquivo do estágio pra pasta documentos
+Teka, pega esse negócio aqui e copia lá pra outra pasta
+Teka, copia esse arquivo pra unidade E
+Teka, faz um backup desse txt
+Teka, copia a pasta do projeto pra outro lugar
 
 ## mover_arquivo   [0 frases]
 #  move ou renomeia um arquivo
 #  argumentos: origem:caminho, destino:caminho
 
-
+Teka, pega esse arquivo e joga na pasta documentos
+Teka, move o relatório pra pasta do estágio
+Teka, renomeia esse arquivo pra relatório final
+Teka, tira essa imagem daqui e coloca na pasta fotos
+mano, muda o nome desse txt pra teste 2
+Teka, move esse projeto pra outra pasta ai
+Teka, pega esse arquivo da área de trabalho e manda pra documentos
+Teka, joga esse arquivo na pasta antiga
+Teka, renomeia esse negócio pra backup
+Teka, move essa pasta pra unidade E
+Teka, tira esse arquivo daqui e coloca lá
+Teka, muda o nome desse arquivo ai
 
 ## criar_pasta   [0 frases]
 #  cria uma pasta
 #  argumentos: caminho:caminho
 
-
+Teka, cria uma pasta chamada projetos
+Teka, faz uma pasta nova na área de trabalho
+Teka, cria uma pasta de backup ai
+Teka, monta uma pasta pra guardar meus jogos
+mano, faz uma pasta chamada estudos dentro de documentos
+Teka, cria uma pasta chamada teste
+Teka, abre uma pasta nova chamada imagens
+Teka, faz uma pasta pra esse projeto ai
+Teka, cria uma pasta chamada arquivos antigos
+Teka, faz uma pasta dentro de documentos chamada escola
+Teka, cria uma pasta pra guardar os txt
+Teka, monta uma pasta chamada nyxara
 
 ## info_arquivo   [0 frases]
 #  diz o tamanho e a data de um arquivo
 #  argumentos: caminho:caminho
 
-
+Teka, quanto pesa esse arquivo aqui
+Teka, me diz o tamanho desse pdf
+Teka, vê ai a data daquele relatório
+Teka, quando foi que esse arquivo foi criado?
+Teka, qual o tamanho dessa pasta do projeto?
+Teka, me mostra as informações desse txt
+Teka, esse arquivo é grande?
+Teka, quando mexeram nesse arquivo pela última vez?
+Teka, me diz o tamanho dessa imagem ai
+Teka, qual foi a última vez que alteraram esse arquivo?
+Teka, quanto espaço esse arquivo tá ocupando?
+Teka, olha a data desse arquivo pra mim
 
 ## apagar_arquivo   [0 frases]
 #  apaga um arquivo
 #  argumentos: caminho:caminho
 
-
+Teka, apaga esse arquivo aqui
+Teka, pode deletar aquele txt de teste
+Teka, tira esse arquivo da pasta ai
+Teka, exclui o relatório antigo
+Teka, apaga essa imagem que não serve mais
+Teka, deleta o arquivo chamado teste
+Teka, remove esse negócio daqui
+Teka, joga esse arquivo fora
+Teka, apaga o backup velho
+Teka, pode excluir esse arquivo?
+Teka, tira esse txt daqui
+Teka, apaga esse arquivo de teste ai
 
 ## processos   [0 frases]
 #  lista os programas rodando agora
 #  argumentos: sem argumento
 
-
+Teka, quais programas tão rodando agora
+Teka, me mostra o que tá aberto no pc
+Teka, vê ai se tem algum programa pesado rodando
+Teka, lista os processos do windows
+mano, Teka, o que tá usando o computador agora?
+Teka, quais programas estão ativos ai?
+Teka, me mostra os programas em segundo plano
+Teka, tem algum processo estranho rodando?
+Teka, lista os processos pra mim
+Teka, o que tá rodando nessa máquina?
+Teka, vê o que tá consumindo o pc
+Teka, me mostra os programas que tão abertos
 
 ## rede   [0 frases]
 #  diz o IP e o estado da rede
 #  argumentos: sem argumento
 
-
+Teka, qual meu ip?
+Teka, vê se a internet tá funcionando
+Teka, me mostra o estado da rede ai
+Teka, qual é o ip desse pc?
+mano, Teka, a conexão tá normal?
+Teka, me diz como tá a rede aqui
+Teka, tô conectado na internet?
+Teka, qual o endereço ip da máquina?
+Teka, vê ai se a rede tá funcionando
+Teka, verifica a conexão
+Teka, me mostra as informações da rede
+mano, Teka, olha o ip desse computador
 
 ## buscar_no_conteudo   [0 frases]
 #  procura um trecho DENTRO dos arquivos, nao pelo nome deles
 #  argumentos: padrao:texto, raiz?:caminho
 
-
+Teka, procura dentro dos arquivos onde aparece nyxara
+Teka, vê ai nos arquivos se tem escrito banco de dados
+Teka, procura aquele erro de cors dentro do projeto
+Teka, acha nos txt onde fala de estágio
+mano, Teka, busca por localhost dentro dos arquivos
+Teka, tem algum arquivo que fala de sqlite?
+Teka, procura a palavra senha nos arquivos
+Teka, vê onde aparece a função calcularMedia
+Teka, procura dentro do projeto por import discord
+Teka, acha nos arquivos onde tá escrito relatório final
+Teka, busca por uma função chamada main
+Teka, vê ai dentro dos arquivos se tem esse texto
 
 ## ler_imagem   [0 frases]
 #  abre uma imagem e descreve o que ela contem
 #  argumentos: caminho:caminho
 
-
+Teka, olha essa imagem ai e me fala o que tem
+Teka, me descreve essa foto
+Teka, o que aparece nessa imagem?
+Teka, vê essa print aqui
+Teka, me diz o que tá escrito nessa imagem
+Teka, olha essa foto e explica o que tem nela
+Teka, consegue identificar o que tem nessa imagem?
+Teka, me fala o que você tá vendo nessa foto
+Teka, descreve essa imagem pra mim
+Teka, vê essa print e me diz qual é o problema
+Teka, olha essa imagem ai e me explica
+Teka, lê o que tá escrito nessa foto
 
 ## atalho   [0 frases]
 #  manda um atalho de teclado (musica, volume, mudo)
 #  argumentos: nome:texto, alvo?:texto
 
-
+Teka, aumenta o volume
+Teka, abaixa o som ai
+Teka, muta o pc
+Teka, pausa a música ai
+Teka, volta a música
+Teka, pula pra próxima
+Teka, aumenta o volume um pouco
+Teka, tira o mudo
+Teka, diminui o volume ai
+Teka, pausa o som
+Teka, passa a música
+Teka, coloca a música pra tocar
 
 # ========================================================================
 # PRIORIDADE 2 — tem poucas, e sao as DUAS PIORES que ela tem
@@ -119,13 +251,35 @@
 #  grava um texto num arquivo
 #  argumentos: caminho:caminho, texto:texto
 
-
+Teka, escreve oi mundo num arquivo chamado teste.txt
+Teka, cria um txt com meu nome dentro
+Teka, salva esse texto num arquivo na área de trabalho
+Teka, escreve esse código num arquivo python
+Teka, faz um arquivo chamado notas.txt e coloca isso dentro
+Teka, grava essa mensagem num txt
+Teka, cria um arquivo com esse texto aqui
+Teka, salva minhas anotações num arquivo
+Teka, escreve isso no arquivo config.json
+Teka, cria um arquivo python com esse código
+Teka, coloca essa lista num arquivo txt
+Teka, salva o relatório nesse arquivo aqui
 
 ## executar_comando   [12 frases, acerta 85%]
 #  roda um comando do sistema
 #  argumentos: comando:texto
 
-
+Teka, roda o comando dir ai
+Teka, executa o python --version
+Teka, abre o terminal e roda ipconfig
+Teka, executa esse comando aqui
+Teka, roda npm install nesse projeto
+Teka, faz o pip install requests
+Teka, executa o comando pra ver os arquivos da pasta
+Teka, roda o git status
+Teka, abre o python pelo terminal
+Teka, executa o comando ollama list
+Teka, roda esse negócio aqui no cmd
+Teka, executa npm start
 
 # ========================================================================
 # PRIORIDADE 3 — ja cobertas. So se sobrar animo.
@@ -140,4 +294,57 @@
 #  ou conversa que nao e pedido. O certo e ela PERGUNTAR em vez de chutar.
 #  Hoje ela age quando devia perguntar em 7% das frases — e em 2,9% com
 #  ferramenta que MEXE no sistema.
+
+Teka, faz aquele negócio lá
+Teka, vê isso aí
+Teka, resolve isso pra mim
+Teka, pega aquele arquivo
+Teka, coloca lá na pasta
+Teka, arruma isso aí
+Teka, mexe naquele negócio
+Teka, olha aquele trem lá
+Teka, deixa tudo certo aí
+Teka, faz o que tem que fazer
+Teka, pega isso e faz lá
+Teka, manda pra lá
+Teka, coloca isso ali
+Teka, tira aquele negócio
+Teka, salva lá
+Teka, escreve aquilo
+Teka, roda aquele comando
+Teka, executa isso aí
+Teka, resolve esse erro
+Teka, conserta isso
+Teka, deixa igual antes
+Teka, muda esse negócio
+Teka, vê o que dá pra fazer
+Teka, faz aí rapidão
+Teka, dá um jeito nisso
+Teka, vê lá pra mim
+Teka, faz igual aquele outro
+Teka, arruma lá
+# ==========================================================================
+# RODADA 2 — só estas duas, ~6 cada. Pedido do Claude em 11/09.
+# ==========================================================================
+#
+# As 12 que você escreveu para cada uma são 100% dêiticas ("essa foto", "esse
+# arquivo aqui") e viraram `perguntar` — que é o rótulo CERTO, porque sem contexto
+# de UI não há foto nenhuma para ela olhar.
+#
+# Só que aí as duas continuam com zero frases medindo o uso normal delas, que era
+# o buraco que este arquivo veio tapar.
+#
+# Então aqui: frases em que você NOMEIA o arquivo. Menos natural, eu sei — mas é
+# o único caso que ela consegue atender hoje, e é o que precisa ser medido.
+#
+# Ex. de forma (não copie, escreva do seu jeito):
+#   quanto pesa o relatorio_final.pdf
+#   descreve a print erro_build.png pra mim
+
+## info_arquivo_nomeado   [rodada 2, ~6 frases COM nome de arquivo]
+
+
+
+## ler_imagem_nomeado   [rodada 2, ~6 frases COM nome de arquivo]
+
 
