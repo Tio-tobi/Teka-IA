@@ -48,7 +48,20 @@
 set -u
 cd "/c/Users/User/Projetos/Assistente/Teka-IA" || exit 1
 
-pronta() { [ -f "tr33_s$1.log" ] && grep -aq "ferramenta certa:" "tr33_s$1.log"; }
+# Pronta = log chegou ao fim E foi feito por ESTE binario.
+#
+# A segunda metade nao estava aqui e quase custou caro: quando a primeira tentativa
+# desta corrida rodou com binario velho, eu apaguei os logs -- mas a corrida antiga
+# seguia viva e escreveu mais dois DEPOIS. No dia seguinte o `pronta()` os teria
+# pulado como bons, e o braco sairia com 2 sementes de dado velho misturadas.
+#
+# Retomabilidade que aceita log mais antigo que o binario nao e retomabilidade, e
+# contaminacao silenciosa.
+pronta() {
+  [ -f "tr33_s$1.log" ] || return 1
+  grep -aq "ferramenta certa:" "tr33_s$1.log" || return 1
+  [ "tr33_s$1.log" -nt teka_33.exe ]
+}
 
 for s in 19 20 21 22 23 24 25 26 27 28 29 30; do
   if pronta "$s"; then echo "=== semente ${s} — ja pronta, pulando ==="; continue; fi
