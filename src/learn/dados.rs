@@ -692,16 +692,23 @@ const MOLDES: &[Molde] = &[
             // categoria "verbo de ver + pasta". O FALSEAMENTO e limpo: se a familia
             // nao melhorar, ela nao generaliza verbo -- memoriza -- e isso e achado
             // mais util que o ponto.
+            //
+            // SEIS FORAM RETIRADOS DEPOIS, e o motivo vale mais que eles: percorre,
+            // inspeciona, confere, vasculha, enumera e exibe TAMBEM estao no
+            // benchmark. Eu havia comparado so contra os verbos da lista de ERROS --
+            // e a lista de erros mostra o que ela FALHA, nao as 14 frases que
+            // `listar_pasta` tem ali. Os outros nove eu nunca tinha visto.
+            //
+            // Quatro seriam ativamente nocivos, e nao so inuteis: o benchmark cobra
+            // `exibe` -> `ler_arquivo` ("exibe o miolo do config.json") e
+            // `vasculha` -> `procurar_arquivo`. Ensinar `exibe` -> `listar_pasta`
+            // roubaria da vizinha.
+            //
+            // Conferir a olho nao funciona. Use `checa_vazamento.py`.
             "examina a pasta {0}",
-            "percorre o diretorio {0}",
-            "inspeciona a pasta {0}",
-            "confere o que tem em {0}",
-            "vasculha a pasta {0}",
             "resume o conteudo de {0}",
             "descreve a pasta {0}",
-            "enumera os arquivos de {0}",
             "cataloga o diretorio {0}",
-            "exibe o conteudo da pasta {0}",
             "esmiuca a pasta {0}",
             "relaciona o que existe em {0}",
             "quero examinar a pasta {0}",
