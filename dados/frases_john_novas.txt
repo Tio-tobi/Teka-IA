@@ -1,0 +1,143 @@
+# FRASES DO JOHN — o que falta o benchmark medir
+#
+# POR QUE ESTE ARQUIVO EXISTE
+#
+# O benchmark de hoje tem 150 frases e cobre 10 das 22 ferramentas. DOZE nao
+# tem uma frase sequer -- e foi assim que `ler_imagem` passou nove dias sendo
+# treinada com texto de recado no lugar de caminho de imagem, sem nada apontar.
+#
+# E as que ele cobre, cobre de leve: a mediana e 14 frases por ferramenta. Com
+# isso o desvio-padrao da diferenca pareada e 5,33 pontos, e uma corrida de 12
+# sementes (8 horas) so enxerga efeito de 3,4 pontos ou mais. Consertar o
+# `escrever_arquivo` por INTEIRO -- de 52% para 95% -- moveria o benchmark uns 5
+# pontos: sucesso total voltaria como 'talvez'.
+#
+# Quadruplicar as frases custa quase nada (avaliar leva milissegundos contra 36
+# minutos de treino por semente) e faz a MESMA corrida de 8h enxergar 1,7 ponto.
+#
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │  ESCREVA DO SEU JEITO, JOHN — como VOCE pediria, nao como um manual.    │
+# │                                                                         │
+# │  Girias, frases pela metade, erro de digitacao, pedido indireto. E ISSO │
+# │  que ela vai receber. Frase de manual mede uma Teka que nao existe.     │
+# │                                                                         │
+# │  NAO copie das ja existentes em frases_teste.txt, e NAO olhe os moldes  │
+# │  de src/learn/dados.rs antes de escrever. O valor deste arquivo esta    │
+# │  em ele NAO ter passado pela minha cabeca -- regua que eu escrevo       │
+# │  herda o meu ponto cego, e ja herdou uma vez, por 24 pontos.            │
+# └─────────────────────────────────────────────────────────────────────────┘
+#
+# FORMATO: uma frase por linha, texto puro. O rotulo eu escrevo depois, e voce
+# confere antes de entrar. Se a frase NAO deve virar acao nenhuma (vaga demais,
+# fora do escopo dela), ponha `??` no comeco -- essas viram `perguntar`, e sao
+# as mais valiosas: e onde ela mais erra hoje (63%).
+#
+# Meta: 10 a 15 por ferramenta. Se cansar, para -- meia duzia ja ajuda, e
+# arquivo pela metade vale mais que arquivo nenhum.
+
+# ========================================================================
+# PRIORIDADE 1 — ZERO frases hoje. Metade do registro esta no escuro.
+# ========================================================================
+
+## buscar_web   [0 frases]
+#  procura na internet e traz um resumo
+#  argumentos: consulta:texto
+
+
+
+## abrir_programa   [0 frases]
+#  abre um programa no computador
+#  argumentos: programa:texto
+
+
+
+## copiar_arquivo   [0 frases]
+#  copia um arquivo para outro lugar
+#  argumentos: origem:caminho, destino:caminho
+
+
+
+## mover_arquivo   [0 frases]
+#  move ou renomeia um arquivo
+#  argumentos: origem:caminho, destino:caminho
+
+
+
+## criar_pasta   [0 frases]
+#  cria uma pasta
+#  argumentos: caminho:caminho
+
+
+
+## info_arquivo   [0 frases]
+#  diz o tamanho e a data de um arquivo
+#  argumentos: caminho:caminho
+
+
+
+## apagar_arquivo   [0 frases]
+#  apaga um arquivo
+#  argumentos: caminho:caminho
+
+
+
+## processos   [0 frases]
+#  lista os programas rodando agora
+#  argumentos: sem argumento
+
+
+
+## rede   [0 frases]
+#  diz o IP e o estado da rede
+#  argumentos: sem argumento
+
+
+
+## buscar_no_conteudo   [0 frases]
+#  procura um trecho DENTRO dos arquivos, nao pelo nome deles
+#  argumentos: padrao:texto, raiz?:caminho
+
+
+
+## ler_imagem   [0 frases]
+#  abre uma imagem e descreve o que ela contem
+#  argumentos: caminho:caminho
+
+
+
+## atalho   [0 frases]
+#  manda um atalho de teclado (musica, volume, mudo)
+#  argumentos: nome:texto, alvo?:texto
+
+
+
+# ========================================================================
+# PRIORIDADE 2 — tem poucas, e sao as DUAS PIORES que ela tem
+# ========================================================================
+
+## escrever_arquivo   [12 frases, acerta 52%]
+#  grava um texto num arquivo
+#  argumentos: caminho:caminho, texto:texto
+
+
+
+## executar_comando   [12 frases, acerta 85%]
+#  roda um comando do sistema
+#  argumentos: comando:texto
+
+
+
+# ========================================================================
+# PRIORIDADE 3 — ja cobertas. So se sobrar animo.
+# ========================================================================
+#
+# perguntar (28) · hora (14) · listar_pasta (14) · ler_arquivo (14) · procurar_arquivo (14) · calcular (14) · memoria (14) · disco (14)
+#
+# E a mais importante de todas, que nao e ferramenta nenhuma:
+
+## ?? nao-faca-nada   [28 frases, acerta 63% — o pior numero dela]
+#  Pedido que ela NAO deve atender: vago demais, ambiguo, fora do escopo,
+#  ou conversa que nao e pedido. O certo e ela PERGUNTAR em vez de chutar.
+#  Hoje ela age quando devia perguntar em 7% das frases — e em 2,9% com
+#  ferramenta que MEXE no sistema.
+
