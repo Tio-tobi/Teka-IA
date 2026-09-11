@@ -55,14 +55,14 @@
 # ── musica ──────────────────────────────────────────────────────────────────
 proxima_musica  | pula essa musica, pula a musica, proxima musica, proxima faixa, passa a musica, avanca a musica, pula essa, proxima
 musica_anterior | musica anterior, volta a musica, faixa anterior, volta pra anterior, musica de antes
-pausar_musica   | pausa a musica, pausa ai, para a musica, pausar
+pausar_musica   | pausa a musica, pausa ai, para a musica, pausar, pausa o som
 tocar_musica    | continua a musica, retoma a musica, volta a tocar, despausa
 parar_musica    | para tudo, encerra a musica
 
 # ── volume ──────────────────────────────────────────────────────────────────
 aumentar_volume | aumenta o volume, aumenta o som, sobe o volume, sobe o som, mais alto
 diminuir_volume | diminui o volume, abaixa o volume, abaixa o som, diminui o som, mais baixo
-mudo            | muta o som, tira o som, silencia o pc, mudo no sistema
+mudo            | muta o som, tira o som, silencia o pc, mudo no sistema, muta o pc, tira o mudo, desmuta, volta o som
 
 # ── discord ─────────────────────────────────────────────────────────────────
 # "me muta" e do Discord e nao do sistema: e o pedido do John, e ele quer o

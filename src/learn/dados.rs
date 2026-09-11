@@ -1194,6 +1194,15 @@ pub const NOMES_DE_ATALHO: &[&str] = &[
     // atalhos em `gatilhos.txt` e o poco continuou com os antigos, deixando as
     // capacidades novas inalcancaveis. `o_poco_de_atalhos_e_a_tabela_inteira`
     // prende as duas listas nas DUAS direcoes agora.
+    // Acrescentados em 11/09, das frases do John. `tira o mudo` e `desmuta` nao
+    // eram capacidade faltando: `VK_VOLUME_MUTE` ALTERNA, entao desmutar sempre
+    // existiu -- faltava so o jeito de pedir. Eu tinha dito que ela nao sabia
+    // desmutar; estava errado.
+    "muta o pc",
+    "tira o mudo",
+    "desmuta",
+    "volta o som",
+    "pausa o som",
     "pula essa musica",
     "pula a musica",
     "proxima musica",
