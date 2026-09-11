@@ -1366,6 +1366,7 @@ const EXPRESSOES: &[&str] = &[
 /// `match` do [`valor_para`], que deixou duas ferramentas sem poco por nove dias.
 ///
 /// Poco novo entra AQUI e os testes o enxergam sozinhos.
+#[cfg(test)]
 pub(crate) const POCOS: &[&[&str]] = &[
     PASTAS, ARQUIVOS, IMAGENS, DISCOS, NOMES, EXPRESSOES, TEXTOS, PADROES, COMANDOS,
     PROGRAMAS, CONSULTAS, NOMES_DE_ATALHO,
