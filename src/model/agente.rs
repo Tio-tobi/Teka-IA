@@ -32,7 +32,7 @@ use crate::model::hierarchy::{Config, Estado, Teka, TekaCache, TekaGrad};
 use crate::model::patcher::{Patcher, Plano};
 use crate::num::Float;
 use crate::rng::Rng;
-use crate::tools::{Chamada, Politica, Registro};
+use crate::tools::{Chamada, Politica, Registro, TipoParam};
 
 #[derive(Clone)]
 pub struct Agente<T: Float> {
@@ -59,6 +59,50 @@ impl<T: Float> AgenteGrad<T> {
         let mut v = self.modelo.slices();
         v.extend(self.cabecas.slices());
         v
+    }
+}
+
+/// Por que a chamada não pôde ser escrita.
+///
+/// Separa "não sei o que fazer" de "sei o que fazer, falta você me dizer com quê" —
+/// e a segunda não é falha, é uma pergunta.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Falta {
+    /// A ferramenta está decidida, mas o pedido não traz o argumento obrigatório.
+    ///
+    /// *"apaga esse arquivo aqui"* → `apagar_arquivo`, faltando `caminho`.
+    Argumento { ferramenta: usize, param: String },
+    /// Qualquer outra falha, com o texto original.
+    Outra(String),
+}
+
+impl Falta {
+    /// A pergunta que ela faz, em português, quando o que falta é um argumento.
+    ///
+    /// O texto sai do TIPO do parâmetro e não do nome dele: "caminho" é como o
+    /// registro chama, não como uma pessoa pergunta. E nomear a ferramenta junto é
+    /// o que transforma a pergunta em prova de que ela entendeu — "qual arquivo
+    /// apagar?" diz que ela sabe que é para apagar.
+    pub fn pergunta(&self, reg: &Registro) -> Option<String> {
+        let Falta::Argumento { ferramenta, param } = self else {
+            return None;
+        };
+        let f = reg.ferramentas.get(*ferramenta)?;
+        let p = f.params.iter().find(|p| &p.nome == param)?;
+        let o_que = match p.tipo {
+            TipoParam::Caminho => "qual arquivo ou pasta",
+            TipoParam::Numero => "qual número",
+            TipoParam::Texto => match param.as_str() {
+                "texto" => "o que escrever",
+                "consulta" => "o que procurar",
+                "padrao" => "o que procurar dentro dos arquivos",
+                "programa" => "qual programa",
+                "comando" => "qual comando",
+                "nome" => "qual nome",
+                _ => "o quê",
+            },
+        };
+        Some(format!("{o_que} para {}?", f.nome))
     }
 }
 
@@ -326,20 +370,18 @@ impl<T: Float> Agente<T> {
             .map(|(ch, _)| ch)
     }
 
-    /// Igual a [`Teka::responder`], mas devolve também o quanto ela estava certa
-    /// disso.
+    /// Tudo até a decisão: bytes do pedido, o alvo escolhido, e a confiança.
     ///
-    /// A confiança sai do mesmo forward — não custa passo extra. Quem decide se
-    /// pergunta em vez de agir é o chamador, com [`Confianca::duvidosa`]; manter a
-    /// decisão fora daqui é de propósito, porque o limiar é calibrado por medição e
-    /// não pertence ao modelo.
-    pub fn responder_com_confianca<O: Ops<T>, P: Patcher + ?Sized>(
+    /// Privado e compartilhado por `responder_com_confianca` e `responder_ou_falta`
+    /// — os dois fazem o mesmo forward e só divergem no que fazem quando a chamada
+    /// não pode ser escrita.
+    fn decidir<O: Ops<T>, P: Patcher + ?Sized>(
         &self,
         ops: &O,
         patcher: &P,
         pedido: &str,
         cache: &mut AgenteCache<T>,
-    ) -> Result<(Chamada, Confianca), String> {
+    ) -> Result<(Vec<u8>, Alvo, Confianca), String> {
         let bytes = pedido.as_bytes().to_vec();
         let seq = bytes.len();
         if seq == 0 {
@@ -369,14 +411,92 @@ impl<T: Float> Agente<T> {
 
         let conf = Confianca::ler(&cache.cabecas, 0, self.registro.n());
 
-        let decisao = &self.cabecas.decidir(
-            &cache.cabecas,
-            &plano.n_patches,
-            plano.seq,
-            &self.slots_por_ferramenta(),
-        )[0];
+        let decisao = self
+            .cabecas
+            .decidir(
+                &cache.cabecas,
+                &plano.n_patches,
+                plano.seq,
+                &self.slots_por_ferramenta(),
+            )
+            .swap_remove(0);
 
-        self.escrever(&bytes, decisao).map(|ch| (ch, conf))
+        Ok((bytes, decisao, conf))
+    }
+
+    /// Igual a [`Teka::responder`], mas devolve também o quanto ela estava certa
+    /// disso.
+    pub fn responder_com_confianca<O: Ops<T>, P: Patcher + ?Sized>(
+        &self,
+        ops: &O,
+        patcher: &P,
+        pedido: &str,
+        cache: &mut AgenteCache<T>,
+    ) -> Result<(Chamada, Confianca), String> {
+        let (bytes, decisao, conf) = self.decidir(ops, patcher, pedido, cache)?;
+        self.escrever(&bytes, &decisao).map(|ch| (ch, conf))
+    }
+
+    /// Como [`Teka::responder_com_confianca`], mas quando a chamada não pode ser
+    /// escrita ela diz **por quê** em vez de só falhar.
+    ///
+    /// ## O caso que isto existe para atender
+    ///
+    /// Das 196 frases que o John escreveu em 11/09, **59 — quase um terço — pedem
+    /// uma ferramenta cujo argumento obrigatório é um caminho, e não trazem caminho
+    /// nenhum**: *"apaga esse arquivo aqui"*, *"me descreve essa foto"*.
+    ///
+    /// O ponteiro COPIA um trecho do pedido; ele não inventa `C:\...oto.jpg`. E a
+    /// gramática proíbe fechar a chamada com obrigatório faltando — `fechar()` só é
+    /// alcançável quando o parâmetro e todos os seguintes são opcionais. As duas
+    /// coisas estão certas, e juntas produzem `Err("chamada incompleta")`.
+    ///
+    /// Erro é a resposta errada para isso. Ela **sabe** que é `apagar_arquivo`; o
+    /// que falta é o John dizer qual. A resposta certa é perguntar.
+    ///
+    /// Não é conserto de acurácia: nenhum treino faz o ponteiro copiar o que não
+    /// está escrito. É mecanismo.
+    pub fn responder_ou_falta<O: Ops<T>, P: Patcher + ?Sized>(
+        &self,
+        ops: &O,
+        patcher: &P,
+        pedido: &str,
+        cache: &mut AgenteCache<T>,
+    ) -> Result<(Chamada, Confianca), Falta> {
+        let (bytes, decisao, conf) = self
+            .decidir(ops, patcher, pedido, cache)
+            .map_err(Falta::Outra)?;
+        match self.escrever(&bytes, &decisao) {
+            Ok(ch) => Ok((ch, conf)),
+            Err(e) => match self.obrigatorio_ausente(&bytes, &decisao) {
+                Some(param) => Err(Falta::Argumento {
+                    ferramenta: decisao.ferramenta,
+                    param,
+                }),
+                None => Err(Falta::Outra(e)),
+            },
+        }
+    }
+
+    /// O primeiro parâmetro obrigatório que o pedido não traz, se houver.
+    ///
+    /// Duas formas de faltar, e as duas contam: a cabeça de presença disse que o
+    /// argumento não aparece (`bytes[slot] == None`), ou o ponteiro apontou para um
+    /// trecho vazio. A gramática rejeita as duas do mesmo jeito.
+    fn obrigatorio_ausente(&self, bytes: &[u8], decisao: &Alvo) -> Option<String> {
+        let f = &self.registro.ferramentas[decisao.ferramenta];
+        f.params
+            .iter()
+            .enumerate()
+            .take(MAX_SLOTS)
+            .find(|(slot, p)| {
+                p.obrigatorio
+                    && match decisao.bytes[*slot] {
+                        None => true,
+                        Some((bi, bf)) => recortar(bytes, bi, bf).is_empty(),
+                    }
+            })
+            .map(|(_, p)| p.nome.clone())
     }
 
     /// Escreve a chamada pela gramática a partir de uma decisão já tomada.
@@ -558,6 +678,107 @@ fn aparar_pontuacao(s: &str) -> String {
         }
     }
     s[ini..fim].trim().to_string()
+}
+
+#[cfg(test)]
+mod testes_falta {
+    use super::*;
+    use crate::model::heads::Alvo;
+
+    fn reg() -> Registro {
+        Registro::padrao()
+    }
+
+    /// A pergunta sai do TIPO do parametro, nao do nome dele.
+    ///
+    /// "qual caminho para apagar_arquivo?" e como o registro fala. Uma pessoa
+    /// pergunta "qual arquivo ou pasta". O nome do parametro e detalhe de
+    /// implementacao vazando para a cara do usuario.
+    #[test]
+    fn a_pergunta_nomeia_a_ferramenta_e_fala_como_gente() {
+        let r = reg();
+        let i = r.indice("apagar_arquivo").expect("apagar_arquivo existe");
+        let f = Falta::Argumento { ferramenta: i, param: "caminho".into() };
+        let q = f.pergunta(&r).expect("tem pergunta");
+        assert!(q.contains("arquivo ou pasta"), "fala de caminho como gente: {q}");
+        assert!(
+            q.contains("apagar_arquivo"),
+            "nomear a ferramenta E a prova de que ela entendeu o pedido: {q}"
+        );
+    }
+
+    /// `Outra` nao gera pergunta: nao ha o que perguntar quando ela nem sabe o que
+    /// fazer. Sem isto, uma falha qualquer viraria "o que para ?" na cara de quem usa.
+    #[test]
+    fn falha_que_nao_e_argumento_nao_vira_pergunta() {
+        assert_eq!(Falta::Outra("pedido vazio".into()).pergunta(&reg()), None);
+    }
+
+    /// As DUAS formas de faltar contam.
+    ///
+    /// A cabeca de presenca pode dizer "o argumento nao aparece" (`None`), ou o
+    /// ponteiro pode apontar para um trecho vazio. A gramatica rejeita as duas
+    /// igual, entao o diagnostico tem de pegar as duas — senao metade dos casos
+    /// deiticos continuaria virando erro cru.
+    #[test]
+    fn ausente_pega_slot_vazio_e_slot_sem_ponteiro() {
+        let r = reg();
+        let ag = Agente::<f32>::novo(Config::pequeno(), r, &mut Rng::new(1));
+        let i = ag.registro.indice("apagar_arquivo").unwrap();
+        let pedido = b"apaga esse arquivo aqui";
+
+        let mut sem_ponteiro = Alvo::vazio(i);
+        sem_ponteiro.ferramenta = i;
+        sem_ponteiro.bytes[0] = None;
+        assert_eq!(
+            ag.obrigatorio_ausente(pedido, &sem_ponteiro).as_deref(),
+            Some("caminho")
+        );
+
+        // O segundo caso precisou ser MEDIDO para o teste fazer sentido. Minha
+        // primeira versao apontava para o espaco em `(5, 5)` e falhou -- `recortar`
+        // ENCAIXA NA PALAVRA e devolveu "apaga esse", que nao e vazio. O recorte so
+        // sai vazio quando o trecho e pontuacao pura, porque `aparar_pontuacao`
+        // come tudo:
+        //
+        //     "apaga esse arquivo aqui" (5,5) -> "apaga esse"
+        //     "apaga , aqui"            (6,6) -> ""
+        let com_virgula = b"apaga , aqui";
+        let mut trecho_vazio = Alvo::vazio(i);
+        trecho_vazio.ferramenta = i;
+        trecho_vazio.bytes[0] = Some((6, 6));
+        assert_eq!(
+            ag.obrigatorio_ausente(com_virgula, &trecho_vazio).as_deref(),
+            Some("caminho")
+        );
+    }
+
+    /// E o outro lado, que e o que impede o mecanismo de virar desculpa: quando o
+    /// argumento ESTA la, nao ha falta nenhuma. Sem esta metade, um bug que zerasse
+    /// todos os ponteiros viraria "ela esta perguntando educadamente".
+    #[test]
+    fn com_o_argumento_presente_nao_falta_nada() {
+        let r = reg();
+        let ag = Agente::<f32>::novo(Config::pequeno(), r, &mut Rng::new(1));
+        let i = ag.registro.indice("apagar_arquivo").unwrap();
+        let pedido = b"apaga notas.md";
+        let mut cheio = Alvo::vazio(i);
+        cheio.ferramenta = i;
+        cheio.bytes[0] = Some((6, 14));
+        assert_eq!(&pedido[6..14], b"notas.md");
+        assert_eq!(ag.obrigatorio_ausente(pedido, &cheio), None);
+    }
+
+    /// Ferramenta sem parametro nunca falta argumento.
+    #[test]
+    fn ferramenta_sem_parametro_nao_falta() {
+        let r = reg();
+        let ag = Agente::<f32>::novo(Config::pequeno(), r, &mut Rng::new(1));
+        let i = ag.registro.indice("hora").unwrap();
+        let mut a = Alvo::vazio(i);
+        a.ferramenta = i;
+        assert_eq!(ag.obrigatorio_ausente(b"que horas sao", &a), None);
+    }
 }
 
 #[cfg(test)]
