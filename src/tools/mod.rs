@@ -12,6 +12,7 @@
 //! 3. Na fase 5, criar uma ferramenta nova vira **compor primitivas** — dado novo no
 //!    registro, não código novo.
 
+pub mod ponte_auto;
 pub mod prim;
 pub mod diario;
 pub mod execucao;
