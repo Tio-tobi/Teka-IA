@@ -440,22 +440,37 @@ impl<T: Float> Agente<T> {
     /// Como [`Teka::responder_com_confianca`], mas quando a chamada não pode ser
     /// escrita ela diz **por quê** em vez de só falhar.
     ///
-    /// ## O caso que isto existe para atender
+    /// ## LEIA ANTES DE USAR: isto NÃO resolve o pedido dêitico
     ///
-    /// Das 196 frases que o John escreveu em 11/09, **59 — quase um terço — pedem
-    /// uma ferramenta cujo argumento obrigatório é um caminho, e não trazem caminho
-    /// nenhum**: *"apaga esse arquivo aqui"*, *"me descreve essa foto"*.
+    /// Foi para isso que foi escrito, e **medido, não resolve**. Em 94 frases sem
+    /// argumento no pedido (*"apaga esse arquivo aqui"*), este caminho disparou
+    /// **zero vezes**:
     ///
-    /// O ponteiro COPIA um trecho do pedido; ele não inventa `C:\...oto.jpg`. E a
-    /// gramática proíbe fechar a chamada com obrigatório faltando — `fechar()` só é
-    /// alcançável quando o parâmetro e todos os seguintes são opcionais. As duas
-    /// coisas estão certas, e juntas produzem `Err("chamada incompleta")`.
+    /// ```text
+    /// abstem (o contexto de `main.rs` cobre)   47   50%
+    /// age com argumento que achou              47   50%
+    /// FALTA ARGUMENTO (este caminho)            0    0%
+    /// ```
     ///
-    /// Erro é a resposta errada para isso. Ela **sabe** que é `apagar_arquivo`; o
-    /// que falta é o John dizer qual. A resposta certa é perguntar.
+    /// A razão é [`recortar`], que **encaixa na palavra**: apontar para qualquer
+    /// byte devolve a palavra que o contém, então o recorte quase nunca sai vazio.
+    /// Ela não falha em recortar — ela recorta a palavra errada, com confiança:
     ///
-    /// Não é conserto de acurácia: nenhum treino faz o ponteiro copiar o que não
-    /// está escrito. É mecanismo.
+    /// ```text
+    /// "pega esse txt e faz uma copia dele"  ->  executar_comando(comando="dele")
+    /// "muda o nome desse txt pra teste 2"   ->  calcular(expressao="2")
+    /// ```
+    ///
+    /// ## Então para que serve
+    ///
+    /// Para o caso raro de verdade: quando a cabeça de presença diz que o argumento
+    /// não aparece, ou quando o trecho apontado é pontuação pura. Custa nada e está
+    /// certo. Só não é o conserto da deixe.
+    ///
+    /// O conserto daquilo é outro: **o argumento recortado não parece do tipo do
+    /// parâmetro**. "dele" não é comando, "2" não é nome de arquivo. É a mesma
+    /// propriedade que `todo_caminho_parece_caminho` já cobra nos DADOS e que
+    /// ninguém cobra na INFERÊNCIA.
     pub fn responder_ou_falta<O: Ops<T>, P: Patcher + ?Sized>(
         &self,
         ops: &O,
