@@ -209,6 +209,28 @@ const MOLDES: &[Molde] = &[
     Molde {
         ferramenta: "copiar_arquivo",
         frases: &[
+            // DESTINO QUE E PASTA — a forma que faltava, e faltava inteira.
+            //
+            // Medido em 12/09 no benchmark de 329: ZERO acerto em 36 tentativas.
+            // Todo molde aqui ensinava arquivo->arquivo, e o John pede
+            // arquivo->PASTA. "pasta" no treino so existia com `listar_pasta` e
+            // `criar_pasta`, entao ela via a palavra e ia para la, sempre.
+            //
+            // `valor_no_contexto` garante que o {1} depois de "pasta" venha de
+            // PASTAS -- senao sairia "para a pasta notas.md".
+            //
+            // Os verbos canonicos (copia, move) sao inevitaveis: sao OS verbos. O
+            // que nao se repete e a ESTRUTURA das frases do John -- conferido com
+            // `checa_vazamento.py`, e `deposita`, `arquiva`, `transfere` e
+            // `arrasta` estao livres.
+            "copia {0} para a pasta {1}",
+            "copia {0} pra pasta {1}",
+            "deposita {0} na pasta {1}",
+            "arquiva {0} na pasta {1}",
+            "poe uma copia de {0} na pasta {1}",
+            "copia {0} para dentro da pasta {1}",
+            "quero {0} copiado na pasta {1}",
+            "faz uma copia de {0} no diretorio {1}",
             "copia {0} para {1}",
             "faz uma copia de {0} em {1}",
             "duplica {0} como {1}",
@@ -245,6 +267,28 @@ const MOLDES: &[Molde] = &[
     Molde {
         ferramenta: "mover_arquivo",
         frases: &[
+            // DESTINO QUE E PASTA — a forma que faltava, e faltava inteira.
+            //
+            // Medido em 12/09 no benchmark de 329: ZERO acerto em 60 tentativas.
+            // Todo molde aqui ensinava arquivo->arquivo, e o John pede
+            // arquivo->PASTA. "pasta" no treino so existia com `listar_pasta` e
+            // `criar_pasta`, entao ela via a palavra e ia para la, sempre.
+            //
+            // `valor_no_contexto` garante que o {1} depois de "pasta" venha de
+            // PASTAS -- senao sairia "para a pasta notas.md".
+            //
+            // Os verbos canonicos (copia, move) sao inevitaveis: sao OS verbos. O
+            // que nao se repete e a ESTRUTURA das frases do John -- conferido com
+            // `checa_vazamento.py`, e `deposita`, `arquiva`, `transfere` e
+            // `arrasta` estao livres.
+            "move {0} para a pasta {1}",
+            "move {0} pra pasta {1}",
+            "transfere {0} para a pasta {1}",
+            "arrasta {0} para a pasta {1}",
+            "tira {0} daqui e poe na pasta {1}",
+            "move {0} para dentro da pasta {1}",
+            "quero {0} na pasta {1}",
+            "manda {0} para o diretorio {1}",
             "move {0} para {1}",
             "renomeia {0} para {1}",
             "tira {0} e poe em {1}",
@@ -1946,6 +1990,31 @@ fn escolher<'a>(pool: &[&'a str], rng: &mut Rng) -> &'a str {
 ///
 /// É o que permite ao modelo aprender que "notas.md" pede `ler_arquivo` e "src"
 /// pede `listar_pasta`, mesmo quando a frase é ambígua.
+/// A palavra ANTES do slot pode obrigar o poço, e às vezes obriga.
+///
+/// `"copia {0} para a pasta {1}"` só faz sentido com `{1}` vindo de [`PASTAS`].
+/// Sortear um arquivo ali geraria *"para a pasta notas.md"* — frase que ensina
+/// errado e que nenhuma pessoa escreve.
+///
+/// Isto existe porque `Molde` não tem controle de poço: ele é só (ferramenta,
+/// frases). Em vez de acrescentar um campo que 700 moldes não usariam, a restrição
+/// sai de onde ela já está — o texto. É a MESMA restrição que uma pessoa sente ao
+/// escrever a frase.
+fn valor_no_contexto(
+    ferramenta: &str,
+    nome_param: &str,
+    ate_aqui: &str,
+    rng: &mut Rng,
+) -> &'static str {
+    let cauda = ate_aqui.trim_end().to_lowercase();
+    for marca in ["pasta", "diretorio", "diretório"] {
+        if cauda.ends_with(marca) {
+            return escolher(PASTAS, rng);
+        }
+    }
+    valor_para(ferramenta, nome_param, rng)
+}
+
 fn valor_para(ferramenta: &str, nome_param: &str, rng: &mut Rng) -> &'static str {
     let pool: &[&str] = match (ferramenta, nome_param) {
         ("listar_pasta", _) => PASTAS,
@@ -1956,11 +2025,24 @@ fn valor_para(ferramenta: &str, nome_param: &str, rng: &mut Rng) -> &'static str
         ("atalho", _) => NOMES_DE_ATALHO,
         ("buscar_web", _) => CONSULTAS,
         ("abrir_programa", _) => PROGRAMAS,
-        // As duas pontas de copiar/mover saem do mesmo poco de arquivos: quem copia
-        // copia arquivo para arquivo. Sortear origem e destino do mesmo poco pode
+        // A ORIGEM e sempre arquivo. Sortear origem e destino do mesmo poco pode
         // dar os dois iguais, e isso e um caso real — "copia notas.md pra notas.md"
         // e um pedido bobo que ela tem de saber executar sem quebrar.
-        ("copiar_arquivo", _) | ("mover_arquivo", _) => ARQUIVOS,
+        ("copiar_arquivo", "origem") | ("mover_arquivo", "origem") => ARQUIVOS,
+        // O DESTINO e arquivo OU pasta, e isso mudou em 12/09 por medicao: as duas
+        // deram ZERO acerto no benchmark de 329 (36 e 60 tentativas, nenhum acerto)
+        // porque todo molde ensinava arquivo->arquivo e o John pede
+        // arquivo->PASTA: "joga uma copia desse arquivo na pasta backup".
+        //
+        // Copiar PARA uma pasta e o caso mais comum na vida real, e era o unico que
+        // ela nunca tinha visto.
+        ("copiar_arquivo", "destino") | ("mover_arquivo", "destino") => {
+            if rng.uniform01() < 0.45 {
+                PASTAS
+            } else {
+                ARQUIVOS
+            }
+        }
         ("criar_pasta", _) => PASTAS,
         ("apagar_arquivo", _) | ("info_arquivo", _) => ARQUIVOS,
         (_, "nome") => NOMES,
@@ -2058,7 +2140,7 @@ pub fn gerar<P: Patcher + ?Sized>(
             let Some(fim) = fim else { break };
             let slot: usize = resto[pos + 1..fim].parse().unwrap_or(0);
             let Some(p) = params.get(slot) else { break };
-            let v = valor_para(m.ferramenta, &p.nome, rng);
+            let v = valor_no_contexto(m.ferramenta, &p.nome, &pedido, rng);
             let ini_byte = pedido.len();
             pedido.push_str(v);
             args.push((slot, (ini_byte, pedido.len())));

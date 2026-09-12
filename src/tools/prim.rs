@@ -557,9 +557,39 @@ fn abrir_programa(nome: &str, pol: &Politica) -> Result<String, String> {
     Ok(format!("abrindo {nome}"))
 }
 
+/// Destino que é PASTA recebe o arquivo DENTRO dela, com o nome da origem.
+///
+/// É o que o `cp` faz e o que qualquer pessoa espera de "copia o relatorio pra
+/// pasta documentos". Sem isto, `fs::copy` e `fs::rename` recusam:
+///
+/// ```text
+/// copy(arquivo, PASTA)   -> Err PermissionDenied "Acesso negado"
+/// rename(arquivo, PASTA) -> Err PermissionDenied
+/// ```
+///
+/// Medido em 12/09, e foi assim que apareceu: `copiar_arquivo` e `mover_arquivo`
+/// deram ZERO acerto no benchmark novo — 36 e 60 tentativas, nenhum acerto. As
+/// frases do John pedem pasta como destino ("joga uma copia desse arquivo na pasta
+/// backup") e os moldes so ensinavam arquivo->arquivo. Ensinar a forma sem isto
+/// aqui trocaria "escolhe a ferramenta errada" por "escolhe a certa e falha".
+///
+/// `file_name` devolve `None` para caminho terminado em `..`; ai nao ha nome para
+/// juntar e o erro e explicito, em vez de um caminho torto.
+fn dentro_da_pasta(de: &Path, para: PathBuf) -> Result<PathBuf, String> {
+    if !para.is_dir() {
+        return Ok(para);
+    }
+    let nome = de
+        .file_name()
+        .ok_or_else(|| format!("origem sem nome de arquivo: {}", de.display()))?;
+    Ok(para.join(nome))
+}
+
 fn copiar(origem: &str, destino: &str, pol: &Politica) -> Result<String, String> {
     let de = pol.resolver_leitura(Path::new(origem));
     let para = pol.checar_escrita(Path::new(destino)).map_err(|e| e.to_string())?;
+    // ANTES do desvio da sandbox, para a mensagem dela dizer o caminho de verdade.
+    let para = dentro_da_pasta(&de, para)?;
     if pol.modo == Modo::Sandbox {
         return Ok(format!("[sandbox] copiaria {} para {}", de.display(), para.display()));
     }
@@ -576,6 +606,7 @@ fn mover(origem: &str, destino: &str, pol: &Politica) -> Result<String, String> 
     // arquivo de fora da raiz para dentro dela.
     let de = pol.checar_escrita(Path::new(origem)).map_err(|e| e.to_string())?;
     let para = pol.checar_escrita(Path::new(destino)).map_err(|e| e.to_string())?;
+    let para = dentro_da_pasta(&de, para)?;
     if pol.modo == Modo::Sandbox {
         return Ok(format!("[sandbox] moveria {} para {}", de.display(), para.display()));
     }
@@ -1025,6 +1056,64 @@ impl Parser<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Copiar e mover para uma PASTA, que e o jeito normal de pedir.
+    ///
+    /// Nasceu de medicao, nao de revisao: no benchmark de 329 frases,
+    /// `copiar_arquivo` e `mover_arquivo` deram ZERO acerto -- 36 e 60 tentativas.
+    /// As frases do John pedem pasta como destino e `fs::copy` recusa isso:
+    ///
+    ///     copy(arquivo, PASTA) -> Err PermissionDenied "Acesso negado."
+    ///
+    /// Entao nem o conserto de DADO adiantaria: ela escolheria a ferramenta certa e
+    /// falharia na hora de executar.
+    #[test]
+    fn destino_que_e_pasta_recebe_o_arquivo_dentro() {
+        let raiz = std::env::temp_dir().join(format!("teka_cp_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&raiz);
+        let alvo = raiz.join("destino");
+        std::fs::create_dir_all(&alvo).expect("criar pasta");
+        let origem = raiz.join("nota.txt");
+        std::fs::write(&origem, b"oi").expect("escrever");
+
+        let pol = Politica::real_em(&raiz);
+        let r = copiar(origem.to_str().unwrap(), alvo.to_str().unwrap(), &pol);
+        assert!(r.is_ok(), "copiar para pasta devia funcionar: {r:?}");
+        assert!(
+            alvo.join("nota.txt").exists(),
+            "o arquivo tem de aparecer DENTRO da pasta, com o nome da origem"
+        );
+        assert!(origem.exists(), "copiar nao tira da origem");
+
+        // E mover: mesmo destino, mas a origem some.
+        let outra = raiz.join("outra.txt");
+        std::fs::write(&outra, b"tchau").expect("escrever");
+        let r = mover(outra.to_str().unwrap(), alvo.to_str().unwrap(), &pol);
+        assert!(r.is_ok(), "mover para pasta devia funcionar: {r:?}");
+        assert!(alvo.join("outra.txt").exists(), "mover poe dentro da pasta");
+        assert!(!outra.exists(), "mover TIRA da origem");
+
+        let _ = std::fs::remove_dir_all(&raiz);
+    }
+
+    /// E o outro lado, que e o que impede o conserto de virar regra cega: destino
+    /// que e ARQUIVO continua sendo o arquivo, e nao vira pasta.
+    #[test]
+    fn destino_que_e_arquivo_continua_sendo_o_arquivo() {
+        let raiz = std::env::temp_dir().join(format!("teka_cp2_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&raiz);
+        std::fs::create_dir_all(&raiz).expect("criar raiz");
+        let origem = raiz.join("a.txt");
+        std::fs::write(&origem, b"oi").expect("escrever");
+        let destino = raiz.join("b.txt");
+
+        let pol = Politica::real_em(&raiz);
+        let r = copiar(origem.to_str().unwrap(), destino.to_str().unwrap(), &pol);
+        assert!(r.is_ok(), "{r:?}");
+        assert!(destino.is_file(), "destino nomeado continua sendo arquivo");
+        assert_eq!(std::fs::read(&destino).unwrap(), b"oi");
+        let _ = std::fs::remove_dir_all(&raiz);
+    }
 
     #[test]
     fn calculadora_respeita_precedencia() {
