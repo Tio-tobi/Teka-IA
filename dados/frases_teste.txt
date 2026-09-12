@@ -231,3 +231,223 @@ perguntar | prega um prego na parede |
 perguntar | resolve a equacao da minha vida |
 perguntar | quem sabe depois |
 perguntar | melhor nao
+
+# ============================================================================
+# FRASES DO JOHN — 196, escritas em 2026-09-11, conferidas por ele
+# ============================================================================
+#
+# O benchmark cobria 10 das 22 ferramentas. DOZE nao tinham uma frase sequer, e foi
+# assim que `ler_imagem` passou nove dias treinando com texto de recado no lugar de
+# caminho de imagem, e que `atalho` -- a ferramenta que custou -2,58 e foi medida
+# por tres dias -- nunca teve uma linha de teste.
+#
+# Escritas pelo John, do jeito dele: giria, frase pela metade, dominio real. Ele NAO
+# olhou os moldes de `dados.rs` antes de escrever, de proposito. Regua que eu
+# escrevo herda o meu ponto cego, e ja herdou uma vez por 24 pontos.
+#
+# 94 das 196 sao `perguntar`, e sempre pelo mesmo motivo: o argumento obrigatorio
+# nao esta escrito no pedido. "apaga esse arquivo aqui" nao tem arquivo nenhum para
+# a cabeca de ponteiro copiar, e nao ha resposta certa alem de perguntar qual.
+# Decisao do John em 11/09. A distribuicao e dele, e e o dado -- amostrar menos para
+# "equilibrar" seria eu decidindo o que a regua mede.
+#
+# ATENCAO A QUEM COMPARAR NUMERO: o benchmark foi de 150 para 346 frases aqui. Todo
+# resultado anterior a esta linha foi medido sobre as 150, e NAO e comparavel com o
+# que vier depois. Braco novo precisa de base nova.
+
+buscar_web | Teka, pesquisa ai pra mim como que faz pra reutilizar um html no python | como que faz pra reutilizar um html no python
+buscar_web | olha na internet qual jogo vai lançar na steam esse mês | qual jogo vai lançar na steam esse mês
+buscar_web | mano, vê ai como eu faço uma api em python do zero | como eu faço uma api em python do zero
+buscar_web | procura pra mim um tutorial de como instalar o node no windows | como instalar o node no windows
+# RETIRADA (virou template do gerador): buscar_web | pesquisa ai qual a diferença entre sqlite e postgresql | qual a diferença entre sqlite e postgresql
+buscar_web | vê na internet como que faz um bot do discord tocar musica | como que faz um bot do discord tocar musica
+buscar_web | Teka, dá uma olhada quanto tá uma rx 580 usada hoje | quanto tá uma rx 580 usada hoje
+buscar_web | pesquisa ai se já saiu alguma notícia do minecraft novo | alguma notícia do minecraft novo
+buscar_web | mano, procura aquele erro de cors no express pra mim | erro de cors no express
+buscar_web | vê ai como funciona o ollama no windows | como funciona o ollama no windows
+buscar_web | pesquisa sobre como fazer um site com html css e javascript | como fazer um site com html css e javascript
+buscar_web | olha ai na internet se tem algum curso bom de python pra iniciante | algum curso bom de python pra iniciante
+abrir_programa | abre o vscode ai | vscode
+abrir_programa | abre o navegador pra mim | navegador
+abrir_programa | liga o discord ai rapidão | discord
+# RETIRADA (virou template do gerador): abrir_programa | abre o terminal | terminal
+# RETIRADA (virou template do gerador): abrir_programa | abre o spotify | spotify
+abrir_programa | pode abrir o python ai? | python
+# RETIRADA (virou template do gerador): abrir_programa | abre o explorador de arquivos | explorador de arquivos
+# RETIRADA (virou template do gerador): abrir_programa | inicia o lm studio | lm studio
+abrir_programa | Teka, liga o ollama | ollama
+abrir_programa | abre o bloco de notas ai | bloco de notas
+abrir_programa | liga o vscode que eu quero codar | vscode
+abrir_programa | mano, abre o navegador ai | navegador
+perguntar | copia esse arquivo pra outra pasta |
+perguntar | pega esse txt e faz uma cópia dele |
+copiar_arquivo | copia o relatório da área de trabalho pra documentos | documentos
+copiar_arquivo | joga uma cópia desse arquivo na pasta backup | backup
+perguntar | mano, copia esse projeto inteiro pra outra pasta |
+perguntar | faz uma cópia desse arquivo aqui rapidão |
+perguntar | duplica essa imagem pra mim |
+copiar_arquivo | copia o arquivo do estágio pra pasta documentos | documentos
+perguntar | pega esse negócio aqui e copia lá pra outra pasta |
+copiar_arquivo | copia esse arquivo pra unidade E | unidade E
+perguntar | faz um backup desse txt |
+perguntar | Teka, copia a pasta do projeto pra outro lugar |
+mover_arquivo | pega esse arquivo e joga na pasta documentos | documentos
+mover_arquivo | move o relatório pra pasta do estágio | estágio
+perguntar | renomeia esse arquivo pra relatório final |
+mover_arquivo | tira essa imagem daqui e coloca na pasta fotos | fotos
+perguntar | mano, muda o nome desse txt pra teste 2 |
+perguntar | move esse projeto pra outra pasta ai |
+mover_arquivo | pega esse arquivo da área de trabalho e manda pra documentos | documentos
+perguntar | joga esse arquivo na pasta antiga |
+mover_arquivo | Teka, renomeia esse negócio pra backup | backup
+mover_arquivo | move essa pasta pra unidade E | unidade E
+perguntar | tira esse arquivo daqui e coloca lá |
+perguntar | muda o nome desse arquivo ai |
+criar_pasta | cria uma pasta chamada projetos | projetos
+perguntar | faz uma pasta nova na área de trabalho |
+criar_pasta | cria uma pasta de backup ai | backup
+perguntar | Teka, monta uma pasta pra guardar meus jogos |
+criar_pasta | mano, faz uma pasta chamada estudos dentro de documentos | estudos
+criar_pasta | cria uma pasta chamada teste | teste
+# RETIRADA (virou template do gerador): criar_pasta | abre uma pasta nova chamada imagens | imagens
+perguntar | faz uma pasta pra esse projeto ai |
+criar_pasta | cria uma pasta chamada arquivos antigos | arquivos antigos
+criar_pasta | faz uma pasta dentro de documentos chamada escola | escola
+perguntar | cria uma pasta pra guardar os txt |
+criar_pasta | monta uma pasta chamada nyxara | nyxara
+perguntar | quanto pesa esse arquivo aqui |
+perguntar | me diz o tamanho desse pdf |
+perguntar | vê ai a data daquele relatório |
+perguntar | Teka, quando foi que esse arquivo foi criado? |
+perguntar | qual o tamanho dessa pasta do projeto? |
+perguntar | Teka, me mostra as informações desse txt |
+perguntar | Teka, esse arquivo é grande? |
+perguntar | quando mexeram nesse arquivo pela última vez? |
+perguntar | me diz o tamanho dessa imagem ai |
+perguntar | Teka, qual foi a última vez que alteraram esse arquivo? |
+perguntar | quanto espaço esse arquivo tá ocupando? |
+perguntar | olha a data desse arquivo pra mim |
+perguntar | apaga esse arquivo aqui |
+perguntar | pode deletar aquele txt de teste |
+perguntar | tira esse arquivo da pasta ai |
+perguntar | exclui o relatório antigo |
+perguntar | apaga essa imagem que não serve mais |
+apagar_arquivo | deleta o arquivo chamado teste | teste
+perguntar | remove esse negócio daqui |
+perguntar | joga esse arquivo fora |
+perguntar | apaga o backup velho |
+perguntar | pode excluir esse arquivo? |
+perguntar | tira esse txt daqui |
+perguntar | apaga esse arquivo de teste ai |
+processos | quais programas tão rodando agora |
+processos | me mostra o que tá aberto no pc |
+processos | vê ai se tem algum programa pesado rodando |
+processos | lista os processos do windows |
+processos | mano, o que tá usando o computador agora? |
+processos | quais programas estão ativos ai? |
+processos | me mostra os programas em segundo plano |
+processos | Teka, tem algum processo estranho rodando? |
+processos | lista os processos pra mim |
+processos | o que tá rodando nessa máquina? |
+processos | vê o que tá consumindo o pc |
+processos | me mostra os programas que tão abertos |
+rede | qual meu ip? |
+rede | vê se a internet tá funcionando |
+rede | me mostra o estado da rede ai |
+rede | qual é o ip desse pc? |
+rede | mano, a conexão tá normal? |
+rede | me diz como tá a rede aqui |
+rede | tô conectado na internet? |
+rede | qual o endereço ip da máquina? |
+rede | vê ai se a rede tá funcionando |
+rede | verifica a conexão |
+rede | me mostra as informações da rede |
+rede | mano, olha o ip desse computador |
+buscar_no_conteudo | Teka, procura dentro dos arquivos onde aparece nyxara | nyxara
+buscar_no_conteudo | vê ai nos arquivos se tem escrito banco de dados | banco de dados
+buscar_no_conteudo | procura aquele erro de cors dentro do projeto | erro de cors
+buscar_no_conteudo | acha nos txt onde fala de estágio | estágio
+buscar_no_conteudo | mano, busca por localhost dentro dos arquivos | localhost
+buscar_no_conteudo | tem algum arquivo que fala de sqlite? | sqlite
+buscar_no_conteudo | procura a palavra senha nos arquivos | senha
+buscar_no_conteudo | vê onde aparece a função calcularMedia | calcularMedia
+buscar_no_conteudo | procura dentro do projeto por import discord | import discord
+buscar_no_conteudo | Teka, acha nos arquivos onde tá escrito relatório final | relatório final
+buscar_no_conteudo | busca por uma função chamada main | main
+perguntar | vê ai dentro dos arquivos se tem esse texto |
+perguntar | Teka, olha essa imagem ai e me fala o que tem |
+perguntar | me descreve essa foto |
+perguntar | o que aparece nessa imagem? |
+perguntar | vê essa print aqui |
+perguntar | Teka, me diz o que tá escrito nessa imagem |
+perguntar | Teka, olha essa foto e explica o que tem nela |
+perguntar | consegue identificar o que tem nessa imagem? |
+perguntar | me fala o que você tá vendo nessa foto |
+perguntar | Teka, descreve essa imagem pra mim |
+perguntar | vê essa print e me diz qual é o problema |
+perguntar | olha essa imagem ai e me explica |
+perguntar | lê o que tá escrito nessa foto |
+# RETIRADA (virou template do gerador): atalho | aumenta o volume | aumenta o volume
+# RETIRADA (virou template do gerador): atalho | abaixa o som ai | abaixa o som
+# RETIRADA (virou template do gerador): atalho | muta o pc | muta o pc
+# RETIRADA (virou template do gerador): atalho | pausa a música ai | pausa a música
+# RETIRADA (virou template do gerador): atalho | volta a música | volta a música
+atalho | pula pra próxima | próxima
+atalho | aumenta o volume um pouco | aumenta o volume
+# RETIRADA (virou template do gerador): atalho | tira o mudo | tira o mudo
+# RETIRADA (virou template do gerador): atalho | diminui o volume ai | diminui o volume
+# RETIRADA (virou template do gerador): atalho | pausa o som | pausa o som
+# RETIRADA (virou template do gerador): atalho | passa a música | passa a música
+atalho | Teka, coloca a música pra tocar | coloca a música
+escrever_arquivo | escreve oi mundo num arquivo chamado teste.txt | teste.txt
+perguntar | cria um txt com meu nome dentro |
+perguntar | salva esse texto num arquivo na área de trabalho |
+perguntar | escreve esse código num arquivo python |
+escrever_arquivo | faz um arquivo chamado notas.txt e coloca isso dentro | notas.txt
+perguntar | Teka, grava essa mensagem num txt |
+perguntar | cria um arquivo com esse texto aqui |
+perguntar | salva minhas anotações num arquivo |
+escrever_arquivo | escreve isso no arquivo config.json | config.json
+perguntar | cria um arquivo python com esse código |
+perguntar | coloca essa lista num arquivo txt |
+perguntar | salva o relatório nesse arquivo aqui |
+executar_comando | roda o comando dir ai | dir
+executar_comando | executa o python --version | python --version
+executar_comando | abre o terminal e roda ipconfig | ipconfig
+perguntar | Teka, executa esse comando aqui |
+executar_comando | Teka, roda npm install nesse projeto | npm install
+executar_comando | faz o pip install requests | pip install requests
+perguntar | Teka, executa o comando pra ver os arquivos da pasta |
+executar_comando | roda o git status | git status
+executar_comando | abre o python pelo terminal | python
+executar_comando | executa o comando ollama list | ollama list
+perguntar | Teka, roda esse negócio aqui no cmd |
+# RETIRADA (virou template do gerador): executar_comando | executa npm start | npm start
+perguntar | faz aquele negócio lá |
+perguntar | vê isso aí |
+# RETIRADA (virou template do gerador): perguntar | resolve isso pra mim |
+perguntar | Teka, pega aquele arquivo |
+perguntar | coloca lá na pasta |
+perguntar | arruma isso aí |
+perguntar | mexe naquele negócio |
+perguntar | olha aquele trem lá |
+perguntar | deixa tudo certo aí |
+perguntar | faz o que tem que fazer |
+perguntar | pega isso e faz lá |
+perguntar | manda pra lá |
+perguntar | coloca isso ali |
+perguntar | Teka, tira aquele negócio |
+perguntar | salva lá |
+perguntar | escreve aquilo |
+perguntar | roda aquele comando |
+perguntar | Teka, executa isso aí |
+perguntar | resolve esse erro |
+perguntar | conserta isso |
+perguntar | deixa igual antes |
+perguntar | muda esse negócio |
+perguntar | vê o que dá pra fazer |
+perguntar | faz aí rapidão |
+perguntar | dá um jeito nisso |
+perguntar | Teka, vê lá pra mim |
+perguntar | faz igual aquele outro |
+perguntar | arruma lá |

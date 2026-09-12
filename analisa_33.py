@@ -73,7 +73,7 @@ base = por_semente("tr22_s*.log")   # poco quebrado
 trat = por_semente("tr33_s*.log")   # poco consertado
 pares = sorted(set(base) & set(trat))
 
-print(f"base `cr_*`: {len(base)} sementes | tratado `tr22_*`: {len(trat)} | pares: {len(pares)}")
+print(f"base `tr22_*` (poco quebrado): {len(base)} | tratado `tr33_*` (consertado): {len(trat)} | pares: {len(pares)}")
 if len(pares) < N_REGISTRADO:
     print(f"\nso {len(pares)} pares de {N_REGISTRADO} — n foi REGISTRADO, nao leio parcial.")
     raise SystemExit
