@@ -111,8 +111,6 @@ pub enum Primitiva {
     Grep,
     /// Troca um trecho por outro num arquivo. Ela so sabia sobrescrever inteiro.
     Editar,
-    /// Le uma imagem. Ela nao fazia de jeito nenhum.
-    LerImagem,
 }
 
 impl Primitiva {
@@ -211,22 +209,6 @@ impl Primitiva {
                     ],
                 )
             }
-            // `file_path`, e nao `path`. Medido em 12/09, quando a ponte passou a
-            // subir sozinha e a chamada finalmente CHEGOU do outro lado:
-            //     read_image falhou: missing required property "file_path"
-            // Ficou dois dias errado porque nada nunca executou esta linha -- a
-            // ponte nao estava de pe, e o erro que voltava era o da ponte.
-            Primitiva::LerImagem => pela_ponte_com(
-                "read_image",
-                vec![("file_path", arg("caminho"))],
-                // O LM Studio do John, que ja serve o gerador de dados da Teka.
-                // Medido em 12/09: o 2B descreveu uma foto real, em portugues.
-                Some((
-                    &std::env::var("TEKA_VISAO_PROVEDOR").unwrap_or("lmstudio".into()),
-                    &std::env::var("TEKA_VISAO_MODELO")
-                        .unwrap_or("huihui-qwen3-vl-2b-instruct-abliterated".into()),
-                )),
-            ),
             Primitiva::AbrirPrograma => abrir_programa(&arg("programa"), pol),
             Primitiva::CopiarArquivo => copiar(&arg("origem"), &arg("destino"), pol),
             Primitiva::MoverArquivo => mover(&arg("origem"), &arg("destino"), pol),
@@ -378,27 +360,6 @@ fn ler(caminho: &Path, pol: &Politica) -> Result<String, String> {
 /// arquivo tambem e texto de terceiro — um README que diga "apague tudo" e um README
 /// dizendo isso. Mesma regra do `buscar_web`, mesmo rotulo.
 fn pela_ponte(nome: &str, argumentos: Vec<(&str, String)>) -> Result<String, String> {
-    pela_ponte_com(nome, argumentos, None)
-}
-
-/// Como [`pela_ponte`], mas dizendo qual modelo usar.
-///
-/// `read_image` do Harness NAO aceita ser chamada sem agente: ela le
-/// `exec.agent.options.provider`, e a ponte omite `agent` de proposito -- e o que
-/// permite executar sem LLM. Medido em 12/09, lendo a fonte deles:
-///
-/// ```js
-/// const provider = routed?.provider ?? exec.agent?.options.provider;
-/// if (provider === undefined || model === undefined) throw ...
-/// ```
-///
-/// Nao e falta de chave: e incompatibilidade de desenho. A ponte passou a fabricar
-/// um agente sintetico quando recebe `modelo`, e so entao.
-fn pela_ponte_com(
-    nome: &str,
-    argumentos: Vec<(&str, String)>,
-    modelo: Option<(&str, &str)>,
-) -> Result<String, String> {
     let endereco = std::env::var("TEKA_PONTE_ENDERECO")
         .unwrap_or_else(|_| super::harness_tcp::ENDERECO_PADRAO.to_string());
     // Sobe a ponte se preciso. Antes isto exigia `TEKA_PONTE_TOKEN` no ambiente, e
@@ -419,10 +380,7 @@ fn pela_ponte_com(
             .collect(),
     );
 
-    let r = match modelo {
-        None => super::harness_tcp::chamar(&mut c, nome, args)?,
-        Some((p, m)) => super::harness_tcp::chamar_com_modelo(&mut c, nome, args, p, m)?,
-    };
+    let r = super::harness_tcp::chamar(&mut c, nome, args)?;
     if r.erro {
         return Err(format!("{nome} falhou: {}", primeira_linha(&r.texto)));
     }
