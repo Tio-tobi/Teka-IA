@@ -19,13 +19,21 @@ A seção "O que já foi tentado e não vale repetir" é a mais valiosa dele.
 ## 1. Onde ela está
 
 ```
-benchmark de 150     113,42         22 ferramentas (s19-30) <- ESTADO DE HOJE
+benchmark de 329     216,58 (65,8%)  22 ferramentas, 20 medidas <- ESTADO DE HOJE
+                                     sd entre sementes 3,64 pp (n=12, 12/09)
+
+  A REGUA MUDOU em 11/09: 150 -> 329 frases, 10 -> 20 ferramentas cobertas.
+  Nada abaixo desta linha e comparavel com o de cima.
+
+benchmark de 150     113,42         22 ferramentas (s19-30)
                      116,17         20 ferramentas, COM o critico (s19-30)
                      113,50         20 ferramentas, sem a contradicao
                      110,33         20 ferramentas, COM a contradicao
                      112,92         19 ferramentas
 argumento condicional  ~92%        (quando a ferramenta sai certa)
-ferramenta certa       ~77%        <- o gargalo
+ferramenta certa       65,8%       <- o gargalo, na regua NOVA (era ~77% na antiga,
+                                    e a diferenca e a regua, nao o modelo: as 12
+                                    ferramentas que ela nunca mediu puxam para baixo)
 ferramentas             22         20 + `buscar_no_conteudo` + `ler_imagem`,
                                     as duas vindas da ponte do Harness.
                                     `editar_arquivo` foi descartada por medicao:
@@ -36,7 +44,9 @@ parâmetros            1,6 M
 para rodar            ~24 MB       binário 1,6 + modelo 6,2 + n-grama 16
 latência              ~103 ms      na CPU, incluindo carregar do disco
 corpus                69,87 MB     9,7x o inicial
-suite                 371 testes   10 binarios, 0 falhas (2026-09-10)
+suite                 341 na lib   3 VERMELHOS nos de integracao (12/09), e um
+                                    deles e limiar velho: o teste do agente cobra
+                                    62% num benchmark que mudou de tamanho.
 ```
 
 **A suite ficou VERMELHA por commits sem ninguem ver.** Tres testes de integracao
@@ -134,9 +144,22 @@ medir ruido.
 
 O argumento está em ~92% condicional; a ferramenta em ~76%. É ali que está o ganho.
 
-**Atualizado em 10/09:** a guarda das 22 ferramentas mediu onde o erro caiu, e as
-famílias que mais pioraram sao `escrever_arquivo` (+14), `listar_pasta` (+14) e
-`memoria` (+11) — nao as tres de baixo. Comecar por elas.
+**Atualizado em 12/09, e o alvo mudou de novo.** A regua de 329 frases mediu as 12
+ferramentas que ninguem media, e o gargalo nao esta onde a analise de erro apontava:
+
+```
+copiar_arquivo        0,0%   <- consertado em 12/09, medindo
+mover_arquivo         0,0%   <- consertado em 12/09, medindo
+buscar_no_conteudo   24,0%   <- diagnosticado, NAO consertado
+escrever_arquivo     52,4%
+atalho               52,8%
+perguntar            60,6%   <- 116 frases, o maior bloco e o mais perigoso
+procurar_arquivo     61,9%
+```
+
+Atacar de baixo para cima, e o metodo e o que funcionou tres vezes: achar a FORMA
+que falta, nao os itens. O que achou `copiar`/`mover` foi comparar molde com frase
+do John e ver que "pasta" nao existia de um lado.
 
 A análise de erro apontou as atrativas: `abrir_programa`, `executar_comando`,
 `procurar_arquivo`. O método é o que funcionou três vezes seguidas — **poço de valor e
@@ -630,6 +653,113 @@ Consertado o teste, e nao o dado: a taxa de maiuscula agora tem denominador prop
 
 Quatro vezes em tres dias. **Regua nova erra mais que o codigo medido** — e sonda
 curta antes de corrida longa e o que separa "medi" de "achei que medi".
+
+### CINCO FERRAMENTAS QUEBRADAS QUE NINGUEM SABIA (2026-09-12)
+
+As 196 frases do John entraram no benchmark e ele foi de 150 para 329, de 10 para 20
+ferramentas cobertas. A base nova, 12 sementes:
+
+```
+216,58 de 329 = 65,8%     sd entre sementes 3,64 pp
+```
+
+O 65,8% contra os ~77% da regua antiga NAO e regressao: sao as 12 ferramentas que
+nunca tinham sido medidas puxando para baixo. E o que elas mostraram:
+
+```
+copiar_arquivo       0,0%    36 tentativas, ZERO acertos
+mover_arquivo        0,0%    60 tentativas, ZERO acertos
+apagar_arquivo       0,0%    (1 frase — amostra nao decide)
+buscar_web           8,3%    (1 frase — amostra nao decide)
+buscar_no_conteudo  24,0%    8 frases
+```
+
+Zero absoluto em 36 e 60 tentativas nao e ruido. E ficou invisivel por meses porque
+o benchmark de 150 nao tinha uma frase sequer delas -- inclusive de `atalho`, a
+ferramenta 20, que custou -2,58 e foi medida por tres dias sem nunca ter um teste.
+
+#### A CAUSA, E ELA NAO ERA SO DADO
+
+`copiar`/`mover` iam para `criar_pasta` e `listar_pasta`. Medido: ZERO moldes delas
+citavam "pasta". Todos ensinavam arquivo->arquivo, e o John pede arquivo->PASTA. No
+treino, "pasta" so existia com as ferramentas de pasta.
+
+E a primitiva RECUSAVA pasta como destino:
+
+```
+copy(arquivo, PASTA)   -> Err PermissionDenied "Acesso negado."
+rename(arquivo, PASTA) -> Err PermissionDenied
+```
+
+Ensinar a forma sem consertar isso trocaria "escolhe a ferramenta errada" por
+"escolhe a certa e falha executando". Consertado nas duas pontas (`a5ef7db`).
+
+Um palpite morreu no caminho: achei que fosse "numero de argumentos obrigatorios",
+ja que as duas tem dois. Mas `escrever_arquivo` tem dois e esta em 52%, e
+`apagar_arquivo` tem um e esta em 0%.
+
+#### O QUE SOBRA DIAGNOSTICADO E NAO CONSERTADO
+
+`buscar_no_conteudo` perde 26 erros para `procurar_arquivo`. Os moldes tem marcador
+de conteudo, mas um conjunto FIXO e estreito -- e ela nao generaliza entre variantes
+quase identicas:
+
+```
+molde   "dentro dos arquivos"    John   "nos arquivos"
+molde   "quais fontes falam de"  John   "arquivo que fala de"
+```
+
+Nao e falta de marcador, e falta de VARIEDADE de marcador. Mesmo padrao dos verbos
+de `listar_pasta`.
+
+### EU PREVI QUE A REGUA MAIOR BAIXARIA O RUIDO. NAO BAIXOU (2026-09-12)
+
+Ao propor crescer o benchmark eu escrevi, com numero e tudo, que o ruido cairia para
+~68% (raiz de 150/329) e que a mesma corrida de 8h enxergaria efeito 1,5x menor.
+
+```
+150 frases -> sd 3,23 pp
+329 frases -> sd 3,64 pp     113% do anterior
+```
+
+Subiu. O erro: modelei o ruido como amostragem binomial sobre ITENS, que media para
+baixo com mais itens. Mas o ruido dominante esta no MODELO -- cada semente produz uma
+Teka diferente, e isso e correlacionado entre todas as frases. Mais frases nao diluem
+variacao de modelo.
+
+RESSALVA que impede a conclusao oposta: o que decide experimento e o desvio da
+diferenca PAREADA, e o pareamento cancela a variacao de semente. Isso so se mede com
+DOIS bracos na regua nova, e ha um. O que esta errado e a minha justificativa, nao
+necessariamente a decisao.
+
+E a decisao se paga de outro jeito, que e maior: sem as 329 frases, as cinco
+ferramentas quebradas continuariam invisiveis.
+
+### DUAS MECANICAS INVENTADAS E MORTAS PELA MEDICAO EM UMA NOITE (2026-09-12)
+
+```
+responder_ou_falta    dispara 0 vezes em 94 frases deiticas
+checagem de tipo      pega 1 erro de 119
+```
+
+A primeira: eu li que argumento obrigatorio sem recorte vira
+`Err("nao consegui recortar")` e construi para transformar aquilo em pergunta
+dirigida. Medido, o ramo e caminho quase morto -- `recortar` ENCAIXA NA PALAVRA,
+entao quase nunca sai vazio. Ela nao falha em recortar; ela recorta lixo com
+confianca:
+
+```
+"pega esse txt e faz uma copia dele"  ->  executar_comando(comando="dele")
+```
+
+A segunda: propus, no commit da primeira, que o lever certo era checar se o
+argumento parece do TIPO do parametro. Medi antes de construir: pega 1 erro de 119.
+Ela nao confunde o tipo -- escolhe a ferramenta errada com argumento que parece
+certo.
+
+As duas nasceram de LER O CODIGO E ACREDITAR. As sondas que as mataram levaram 15
+minutos cada. E nas duas, o que sobrou de pe foi o que a secao 3.2 ja dizia: o
+gargalo e ESCOLHER a ferramenta, e isso se move com dado.
 
 ### FECHADO: as duas ferramentas da ponte custaram -2,75, e FICAM (2026-09-10)
 
