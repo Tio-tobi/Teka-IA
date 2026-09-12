@@ -1169,7 +1169,7 @@ const ARQUIVOS: &[&str] = &[
     "projeto.toml", "script.py", "estilo.css", "index.html", "app.js",
     "readme.md", "licenca.txt", "changelog.md", "makefile", "requisitos.txt",
     "senha.txt", "backup2.csv", "historico.log", "erro.log", "acesso.log",
-    "foto.png", "imagem.jpg", "video.mp4", "musica.mp3", "documento.pdf",
+    "esquema.drawio", "planilha.ods", "video.mp4", "musica.mp3", "documento.pdf",
     "apresentacao.pptx", "tabela.xlsx", "carta.docx", "banco.db", "chave.pem",
     "notas\\antigas.md", "docs\\guia.txt", "src\\lib.rs", "config\\app.json",
     "logs\\ontem.log", "backup\\copia.zip", "temp\\rascunho.txt",
