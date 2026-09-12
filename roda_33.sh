@@ -29,4 +29,4 @@ for marca in tela_do_erro.png api_key; do
 done
 echo "binario conferido: tem os pocos novos"
 
-exec ./exp_33.sh >> tr33_corrida.log 2>&1
+exec ./exp_33.sh >> logs/tr33_corrida.log 2>&1

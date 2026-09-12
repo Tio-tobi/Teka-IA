@@ -35,8 +35,8 @@ def sementes(padrao):
             fora[s] = r
     return fora
 
-a = sementes("cf_vb_s*.log")   # 19 ferramentas
-b = sementes("ct_20_s*.log")   # 20 ferramentas
+a = sementes("logs/cf_vb_s*.log")   # 19 ferramentas
+b = sementes("logs/ct_20_s*.log")   # 20 ferramentas
 pares = sorted(set(a) & set(b))
 
 if not pares:

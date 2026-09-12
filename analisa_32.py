@@ -35,8 +35,8 @@ def colher(padrao):
                 fora[(frase, esp)][m.group(2)] += 1
     return fora, n
 
-base, nb = colher("cr_s*.log")     # 20 ferramentas
-trat, nt = colher("tr22_s*.log")   # 22 ferramentas
+base, nb = colher("logs/cr_s*.log")     # 20 ferramentas
+trat, nt = colher("logs/tr22_s*.log")   # 22 ferramentas
 print(f"sementes: 20f={nb}  22f={nt}\n")
 
 for fam in ALVO:

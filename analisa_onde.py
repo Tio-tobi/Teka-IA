@@ -18,8 +18,8 @@ def erros(padrao):
             if esp: c[(esp, obtido)] += 1
     return c, n
 
-a, na = erros('cf_vb_s*.log')
-b, nb = erros('ct_20_s*.log')
+a, na = erros('logs/cf_vb_s*.log')
+b, nb = erros('logs/ct_20_s*.log')
 print(f"corridas lidas: 19f={na}  20f={nb}\n")
 chaves = set(a) | set(b)
 piora = sorted(chaves, key=lambda k: (b[k]-a[k]), reverse=True)

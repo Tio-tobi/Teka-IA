@@ -29,8 +29,13 @@ dados/val_*.txt
 dados/.cursor*
 
 # --- saidas de experimento ---
-# Cento e cinquenta logs de rodadas antigas. O que vale ficar esta escrito em
-# ARQUITETURA.md, que e onde os achados moram.
+# Em 12/09 eram 319 logs e 151 checkpoints soltos na raiz -- 554 itens, 939 MB de
+# `.bin`. Agora vao para `logs/` e `modelos/`, e os scripts leem de la.
+#
+# O que vale ficar esta escrito em ARQUITETURA.md e no ROTEIRO, que e onde os
+# achados moram. Log e checkpoint sao reproduziveis; achado nao.
 *.log
 *.csv
 *.zip
+logs/
+modelos/

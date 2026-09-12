@@ -15,5 +15,5 @@
 cd "/c/Users/User/Projetos/Assistente/Teka-IA" || exit 1
 ./teka_32.exe agente --patcher por_palavra --epocas 12 --exemplos 16000 \
   --semente 19 --threads 10 --saida teka_ctrl_s19.bin --benchmark \
-  > ctrl_s19.log 2>&1
-echo "=== FIM codigo=$? — $(date +%H:%M)" >> ctrl_s19.log
+  > logs/ctrl_s19.log 2>&1
+echo "=== FIM codigo=$? — $(date +%H:%M)" >> logs/ctrl_s19.log

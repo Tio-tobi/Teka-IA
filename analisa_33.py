@@ -69,8 +69,8 @@ def por_ferramenta(dados, pares):
                 c[esp] += 1
     return c
 
-base = por_semente("tr22_s*.log")   # poco quebrado
-trat = por_semente("tr33_s*.log")   # poco consertado
+base = por_semente("logs/tr22_s*.log")   # poco quebrado
+trat = por_semente("logs/tr33_s*.log")   # poco consertado
 pares = sorted(set(base) & set(trat))
 
 print(f"base `tr22_*` (poco quebrado): {len(base)} | tratado `tr33_*` (consertado): {len(trat)} | pares: {len(pares)}")

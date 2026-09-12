@@ -6,4 +6,4 @@
 # existe para o `Start-Process` do PowerShell ter um alvo simples, sem aspas
 # aninhadas para o Windows mastigar.
 cd /c/Users/User/Projetos/Assistente/Teka-IA || exit 1
-exec ./exp_critico.sh >> cr_corrida.log 2>&1
+exec ./exp_critico.sh >> logs/cr_corrida.log 2>&1

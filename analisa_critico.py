@@ -59,8 +59,8 @@ def pareado(a, b, pares, campo):
     return m, t, n, sum(1 for x in d if x > 0)
 
 
-base = por_semente("oos_s*.log")     # sem o passo 1
-trat = por_semente("cr_s*.log")      # com o passo 1
+base = por_semente("logs/oos_s*.log")     # sem o passo 1
+trat = por_semente("logs/cr_s*.log")      # com o passo 1
 pares = sorted(set(base) & set(trat))
 
 if len(pares) < 12:

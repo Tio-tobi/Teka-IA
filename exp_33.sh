@@ -58,16 +58,16 @@ cd "/c/Users/User/Projetos/Assistente/Teka-IA" || exit 1
 # Retomabilidade que aceita log mais antigo que o binario nao e retomabilidade, e
 # contaminacao silenciosa.
 pronta() {
-  [ -f "tr33_s$1.log" ] || return 1
-  grep -aq "ferramenta certa:" "tr33_s$1.log" || return 1
-  [ "tr33_s$1.log" -nt teka_33.exe ]
+  [ -f "logs/tr33_s$1.log" ] || return 1
+  grep -aq "ferramenta certa:" "logs/tr33_s$1.log" || return 1
+  [ "logs/tr33_s$1.log" -nt teka_33.exe ]
 }
 
 for s in 19 20 21 22 23 24 25 26 27 28 29 30; do
   if pronta "$s"; then echo "=== semente ${s} — ja pronta, pulando ==="; continue; fi
   echo "=== poco consertado, semente ${s} — $(date +%H:%M) ==="
   ./teka_33.exe agente --patcher por_palavra --epocas 12 --exemplos 16000 \
-    --semente "$s" --threads 10 --saida "teka_tr33_s${s}.bin" --benchmark \
-    > "tr33_s${s}.log" 2>&1
+    --semente "$s" --threads 10 --saida "modelos/teka_tr33_s${s}.bin" --benchmark \
+    > "logs/tr33_s${s}.log" 2>&1
 done
 echo "=== POCO COMPLETO — $(date +%H:%M) ==="

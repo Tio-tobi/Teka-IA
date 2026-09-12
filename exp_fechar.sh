@@ -12,7 +12,7 @@ cd "/c/Users/User/Projetos/Assistente/Teka-IA" || exit 1
 for s in 13 14 15 16 17 18; do
     echo "=== semente ${s} — $(date +%H:%M) ==="
     ./teka_exp.exe agente --epocas 12 --exemplos 16000 --semente "$s" --threads 10 \
-        --saida "teka_f_s${s}.bin" --benchmark > "f_s${s}.log" 2>&1
+        --saida "modelos/teka_f_s${s}.bin" --benchmark > "f_s${s}.log" 2>&1
     grep -aE 'ferramenta certa:|argumento quando' "f_s${s}.log"
     bash sonda_consulta.sh "teka_f_s${s}.bin"
 done

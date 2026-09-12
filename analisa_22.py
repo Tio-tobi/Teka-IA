@@ -66,8 +66,8 @@ def por_ferramenta(dados, pares):
                 c[esp] += 1
     return c
 
-base = por_semente("cr_s*.log")    # 20 ferramentas
-trat = por_semente("tr22_s*.log")  # 22 ferramentas
+base = por_semente("logs/cr_s*.log")    # 20 ferramentas
+trat = por_semente("logs/tr22_s*.log")  # 22 ferramentas
 pares = sorted(set(base) & set(trat))
 
 print(f"base `cr_*`: {len(base)} sementes | tratado `tr22_*`: {len(trat)} | pares: {len(pares)}")

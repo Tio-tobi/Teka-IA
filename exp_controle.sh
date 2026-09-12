@@ -17,7 +17,7 @@ cd "/c/Users/User/Projetos/Assistente/Teka-IA" || exit 1
 for s in 7 8 9 10 11 12 13 14 15 16 17 18; do
     echo "=== por_palavra semente ${s} — $(date +%H:%M) ==="
     ./teka_exp.exe agente --patcher por_palavra --epocas 12 --exemplos 16000 \
-        --semente "$s" --threads 10 --saida "teka_pp_s${s}.bin" --benchmark \
-        > "pp_s${s}.log" 2>&1
-    grep -aE 'ferramenta certa:|argumento quando' "pp_s${s}.log"
+        --semente "$s" --threads 10 --saida "modelos/teka_pp_s${s}.bin" --benchmark \
+        > "logs/pp_s${s}.log" 2>&1
+    grep -aE 'ferramenta certa:|argumento quando' "logs/pp_s${s}.log"
 done

@@ -47,7 +47,7 @@ cd "/c/Users/User/Projetos/Assistente/Teka-IA" || exit 1
 
 # RETOMAVEL: so conta como pronta a corrida cujo log chegou ao fim.
 pronta() {
-  [ -f "oos_s$1.log" ] && grep -aq "ferramenta certa:" "oos_s$1.log"
+  [ -f "logs/oos_s$1.log" ] && grep -aq "ferramenta certa:" "logs/oos_s$1.log"
 }
 
 for s in 19 20 21 22 23 24 25 26 27 28 29 30; do
@@ -57,7 +57,7 @@ for s in 19 20 21 22 23 24 25 26 27 28 29 30; do
   fi
   echo "=== 20 ferramentas, semente ${s} — $(date +%H:%M) ==="
   ./teka_oos.exe agente --patcher por_palavra --epocas 12 --exemplos 16000 \
-    --semente "$s" --threads 10 --saida "teka_oos_s${s}.bin" --benchmark \
-    > "oos_s${s}.log" 2>&1
+    --semente "$s" --threads 10 --saida "modelos/teka_oos_s${s}.bin" --benchmark \
+    > "logs/oos_s${s}.log" 2>&1
 done
 echo "=== CUSTO COMPLETO — $(date +%H:%M) ==="

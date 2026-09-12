@@ -32,8 +32,8 @@ def por_semente(padrao):
         fora[s] = (n, bench, quais)
     return fora
 
-a = por_semente('ct_20_s*.log')   # base: com a contradicao
-b = por_semente('oos_s*.log')     # tratado: sem a contradicao
+a = por_semente('logs/ct_20_s*.log')   # base: com a contradicao
+b = por_semente('logs/oos_s*.log')     # tratado: sem a contradicao
 pares = sorted(set(a) & set(b))
 
 def pareado(f):
