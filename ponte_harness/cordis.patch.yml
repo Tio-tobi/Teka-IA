@@ -9,3 +9,36 @@
       # `file://` obrigatorio no Windows: o carregador ESM recusa caminho
       # absoluto cru ("Received protocol 'c:'").
       name: file:///C:/Users/User/Projetos/Assistente/DeepSeek-Harness/teka-ponte.mjs
+
+# ── LM Studio local, para o `read_image` funcionar sem chave ────────────────
+#
+# Medido em 12/09: `read_image` falhava com "the current model route could not be
+# resolved", porque `settings.yaml` aponta para OpenRouter e nao ha
+# OPENROUTER_API_KEY. Era a UNICA das 22 ferramentas da Teka que nao funcionava.
+#
+# O LM Studio ja serve em 127.0.0.1:1234 com API compativel com OpenAI, e o John ja
+# usa aquele mesmo servidor como gerador de dados da Teka. Medido antes de ligar:
+#   huihui-qwen3-vl-2b -> descreveu uma foto real, em portugues, coerente
+#   huihui-qwen3-vl-4b -> HTTP 400 (nao carregado no LM Studio)
+#
+# AQUI e nao no `settings.yaml`: este patch vale so para o perfil `teka`. O arquivo
+# global afeta tudo que o John roda no Harness, e nao e meu para mexer.
+- id: llm-pi-ai
+  name: '@deepseek-ai/dsh-llm-pi-ai'
+  config:
+    providers:
+      lmstudio:
+        displayName: LM Studio (local)
+        api: openai-completions
+        baseURL: http://127.0.0.1:1234/v1
+        models:
+          - id: huihui-qwen3-vl-2b-instruct-abliterated
+            name: Qwen3-VL 2B (local, visao)
+            contextWindow: 32768
+            maxTokens: 4096
+
+- id: agent-default-model
+  name: '@deepseek-ai/dsh-agent-default-model'
+  config:
+    provider: lmstudio
+    model: huihui-qwen3-vl-2b-instruct-abliterated

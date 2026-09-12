@@ -151,6 +151,47 @@ pub fn chamar(c: &mut Conversa, nome: &str, argumentos: Json) -> Result<Resposta
     Ok(Resposta { erro, texto })
 }
 
+/// Como [`chamar`], mas dizendo à ponte qual modelo o agente sintético usa.
+///
+/// Existe por causa de `read_image`, que lê provider e modelo do agente que chamou
+/// — e a ponte omite o agente de propósito. Ver `tools::prim::pela_ponte_com`.
+pub fn chamar_com_modelo(
+    c: &mut Conversa,
+    nome: &str,
+    argumentos: Json,
+    provider: &str,
+    modelo: &str,
+) -> Result<Resposta, String> {
+    let r = c.pedir(
+        "tools/call",
+        json::obj(vec![
+            ("name", json::txt(nome)),
+            ("arguments", argumentos),
+            (
+                "modelo",
+                json::obj(vec![
+                    ("provider", json::txt(provider)),
+                    ("model", json::txt(modelo)),
+                ]),
+            ),
+        ]),
+    )?;
+    let erro = r.get("isError").and_then(Json::booleano).unwrap_or(false);
+    let texto = r
+        .get("content")
+        .and_then(Json::lista)
+        .map(|blocos| {
+            blocos
+                .iter()
+                .filter_map(|b| b.get("text").and_then(Json::texto))
+                .collect::<Vec<_>>()
+                .join("
+")
+        })
+        .unwrap_or_default();
+    Ok(Resposta { erro, texto })
+}
+
 /// Encerra a conversa.
 ///
 /// Existe para simetria e para o dia em que a ponte quiser saber que acabou; hoje

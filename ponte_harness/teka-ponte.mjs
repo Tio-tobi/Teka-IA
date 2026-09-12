@@ -183,6 +183,26 @@ async function chamar(ctx, sock, id, params) {
     return
   }
   try {
+    // AGENTE SINTETICO, e so quando quem chama pede.
+    //
+    // Por padrao `agent` fica OMITIDO — e o que permite executar sem LLM no
+    // caminho, e e o motivo de a ponte existir. Mas nem toda ferramenta aceita
+    // isso. Medido em 12/09, `read_image` do `dsh-tool-fs` faz:
+    //
+    //   const provider = routed?.provider ?? exec.agent?.options.provider
+    //   if (provider === undefined || model === undefined) throw ...
+    //
+    // Sem agente, `provider` e `undefined` e ela recusa. Nao e falta de chave nem
+    // de configuracao: a ferramenta LE do agente que chamou.
+    //
+    // Entao quem chama pode mandar `modelo: {provider, model}` e a ponte fabrica o
+    // minimo que aquele codigo toca. `session.requestHeader()` devolvendo undefined
+    // e de proposito: faz o `??` cair no `options`, que e o que a gente controla.
+    const m = params.modelo
+    const agente = m && m.provider && m.model
+      ? { options: { provider: m.provider, model: m.model },
+          session: { requestHeader: () => undefined } }
+      : undefined
     const r = await ctx.tools.execute({
       callId: `teka-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: nome,
@@ -190,7 +210,7 @@ async function chamar(ctx, sock, id, params) {
       // `signal` e OBRIGATORIO: sem ele `callerCancelled` le `.aborted` de
       // undefined e estoura antes de a ferramenta rodar.
       signal: new AbortController().signal,
-      // `agent` OMITIDO — e o que permite executar sem LLM no caminho.
+      ...(agente ? { agent: agente } : {}),
     })
     responder(sock, id, r)
   } catch (e) {
