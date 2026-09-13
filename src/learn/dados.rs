@@ -718,6 +718,46 @@ const MOLDES: &[Molde] = &[
     Molde {
         ferramenta: "listar_pasta",
         frases: &[
+            // VERBOS DE VER, acrescentados em 2026-09-11.
+            //
+            // A guarda mediu 37 erros nesta familia, e quase todos vao para
+            // `criar_pasta`: ela ancora em "pasta" e, sem reconhecer o verbo, escolhe
+            // a outra ferramenta de pasta.
+            //
+            //   quero visualizar a pasta recibos  -> criar_pasta  10 de 12
+            //   me da um panorama da pasta src    -> criar_pasta   6 de 12
+            //   detalha o diretorio planilhas     -> criar_pasta   3 de 12
+            //
+            // Os verbos que o benchmark cobra -- visualizar, panorama, detalhar,
+            // separar, "faz um inventario de" -- NAO entram aqui. Se eu os copiasse,
+            // ele pararia de medir generalizacao e viraria prova com gabarito.
+            //
+            // Entao o que entra sao OUTROS verbos da mesma familia, para adensar a
+            // categoria "verbo de ver + pasta". O FALSEAMENTO e limpo: se a familia
+            // nao melhorar, ela nao generaliza verbo -- memoriza -- e isso e achado
+            // mais util que o ponto.
+            //
+            // SEIS FORAM RETIRADOS DEPOIS, e o motivo vale mais que eles: percorre,
+            // inspeciona, confere, vasculha, enumera e exibe TAMBEM estao no
+            // benchmark. Eu havia comparado so contra os verbos da lista de ERROS --
+            // e a lista de erros mostra o que ela FALHA, nao as 14 frases que
+            // `listar_pasta` tem ali. Os outros nove eu nunca tinha visto.
+            //
+            // Quatro seriam ativamente nocivos, e nao so inuteis: o benchmark cobra
+            // `exibe` -> `ler_arquivo` ("exibe o miolo do config.json") e
+            // `vasculha` -> `procurar_arquivo`. Ensinar `exibe` -> `listar_pasta`
+            // roubaria da vizinha.
+            //
+            // Conferir a olho nao funciona. Use `checa_vazamento.py`.
+            "examina a pasta {0}",
+            "resume o conteudo de {0}",
+            "descreve a pasta {0}",
+            "cataloga o diretorio {0}",
+            "esmiuca a pasta {0}",
+            "relaciona o que existe em {0}",
+            "quero examinar a pasta {0}",
+            "me da um retrato da pasta {0}",
+            "faz um apanhado de {0}",
             "desfia o que tem na pasta {0}",
             "revela o conteudo da pasta {0}",
             "escancara a pasta {0}",
@@ -1489,7 +1529,28 @@ const PADROES: &[&str] = &[
     "token",
 ];
 
+/// O que se GRAVA num arquivo, para `escrever_arquivo`.
+///
+/// Eram SETE, e depois do conserto dos caminhos (2fa614d) este virou o poco mais
+/// fino do gerador — alimentando justamente a familia com mais erro medido na
+/// guarda: `escrever_arquivo`, 69 erros em 12 sementes, 52,1% de acerto.
+///
+/// O precedente esta medido e escrito logo abaixo, em `COMANDOS`: seis valores nao
+/// distinguiam nada, o verbo generico virava a unica pista, e `executar_comando`
+/// atraia 37 dos 114 erros. De 6 para 62 resolveu.
+///
+/// A FORMA QUE FALTAVA, e nao so a quantidade. Os sete valores antigos eram todos
+/// NUS — "lembrete", "comprar pao". O que ela recebe de verdade vem com
+/// determinante: "salva A NOTA conferir depois em memo.txt". Ela nunca tinha visto
+/// carga util com essa forma, entao via o `.txt`, nao reconhecia o texto, e caia na
+/// ferramenta de UM argumento (`ler_arquivo` levou 11 de 12 em varias frases).
+///
+/// Os substantivos aqui sao DIFERENTES dos que o benchmark cobra (nota, observacao,
+/// linha, anotacao, texto, prazo, backup). E de proposito: copiar os dele faria o
+/// benchmark deixar de medir generalizacao e virar prova com gabarito. Ver
+/// [[teka-regua-independente]].
 const TEXTOS: &[&str] = &[
+    // nus, como antes
     "ola",
     "lembrete",
     "comprar pao",
@@ -1497,6 +1558,46 @@ const TEXTOS: &[&str] = &[
     "reuniao amanha",
     "senha antiga",
     "anotacao rapida",
+    "ligar para o dentista",
+    "pagar a conta de luz",
+    "levar o carro na revisao",
+    "comprar racao",
+    "devolver o livro",
+    "confirmar o horario",
+    "buscar encomenda",
+    "renovar o seguro",
+    // com determinante — a forma que faltava
+    "o recado do joao",
+    "a ideia nova",
+    "a tarefa de amanha",
+    "o resumo curto",
+    "a senha do wifi",
+    "o endereco da loja",
+    "o telefone do suporte",
+    "a receita do bolo",
+    "o combinado da reuniao",
+    "a lista da farmacia",
+    "o titulo provisorio",
+    "o rascunho inicial",
+    "a meta do mes",
+    "o orcamento aprovado",
+    "a resposta do cliente",
+    "o link da chamada",
+    "a data da entrega",
+    "o nome do contato",
+    "a placa do carro",
+    "o codigo do pedido",
+    "uma ideia solta",
+    "um aviso rapido",
+    "um recado curto",
+    "uma tarefa pendente",
+    // frases inteiras, que tambem e como se escreve num arquivo
+    "reuniao transferida para sexta",
+    "cliente pediu desconto",
+    "build quebrou na etapa de teste",
+    "entrega atrasou dois dias",
+    "faltou assinatura no contrato",
+    "servidor caiu as tres da manha",
 ];
 
 /// Comandos de sistema. Eram SEIS.
