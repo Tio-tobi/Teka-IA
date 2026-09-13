@@ -17,14 +17,25 @@
 //! O Harness em si já estava montado — `dsh_home/profiles/teka` existe desde 09/09.
 //! O que faltava era ninguém ligar.
 //!
-//! ## O que este módulo NÃO faz
+//! ## O segredo FICA em disco, e a razão mudou de ideia
 //!
-//! **Não guarda o segredo em disco.** O token é sorteado por execução e vive só na
-//! memória deste processo. Um socket que executa `pwsh` protegido por um arquivo
-//! seria trocar "a pessoa esquece" por "qualquer processo do usuário entra".
+//! A primeira versão não guardava, de propósito: token sorteado por execução, só na
+//! memória. A intenção era não trocar "a pessoa esquece" por "qualquer processo do
+//! usuário entra".
 //!
-//! A consequência é deliberada: se uma ponte já está de pé e não foi esta execução
-//! que a subiu, a Teka **não adivinha o segredo dela** — diz isso e para.
+//! Não se sustentou, e o motivo foi medido: `main.rs` tem **30 `process::exit`**, e
+//! nenhum deles roda desligamento. A ponte sobrevivia à Teka, segurava a 8768, e a
+//! execução seguinte não sabia o segredo dela. O desenho "não guarda" produzia, na
+//! prática, "não funciona a segunda vez".
+//!
+//! E o argumento de segurança não fecha de perto: o socket é `127.0.0.1` e o arquivo
+//! fica no perfil do próprio usuário. Quem consegue ler aquele arquivo **já roda como
+//! o John** — executaria `pwsh` direto, sem precisar da ponte. O arquivo não abre
+//! porta que já não estivesse aberta. O que ele protege continua de pé: outro
+//! USUÁRIO da máquina, e qualquer coisa fora do loopback.
+//!
+//! Decisão do John em 12/09. Ver [`arquivo_do_segredo`] e [`segredo_serve`] — o
+//! token guardado é CONFERIDO contra a ponte viva antes de ser usado.
 //!
 //! **Não mata o que não subiu.** Só derruba o filho que ela mesma criou.
 

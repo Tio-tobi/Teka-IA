@@ -59,17 +59,54 @@ while tasklist //FI "IMAGENAME eq teka_semimg.exe" 2>/dev/null | grep -q teka_se
 while tasklist //FI "IMAGENAME eq cargo.exe" 2>/dev/null | grep -q cargo.exe; do sleep 30; done
 
 cargo build --release --bin teka || { echo "build falhou"; exit 1; }
-cp -f target/release/teka.exe teka_tres.exe || { echo "nao copiei"; exit 1; }
+# SO COPIA SE MUDOU. `cp -f` atualiza o mtime mesmo com conteudo identico, e o
+# `pronta()` compara o log com o mtime do binario -- entao recopiar a cada retomada
+# fazia TODA semente parecer nao-pronta. A trava contra binario velho se derrotava
+# a si mesma: em 13/09 ela mandou refazer 7 sementes ja prontas.
+if ! cmp -s target/release/teka.exe teka_tres.exe; then
+  cp -f target/release/teka.exe teka_tres.exe || { echo "nao copiei"; exit 1; }
+  echo "binario novo copiado"
+else
+  echo "binario identico ao anterior: mtime preservado"
+fi
 # Confere as QUATRO mudancas, uma marca de cada. Marca que so existe no molde novo.
 for marca in "o recado do joao" "esmiuca a pasta" "grep de" "ajeita aquele negocio"; do
   grep -aq "$marca" teka_tres.exe || { echo "BINARIO INCOMPLETO: falta '$marca'"; exit 1; }
 done
 echo "binario conferido: as quatro formas estao nele"
 
+# O REGIME, e nao o mtime.
+#
+# A versao anterior exigia que o log fosse mais NOVO que o binario -- para nao
+# misturar log velho com dado novo. Mas o script recopia o binario a cada retomada, e
+# `cp` atualiza o mtime mesmo com conteudo identico. A trava se derrotava a si mesma:
+# em 13/09 ela mandou refazer 7 sementes prontas e sobrescreveu a primeira antes de
+# eu perceber.
+#
+# Cada log diz o proprio regime na terceira linha:
+#
+#     17805 exemplos de treino, 6175 de validacao | 21 ferramentas | 1615866 params
+#
+# Isso e ASSINATURA DE CONTEUDO: muda quando o registro muda e muda quando os moldes
+# mudam. A primeira semente que fecha define o regime do braco; as outras tem de
+# bater com ela. Log de outro regime nao conta como pronto.
+regime() { grep -aoE '[0-9]+ exemplos de treino[^|]*\|[^|]*\|[^0-9]*[0-9]+ params' "$1" | head -1; }
+
+REGIME_DO_BRACO=""
+for f in logs/tres_s*.log; do
+  [ -f "$f" ] || continue
+  grep -aq "ferramenta certa:" "$f" || continue
+  REGIME_DO_BRACO="$(regime "$f")"
+  [ -n "$REGIME_DO_BRACO" ] && break
+done
+[ -n "$REGIME_DO_BRACO" ] && echo "regime do braco: $REGIME_DO_BRACO"
+
 pronta() {
-  [ -f "logs/tres_s$1.log" ] || return 1
-  grep -aq "ferramenta certa:" "logs/tres_s$1.log" || return 1
-  [ "logs/tres_s$1.log" -nt teka_tres.exe ]
+  local f="logs/tres_s$1.log"
+  [ -f "$f" ] || return 1
+  grep -aq "ferramenta certa:" "$f" || return 1
+  [ -z "$REGIME_DO_BRACO" ] && return 0
+  [ "$(regime "$f")" = "$REGIME_DO_BRACO" ]
 }
 for s in 19 20 21 22 23 24 25 26 27 28 29 30; do
   if pronta "$s"; then echo "=== semente ${s} — ja pronta ==="; continue; fi
