@@ -12,6 +12,7 @@
 //! 3. Na fase 5, criar uma ferramenta nova vira **compor primitivas** — dado novo no
 //!    registro, não código novo.
 
+pub mod ponte_auto;
 pub mod prim;
 pub mod diario;
 pub mod execucao;
@@ -298,12 +299,6 @@ impl Registro {
                     P::Grep,
                 ),
                 f(
-                    "ler_imagem",
-                    "abre uma imagem e descreve o que ela contem",
-                    vec![Param::obrigatorio("caminho", Caminho)],
-                    P::LerImagem,
-                ),
-                f(
                     "atalho",
                     "manda um atalho de teclado (musica, volume, mudo)",
                     vec![Param::obrigatorio("nome", Texto), Param::opcional("alvo", Texto)],
@@ -417,7 +412,17 @@ mod tests {
         // Decisao do John em 09/09, depois de eu mostrar que das 25 da ponte, 16 so
         // servem dentro de um laco de LLM, 5 ela ja tem, e 1 (web_search) exige
         // chave paga -- que ele cortou, mantendo a busca no DuckDuckGo.
-        assert_eq!(r.n(), 22);
+        //   22 -> 21   `ler_imagem` SAI, em 12/09. Nao por custo de acuracia --
+        //              por nao funcionar. Ela e a unica ferramenta do registro que
+        //              nao executa: `read_image` do Harness le provider e modelo do
+        //              AGENTE que chamou, e depois exige sessao viva no store. A
+        //              ponte omite agente de proposito, que e o que permite usar as
+        //              ferramentas deles sem LLM.
+        //
+        //              Medido: das 25 da ponte, ~12 servem e 8 exigem agente.
+        //              `ler_imagem` esta do lado errado da linha por construcao.
+        //              Custava metade dos -2,75 de 09/09 e entregava nada.
+        assert_eq!(r.n(), 21);
         assert_eq!(
             r.ferramentas[0].nome, "perguntar",
             "perguntar tem de ser a primeira: e o que ela escolhe quando nada encaixa"

@@ -850,6 +850,38 @@ const MOLDES: &[Molde] = &[
         // porque ai eu estaria ensinando a contradicao em vez de evita-la.
         ferramenta: "buscar_no_conteudo",
         frases: &[
+            // VARIEDADE DE MARCADOR, acrescentada em 12/09.
+            //
+            // Nao faltava marcador -- faltava VARIEDADE dele. Os 16 moldes antigos
+            // concentravam em poucas strings ("dentro dos arquivos" sozinho era 4
+            // de 16), e medido no benchmark de 329 ela erra 26 vezes para
+            // `procurar_arquivo`, a vizinha que acha arquivo por NOME.
+            //
+            // O que denuncia memorizacao de string, e nao conceito:
+            //
+            //     molde  "procura pela palavra {0} dentro dos arquivos"
+            //     John   "procura a palavra senha nos arquivos"     erra 10/12
+            //
+            // Quase identicas. Se ela tivesse aprendido "busca em conteudo", a
+            // troca de "pela/dentro dos" por "a/nos" nao derrubaria.
+            //
+            // Os marcadores do John (nos arquivos, dentro do projeto, arquivo que
+            // fala de, a palavra X) NAO entram: sao a regua. Entram OUTROS da mesma
+            // familia, e `checa_vazamento.py` confirmou livres: interior, linhas,
+            // varrendo, grep, salvo, trecho, recheio, corpo.
+            //
+            // FALSEAMENTO: se a familia nao melhorar com o dobro de marcadores, ela
+            // nao generaliza marcador -- memoriza -- e o conserto e outro.
+            "faz um grep de {0} nos fontes",
+            "procura {0} no interior dos arquivos",
+            "ve se {0} aparece nas linhas de algum arquivo",
+            "sai varrendo os arquivos atras de {0}",
+            "que arquivo guarda {0} no corpo dele",
+            "acha {0} no recheio dos arquivos",
+            "olha o trecho salvo em cada arquivo por {0}",
+            "esmiuca os arquivos procurando {0}",
+            "onde é que {0} esta salvo dentro de algum arquivo",
+            "varre o conteudo de tudo por {0}",
             "procura {0} dentro dos arquivos",
             "quais arquivos mencionam {0}",
             "onde aparece {0} no codigo",
@@ -866,25 +898,6 @@ const MOLDES: &[Molde] = &[
             "peneira o conteudo dos arquivos por {0}",
             "quero achar {0} dentro dos arquivos",
             "olha dentro dos arquivos por {0}",
-        ],
-    },
-    Molde {
-        // A marca aqui e a palavra IMAGEM/FOTO/PRINT junto da extensao. Sem ela,
-        // "abre o foto.png" cai em `ler_arquivo`, que e o que ela faria hoje.
-        ferramenta: "ler_imagem",
-        frases: &[
-            "descreve a imagem {0}",
-            "o que tem na imagem {0}",
-            "abre a foto {0} e me conta",
-            "olha o print {0} e diz o que deu",
-            "que imagem e essa {0}",
-            "me explica a figura {0}",
-            "ve essa imagem {0} pra mim",
-            "analisa a captura de tela {0}",
-            "da uma olhada na foto {0}",
-            "o que aparece na imagem {0}",
-            "interpreta a figura {0}",
-            "me diz o que mostra a imagem {0}",
         ],
     },
     Molde {
@@ -1461,47 +1474,10 @@ const EXPRESSOES: &[&str] = &[
 /// Poco novo entra AQUI e os testes o enxergam sozinhos.
 #[cfg(test)]
 pub(crate) const POCOS: &[&[&str]] = &[
-    PASTAS, ARQUIVOS, IMAGENS, DISCOS, NOMES, EXPRESSOES, TEXTOS, PADROES, COMANDOS,
+    PASTAS, ARQUIVOS, DISCOS, NOMES, EXPRESSOES, TEXTOS, PADROES, COMANDOS,
     PROGRAMAS, CONSULTAS, NOMES_DE_ATALHO,
 ];
 
-/// Caminhos de IMAGEM, para `ler_imagem`.
-///
-/// Nao existia. Medido em 2026-09-10: `ler_imagem` aprendia o `caminho` dela a
-/// partir de `TEXTOS`, o poco de recado — os 7 valores que ela via eram "ola",
-/// "lembrete", "comprar pao", "reuniao amanha", "senha antiga", "teste" e
-/// "anotacao rapida". **A ferramenta que le imagem nunca tinha visto um `.png`.**
-///
-/// A causa e mecanica: `valor_para` casa por (ferramenta, parametro), e as duas
-/// ferramentas que entraram em `033d533` nao ganharam braco. Cairam no `_ =>
-/// TEXTOS`. A doc de `valor_para` explica por que isso importa: o poco E o sinal —
-/// e o que ensina que "notas.md" pede `ler_arquivo` e "src" pede `listar_pasta`.
-///
-/// Extensao sempre presente, e de proposito: e a pista que separa imagem de
-/// arquivo qualquer, do mesmo jeito que a extensao em `ARQUIVOS` separa arquivo de
-/// pasta.
-const IMAGENS: &[&str] = &[
-    "print.png",
-    "foto.jpg",
-    "captura.png",
-    "diagrama.png",
-    "recibo.jpg",
-    "tela_do_erro.png",
-    "grafico.png",
-    "assinatura.png",
-    "C:\\Users\\User\\Imagens\\ferias.jpg",
-    "C:\\Users\\User\\Downloads\\comprovante.png",
-    "fotos\\2026\\aniversario.jpg",
-    "fotos\\viagem\\praia.jpeg",
-    "capturas\\erro_build.png",
-    "documentos\\scan_rg.jpg",
-    "screenshot_2026_09_10.png",
-    "logo.svg",
-    "banner.webp",
-    "icone.ico",
-    "planta_baixa.png",
-    "print da tela.png",
-];
 
 /// Trechos que se PROCURA dentro de arquivo, para `buscar_no_conteudo`.
 ///
@@ -2151,7 +2127,6 @@ fn valor_para(ferramenta: &str, nome_param: &str, rng: &mut Rng) -> &'static str
         (_, "comando") => COMANDOS,
         // As duas que entraram em `033d533` e nao tinham braco. Sem isto elas caiam
         // no `_ => TEXTOS` e aprendiam caminho a partir de recado.
-        ("ler_imagem", _) => IMAGENS,
         ("buscar_no_conteudo", "padrao") => PADROES,
         // REDE POR NOME DE PARAMETRO, e nao so por ferramenta.
         //
@@ -3034,7 +3009,6 @@ mod testes_destilacao {
         let caminhos: Vec<&str> = PASTAS
             .iter()
             .chain(ARQUIVOS)
-            .chain(IMAGENS)
             .chain(DISCOS)
             .copied()
             .collect();

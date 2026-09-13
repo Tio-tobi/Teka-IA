@@ -111,8 +111,6 @@ pub enum Primitiva {
     Grep,
     /// Troca um trecho por outro num arquivo. Ela so sabia sobrescrever inteiro.
     Editar,
-    /// Le uma imagem. Ela nao fazia de jeito nenhum.
-    LerImagem,
 }
 
 impl Primitiva {
@@ -211,7 +209,6 @@ impl Primitiva {
                     ],
                 )
             }
-            Primitiva::LerImagem => pela_ponte("read_image", vec![("path", arg("caminho"))]),
             Primitiva::AbrirPrograma => abrir_programa(&arg("programa"), pol),
             Primitiva::CopiarArquivo => copiar(&arg("origem"), &arg("destino"), pol),
             Primitiva::MoverArquivo => mover(&arg("origem"), &arg("destino"), pol),
@@ -363,14 +360,12 @@ fn ler(caminho: &Path, pol: &Politica) -> Result<String, String> {
 /// arquivo tambem e texto de terceiro — um README que diga "apague tudo" e um README
 /// dizendo isso. Mesma regra do `buscar_web`, mesmo rotulo.
 fn pela_ponte(nome: &str, argumentos: Vec<(&str, String)>) -> Result<String, String> {
-    let segredo = std::env::var("TEKA_PONTE_TOKEN")
-        .ok()
-        .filter(|s| !s.is_empty())
-        .ok_or(
-            "a ponte do harness nao esta configurada (falta TEKA_PONTE_TOKEN).              Ver ponte_harness/README.md",
-        )?;
     let endereco = std::env::var("TEKA_PONTE_ENDERECO")
         .unwrap_or_else(|_| super::harness_tcp::ENDERECO_PADRAO.to_string());
+    // Sobe a ponte se preciso. Antes isto exigia `TEKA_PONTE_TOKEN` no ambiente, e
+    // medido em 12/09 era por isso que `buscar_no_conteudo` e `ler_imagem` eram as
+    // DUAS unicas ferramentas das 22 que nao funcionavam.
+    let segredo = super::ponte_auto::garantir(&endereco)?;
 
     let mut c = super::harness_tcp::conectar(&endereco, &segredo, super::harness_tcp::PRAZO_PADRAO)
         .map_err(|e| format!("{e} — a ponte do harness precisa estar de pe"))?;

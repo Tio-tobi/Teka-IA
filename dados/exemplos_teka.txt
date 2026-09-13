@@ -931,11 +931,3 @@ buscar_no_conteudo | localiza a expressao fixme no conteudo | fixme
 #
 # Ela nao lia imagem de jeito nenhum. A marca de superficie aqui e a EXTENSAO e a
 # palavra imagem/foto/print -- sem isso, "abre o foto.png" cairia em ler_arquivo.
-ler_imagem | descreve pra mim a imagem foto.png | foto.png
-ler_imagem | o que tem nessa imagem captura.png | captura.png
-ler_imagem | abre a foto ferias.jpg e me conta | ferias.jpg
-ler_imagem | olha o print erro.png e diz o que deu | erro.png
-ler_imagem | que imagem e essa diagrama.png | diagrama.png
-ler_imagem | me explica a figura grafico.jpg | grafico.jpg
-ler_imagem | ve essa imagem tela.png pra mim | tela.png
-ler_imagem | analisa a captura de tela bug.png | bug.png

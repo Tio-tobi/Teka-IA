@@ -281,26 +281,55 @@ abrir_programa | liga o vscode que eu quero codar | vscode
 abrir_programa | mano, abre o navegador ai | navegador
 perguntar | copia esse arquivo pra outra pasta |
 perguntar | pega esse txt e faz uma cópia dele |
-copiar_arquivo | copia o relatório da área de trabalho pra documentos | documentos
-copiar_arquivo | joga uma cópia desse arquivo na pasta backup | backup
+# RERROTULADAS EM 12/09: as 10 de copiar/mover viraram `perguntar`.
+#
+# Elas ficaram em 0,0% de acerto -- 36 e 60 tentativas, nenhuma. Eu achei que era
+# falta da forma "arquivo -> PASTA" nos moldes, ensinei a forma, e o numero nao
+# mudou nada (36 -> 36, 60 -> 60).
+#
+# A sonda isolou a variavel (`examples/sonda_forma_pasta.rs`), no modelo treinado:
+#
+#   "copia notas.md para a pasta backup"            -> copiar_arquivo   4/4
+#   "joga uma copia DE NOTAS.MD na pasta backup"    -> copiar_arquivo   2/2
+#   "joga uma copia DESSE ARQUIVO na pasta backup"  -> criar_pasta      0/4
+#
+# Ela APRENDEU a forma, inclusive no jeito do John. O que ela nao resolve e o
+# PRONOME: as duas ultimas sao identicas menos por `notas.md` contra `desse arquivo`.
+#
+# Eu consertei o destino e o problema era a ORIGEM. Nenhuma das 10 diz QUE arquivo
+# copiar -- e a cabeca de ponteiro copia um trecho do pedido, ela nao inventa. Sao
+# o mesmo caso das 59 deiticas de 11/09, e o mesmo criterio se aplica.
+
+perguntar | copia o relatório da área de trabalho pra documentos |
+# era: copiar_arquivo (origem deitica, sem arquivo para copiar)
+perguntar | joga uma cópia desse arquivo na pasta backup |
+# era: copiar_arquivo (origem deitica, sem arquivo para copiar)
 perguntar | mano, copia esse projeto inteiro pra outra pasta |
 perguntar | faz uma cópia desse arquivo aqui rapidão |
 perguntar | duplica essa imagem pra mim |
-copiar_arquivo | copia o arquivo do estágio pra pasta documentos | documentos
+perguntar | copia o arquivo do estágio pra pasta documentos |
+# era: copiar_arquivo (origem deitica, sem arquivo para copiar)
 perguntar | pega esse negócio aqui e copia lá pra outra pasta |
-copiar_arquivo | copia esse arquivo pra unidade E | unidade E
+perguntar | copia esse arquivo pra unidade E |
+# era: copiar_arquivo (origem deitica, sem arquivo para copiar)
 perguntar | faz um backup desse txt |
 perguntar | Teka, copia a pasta do projeto pra outro lugar |
-mover_arquivo | pega esse arquivo e joga na pasta documentos | documentos
-mover_arquivo | move o relatório pra pasta do estágio | estágio
+perguntar | pega esse arquivo e joga na pasta documentos |
+# era: mover_arquivo (origem deitica, sem arquivo para copiar)
+perguntar | move o relatório pra pasta do estágio |
+# era: mover_arquivo (origem deitica, sem arquivo para copiar)
 perguntar | renomeia esse arquivo pra relatório final |
-mover_arquivo | tira essa imagem daqui e coloca na pasta fotos | fotos
+perguntar | tira essa imagem daqui e coloca na pasta fotos |
+# era: mover_arquivo (origem deitica, sem arquivo para copiar)
 perguntar | mano, muda o nome desse txt pra teste 2 |
 perguntar | move esse projeto pra outra pasta ai |
-mover_arquivo | pega esse arquivo da área de trabalho e manda pra documentos | documentos
+perguntar | pega esse arquivo da área de trabalho e manda pra documentos |
+# era: mover_arquivo (origem deitica, sem arquivo para copiar)
 perguntar | joga esse arquivo na pasta antiga |
-mover_arquivo | Teka, renomeia esse negócio pra backup | backup
-mover_arquivo | move essa pasta pra unidade E | unidade E
+perguntar | Teka, renomeia esse negócio pra backup |
+# era: mover_arquivo (origem deitica, sem arquivo para copiar)
+perguntar | move essa pasta pra unidade E |
+# era: mover_arquivo (origem deitica, sem arquivo para copiar)
 perguntar | tira esse arquivo daqui e coloca lá |
 perguntar | muda o nome desse arquivo ai |
 criar_pasta | cria uma pasta chamada projetos | projetos

@@ -2404,6 +2404,20 @@ fn rodar_exportacao(args: &Args) {
 }
 
 fn main() {
+    rodar();
+    // A ponte que a Teka subiu morre com ela.
+    //
+    // Isto e uma CHAMADA e nao um `Drop` de proposito: o processo da ponte fica num
+    // `static`, e Rust nao roda destrutor de `static` ao sair. Medido em 12/09 --
+    // a sonda terminou, imprimiu tudo, e o `node.exe` continuou vivo segurando a
+    // porta 8768. Ver `tools::ponte_auto::derrubar`.
+    //
+    // `rodar` tem varios `return` no meio, entao envolver e o unico jeito de cobrir
+    // todos sem espalhar a chamada por doze lugares e esquecer um.
+    teka::tools::ponte_auto::derrubar();
+}
+
+fn rodar() {
     let args = parse_args();
 
     if args.modo == "gerar" {
