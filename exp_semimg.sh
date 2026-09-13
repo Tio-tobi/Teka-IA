@@ -43,7 +43,17 @@ while tasklist //FI "IMAGENAME eq cargo.exe" 2>/dev/null | grep -q cargo.exe; do
 cargo build --release --bin teka || { echo "build falhou"; exit 1; }
 cp -f target/release/teka.exe teka_semimg.exe || { echo "nao copiei"; exit 1; }
 # CONFERE que e o binario certo: sem `ler_imagem` e com os moldes de pasta.
-grep -aq 'ler_imagem' teka_semimg.exe && { echo "BINARIO VELHO: ainda tem ler_imagem"; exit 1; }
+# CONFERE A PROPRIEDADE, e nao um substring qualquer.
+#
+# A primeira versao procurava 'ler_imagem' no binario e RECUSOU a corrida por 4
+# horas -- falso positivo: o executavel embute `exemplos_teka.txt` e
+# `frases_teste.txt` por `include_str!`, e a palavra estava em COMENTARIO e em
+# exemplos ja mortos (o carregador os descarta, `reg.indice` devolve None).
+#
+# A descricao abaixo so existia na ENTRADA DO REGISTRO. Se ela sumiu, a ferramenta
+# saiu de verdade. Mesma licao do `makefile` e da varredura de vazamento: proxy no
+# lugar da propriedade.
+grep -aq 'abre uma imagem e descreve' teka_semimg.exe && { echo "BINARIO VELHO: o registro ainda tem ler_imagem"; exit 1; }
 grep -aq 'arquiva' teka_semimg.exe || { echo "BINARIO VELHO: sem os moldes de pasta"; exit 1; }
 echo "binario conferido: 21 ferramentas, com os moldes de pasta"
 
