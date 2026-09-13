@@ -531,6 +531,52 @@ const MOLDES: &[Molde] = &[
     Molde {
         ferramenta: "perguntar",
         frases: &[
+            // IMPERATIVO VAGO — a forma que faltava, e faltava inteira.
+            //
+            // Medido em 12/09: `perguntar` esta em 54,5%, o pior numero dela, e das
+            // 716 acoes indevidas 324 usam ferramenta que MEXE NO SISTEMA. O maior
+            // ladrao e `atalho` (20,3%), e NAO e a tabela de gatilhos sendo gulosa:
+            // 13 das 14 frases que ela rouba nao casam gatilho nenhum. E a cabeca de
+            // INTENCAO escolhendo.
+            //
+            // O porque se ve comparando as frases CURTAS dos dois lados:
+            //
+            //     perguntar  "bom dia" | "e ai beleza" | "obrigado pela ajuda"
+            //     o John     "tira aquele negocio" | "executa isso ai" | "ve la pra mim"
+            //
+            // As curtas de `perguntar` eram todas SOCIAIS. Ela nunca tinha visto um
+            // imperativo VAGO -- e os moldes de `atalho` SAO os gatilhos, que sao
+            // imperativos curtos. Entao a frase vaga ia para quem possuia aquela
+            // forma, e `atalho` age.
+            //
+            // Os verbos do John (faz, ve, resolve, pega, arruma, mexe, coloca, tira,
+            // manda, salva, roda, conserta, muda, da um jeito) NAO entram: sao a
+            // regua, e sao 28 das 131 frases de `perguntar` do benchmark. Entram
+            // OUTROS da mesma familia, conferidos livres por `checa_vazamento.py`.
+            //
+            // FALSEAMENTO: se `perguntar` nao subir com o dobro de forma vaga, a
+            // explicacao esta errada e o problema nao e a forma.
+            "cuida daquilo ali",
+            "ajeita aquele negocio",
+            "termina o que falta",
+            "continua dali onde parou",
+            "organiza essas coisas ai",
+            "prepara aquilo pra mim",
+            "adianta esse lado",
+            "revisa aquele ponto",
+            "trata disso ai",
+            "finaliza aquele resto",
+            "acerta aquele detalhe",
+            "encaminha aquilo",
+            "despacha isso ai",
+            "ajeita la do jeito certo",
+            "cuida do resto",
+            "termina aquilo depois",
+            "organiza do jeito que voce achar",
+            "prepara o que for preciso",
+            "revisa e me avisa",
+            "acerta o que estiver torto",
+
             // conversa
             "oi tudo bem com voce",
             "bom dia",
