@@ -654,6 +654,91 @@ Consertado o teste, e nao o dado: a taxa de maiuscula agora tem denominador prop
 Quatro vezes em tres dias. **Regua nova erra mais que o codigo medido** — e sonda
 curta antes de corrida longa e o que separa "medi" de "achei que medi".
 
+### A VOZ DO JOHN CONTRA A TEKA, E O PONTO FINAL QUE CUSTAVA 6 PONTOS (2026-09-14)
+
+Ideia dele em 13/09: usar o `omnivoice-pt`, que tem a voz clonada dele, para gerar a
+fala, passar pelo Whisper, e usar a TRANSCRICAO como entrada de teste.
+
+```
+frase do frases_teste.txt
+  -> omnivoice-pt -p VozJohn.ovprompt   (RX 580, Vulkan, ~15s/frase)
+  -> faster-whisper base E medium        (os dois que ele ja tem em cache)
+  -> Teka
+```
+
+39 frases, amostra estratificada por ferramenta, 12 sementes.
+
+#### O achado que ninguem procurava: o PONTO FINAL
+
+Antes do audio, uma medida que nao precisa de audio nenhum -- so aplicar a forma que
+todo transcritor devolve as 329 frases da regua:
+
+```
+  forma          acerto    delta
+  original        71,4%        -
+  MAIUSCULA       71,0%    -0,38     <- maiuscula quase nao custa
+  PONTO           65,1%    -6,23     <- o PONTO custa
+  whisper         65,0%    -6,38
+```
+
+Causa mecanica: o `PorPalavra` corta por palavra, entao `ram.` e um patch diferente
+de `ram` -- e a ultima palavra e justamente onde mora o argumento na maioria dos
+pedidos. Nao afeta o argumento extraido (o `aparar_pontuacao` ja cuidava daquele
+lado); afeta a ESCOLHA DA FERRAMENTA.
+
+Conserto: `normalizar_pedido` em `decidir`, ~15 linhas. So o `.`; `?` e `!` ficam,
+porque 20 das 329 frases da regua terminam em `?` digitado por gente -- ali a marca e
+sinal do usuario, nao ruido.
+
+#### Honestidade sobre qual numero vale
+
+`whisper+norm` recuperar os 6,23 pontos e quase TAUTOLOGICO: `norm(ponto(x)) == x`,
+eu apliquei a transformacao e depois a inversa exata dela. Os numeros que valem:
+
+1. o ponto custa 6,23 (medida real);
+2. normalizar NAO estraga o digitado (`original+norm` = 71,4%, na virgula);
+3. e o A/B em transcricao DE VERDADE, que nao e tautologico:
+
+```
+  canal      sem conserto   com conserto
+  base          51,3%         55,3%    +4,0
+  medium        54,7%         58,5%    +3,8
+  digitado         66,9% (teto)
+```
+
+#### Quanto a voz custa
+
+-11,5 pontos no `base`, -8,3 no `medium`. **O `medium` ganha 3,2 pontos e ja esta no
+cache dele** -- recomendacao que nao custa uma linha de Teka.
+
+So 3 das 39 transcreveram exatas no `base`. Exemplos:
+
+```
+  "liga o discord ai rapidao"  ->  "Ligo discordia e rapidao."   <- o discordia dele
+  "fecha o discord"            ->  "Fecho discotico."
+  "encerra o vscode"           ->  "e ser o vosso por cima."
+```
+
+RESSALVA que nao pode sumir: e voz SINTETIZADA, nao gravada. O numero e um teto de
+dificuldade, nao a taxa de erro do John no microfone. O que sustenta a fidelidade e o
+"discordia" ter saido igual ao que ele descreveu de memoria, antes de medir.
+
+Transcricoes guardadas em `dados/transcricoes_voz.tsv`, com a mesma proibicao do
+`frases_teste.txt`: NUNCA viram molde.
+
+#### O tamanho da inversao "fecha"/"abre", agora medido
+
+`examples/sonda_fechar.rs`, 12 sementes, 28 frases:
+
+```
+  abrir  (controle)   90% certo     0% inversao
+  fechar              15% certo    71% INVERSAO
+  matar  (comando)    48% certo    23% inversao
+```
+
+`encerra o vscode` e `finaliza o vscode` invertem 12/12. Tese sustentada: o verbo nao
+e sinal nenhum naquele espaco. Conserto ainda NAO feito -- ver a proposta abaixo.
+
 ### "FECHA" E "ABRE" SAO A MESMA COISA PARA ELA (2026-09-13)
 
 Achado por acaso, e o acaso tem metodo: o John pediu para ela fechar o Discord

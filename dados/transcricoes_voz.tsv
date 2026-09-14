@@ -1,0 +1,95 @@
+# Transcricoes da voz clonada do John. NAO E DADO DE TREINO.
+#
+# Tubulacao: frase do frases_teste.txt -> omnivoice-pt com VozJohn.ovprompt (RX 580,
+# Vulkan) -> faster-whisper base e medium -> esta tabela.
+#
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │  ISTO NUNCA PODE VIRAR MOLDE em src/learn/dados.rs.                         │
+# │                                                                             │
+# │  As frases de origem saem do frases_teste.txt, que ja proibe isso. As       │
+# │  transcricoes herdam a proibicao: sao a MEDIDA de quanto a voz custa. Se    │
+# │  entrarem no gerador, a medida vira memorizacao e o numero perde sentido.   │
+# └─────────────────────────────────────────────────────────────────────────────┘
+#
+# RESSALVA: voz sintetizada, nao gravada. E um teto de dificuldade, nao a taxa de
+# erro real do John falando ao microfone.
+#
+# colunas:  modelo_whisper <TAB> ferramenta_certa <TAB> frase_digitada <TAB> transcricao
+base	abrir_programa	liga o vscode que eu quero codar	Ligo, vioce que eu quero codar.
+base	abrir_programa	liga o discord ai rapidão	Ligo discordia e rapidão.
+base	apagar_arquivo	deleta o arquivo chamado teste	Deleto arquivo chamado teste.
+base	atalho	pula pra próxima	Pula para a próxima!
+base	atalho	aumenta o volume um pouco	aumenta o volume um pouco.
+base	buscar_no_conteudo	tem algum arquivo que fala de sqlite?	Tem alguma equivocada de screen edge?
+base	buscar_no_conteudo	procura dentro do projeto por import discord	Procura dentro do projeto por Import Discord.
+base	buscar_web	olha na internet qual jogo vai lançar na steam esse mês	Olha na internet, o jogo vai lançar na Steam esse mês.
+base	buscar_web	pesquisa sobre como fazer um site com html css e javascript	a pesquisa sobre como fazer um site quando atmail e cssis e já descreta.
+base	calcular	preciso somar 7*8-12	Preciso somar 7-8-12.
+base	calcular	qual o total de (90+10)*2	Qual o total de 90-10-2?
+base	criar_pasta	cria uma pasta chamada arquivos antigos	Cri uma pasta chamada arquivos antigos.
+base	criar_pasta	faz uma pasta dentro de documentos chamada escola	faz uma pasta dentro de documento e chamada escola.
+base	disco	avalia o espaco disponivel no ssd	avaliu o espaco disponível no SSD.
+base	disco	me fala da saude do armazenamento	me fala da sal de do armazenamento.
+base	escrever_arquivo	faz um arquivo chamado notas.txt e coloca isso dentro	Faz um arquivo chamado Notas.txt e se coloca isso dentro.
+base	escrever_arquivo	anota reuniao as dez em agenda.md	A nota reuniá-las 10 em Agenda.md.
+base	executar_comando	executa arp -a pra mim	executa a arpea para mim.
+base	executar_comando	chama o ipconfig no terminal	chama o ipconfig no terminal
+base	hora	sabe me falar o horario e a data de hoje	Sabe-me falar a oraria da data de hoje?
+base	hora	to sem nocao de tempo hoje	sem no carro de tempo hoje.
+base	ler_arquivo	acessa o arquivo treino.csv	acessa o arquivo treino.cxv
+base	ler_arquivo	quero inspecionar o conteudo de leia_me.txt	Quero especionar o conteúdo de leimade.tsch
+base	listar_pasta	enumera o que ha em src\backend	e o número que é em esses bequinhos.
+base	listar_pasta	percorre a pasta dados e me diz o que achou	recorre a pasta dados e me diz o que achou.
+base	memoria	reporta o estado da memoria	e porto o estado da memória.
+base	memoria	checa quanta memoria fisica sobrou	Checa quanto a memória física sobrou.
+base	perguntar	faz uma pasta pra esse projeto ai	Faz uma pasta para esse projeto aí.
+base	perguntar	vê essa print aqui	ver essa print aqui.
+base	perguntar	Teka, me mostra as informações desse txt	que me mostra as informações desse TST.
+base	processos	vê o que tá consumindo o pc	ver o que está consumindo o PC.
+base	processos	me mostra o que tá aberto no pc	me mostra o que está aberto no PC
+base	procurar_arquivo	localiza pra mim algo batizado de esboco	localiza pra mim é algo batizado desboco.
+base	procurar_arquivo	vasculha o pc atras de um tal de contrato	o vasculho PC atras de um tal de contrato.
+base	rede	me diz como tá a rede aqui	me diz como está a rede aqui
+base	rede	vê se a internet tá funcionando	ver se a internet está funcionando.
+base	perguntar	fecha o discord	Fecho discótico.
+base	perguntar	encerra o vscode	e ser o vosso por cima.
+base	perguntar	fecha o spotify pra mim	Fecho Spotify para mim.
+medium	abrir_programa	liga o vscode que eu quero codar	Ligo o Viosca, eu quero codar.
+medium	abrir_programa	liga o discord ai rapidão	Liga o Discord aí rapidão.
+medium	apagar_arquivo	deleta o arquivo chamado teste	e deleita o arquivo chamado Teste.
+medium	atalho	pula pra próxima	Pula para a próxima.
+medium	atalho	aumenta o volume um pouco	Aumenta o volume um pouco.
+medium	buscar_no_conteudo	tem algum arquivo que fala de sqlite?	Tem algum arquivo que fala de screw light?
+medium	buscar_no_conteudo	procura dentro do projeto por import discord	procura dentro do projeto por Import e Discord.
+medium	buscar_web	olha na internet qual jogo vai lançar na steam esse mês	Olha na internet qual jogo vai lançar na Steam esse mês.
+medium	buscar_web	pesquisa sobre como fazer um site com html css e javascript	pesquisa sobre como fazer um site com html e ccs e javascript
+medium	calcular	preciso somar 7*8-12	Eu preciso somar 7, 8, 12.
+medium	calcular	qual o total de (90+10)*2	Qual o total de 90 e 10 2?
+medium	criar_pasta	cria uma pasta chamada arquivos antigos	criou uma pasta chamada Arquivos Antigos.
+medium	criar_pasta	faz uma pasta dentro de documentos chamada escola	faz uma pasta dentro de documento chamada Escola.
+medium	disco	avalia o espaco disponivel no ssd	Avalie o espaco disponível no SSD.
+medium	disco	me fala da saude do armazenamento	que me fala da saúde do armazenamento.
+medium	escrever_arquivo	faz um arquivo chamado notas.txt e coloca isso dentro	faz um arquivo chamado notas.tk e se coloca isso dentro.
+medium	escrever_arquivo	anota reuniao as dez em agenda.md	Anota Reunião às 10 em agenda.md.
+medium	executar_comando	executa arp -a pra mim	executa a arpia pra mim.
+medium	executar_comando	chama o ipconfig no terminal	Chama o ipconfig no terminal.
+medium	hora	sabe me falar o horario e a data de hoje	Sabe me falar o horário e a data de hoje?
+medium	hora	to sem nocao de tempo hoje	eu estou sem local de tempo hoje.
+medium	ler_arquivo	acessa o arquivo treino.csv	acessa o arquivo treino.se
+medium	ler_arquivo	quero inspecionar o conteudo de leia_me.txt	Quero inspecionar o conteúdo de leiamente.txt.
+medium	listar_pasta	enumera o que ha em src\backend	e número que há em ssbcam.
+medium	listar_pasta	percorre a pasta dados e me diz o que achou	percorre a pasta dados e me diz o que achou.
+medium	memoria	reporta o estado da memoria	reporta o estado da memória.
+medium	memoria	checa quanta memoria fisica sobrou	a gente checa quanta memória física sobrou.
+medium	perguntar	faz uma pasta pra esse projeto ai	faz uma pasta para esse projeto aí.
+medium	perguntar	vê essa print aqui	Vê essa print aqui.
+medium	perguntar	Teka, me mostra as informações desse txt	O Teca me mostra as informações desse TXT.
+medium	processos	vê o que tá consumindo o pc	ver o que está consumindo o PC.
+medium	processos	me mostra o que tá aberto no pc	Me mostra o que está aberto no PC.
+medium	procurar_arquivo	localiza pra mim algo batizado de esboco	localiza para mim algo batizado de esboco.
+medium	procurar_arquivo	vasculha o pc atras de um tal de contrato	vasculha o PCA atrás de um tal de contrato.
+medium	rede	me diz como tá a rede aqui	Me diz como está a rede aqui.
+medium	rede	vê se a internet tá funcionando	ver se a internet está funcionando.
+medium	perguntar	fecha o discord	Feche o Discord.
+medium	perguntar	encerra o vscode	Encerro o vosso piscin...
+medium	perguntar	fecha o spotify pra mim	Fecha o Spotify pra mim.

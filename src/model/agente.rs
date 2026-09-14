@@ -359,6 +359,9 @@ impl<T: Float> Agente<T> {
 
     /// Do pedido à chamada: compreende, recorta os argumentos, e escreve pela
     /// gramática. O resultado é sempre sintaticamente válido — ou é erro explícito.
+    ///
+    /// Passa por [`normalizar_pedido`] antes de tudo — pedido falado chega com ponto
+    /// final, e o ponto custa 6,2 pontos de acerto.
     pub fn responder<O: Ops<T>, P: Patcher + ?Sized>(
         &self,
         ops: &O,
@@ -382,6 +385,7 @@ impl<T: Float> Agente<T> {
         pedido: &str,
         cache: &mut AgenteCache<T>,
     ) -> Result<(Vec<u8>, Alvo, Confianca), String> {
+        let pedido = normalizar_pedido(pedido);
         let bytes = pedido.as_bytes().to_vec();
         let seq = bytes.len();
         if seq == 0 {
@@ -704,6 +708,38 @@ fn descascar_parenteses(s: &str) -> String {
     }
 }
 
+/// Tira do PEDIDO o ponto final que o transcritor põe e o teclado não.
+///
+/// Medido em 14/09, 12 sementes, as 329 frases da régua, só mudando o texto:
+///
+/// ```text
+///   original    71,4%
+///   MAIUSCULA   71,0%    -0,38   <- maiuscula quase nao custa
+///   PONTO       65,1%    -6,23   <- o ponto custa
+///   whisper     65,0%    -6,38
+/// ```
+///
+/// A causa é mecânica: o `PorPalavra` corta por palavra, então `ram.` é um patch
+/// diferente de `ram`, e a última palavra é justamente onde mora o argumento na
+/// maioria dos pedidos.
+///
+/// **Por que só o ponto.** `?` e `!` ficam: 20 das 329 frases da régua já terminam em
+/// `?` digitado por gente, então ali a marca é sinal de verdade, não ruído de
+/// transcrição. Tirar seria apagar informação que o usuário escreveu de propósito.
+///
+/// Isto não toca no argumento — `aparar_pontuacao` já cuida daquele lado.
+pub fn normalizar_pedido(pedido: &str) -> std::borrow::Cow<'_, str> {
+    let t = pedido.trim_end();
+    let cortado = t.trim_end_matches(['.', ' ', '\t']);
+    // Um pedido que é SÓ pontuação continua sendo o que veio: virar vazio troca uma
+    // resposta ruim por um erro, e `decidir` recusa pedido vazio.
+    if cortado.is_empty() || cortado.len() == pedido.len() {
+        std::borrow::Cow::Borrowed(pedido)
+    } else {
+        std::borrow::Cow::Borrowed(cortado)
+    }
+}
+
 /// Tira a pontuação que grudou na palavra mas não faz parte do valor.
 ///
 /// 4,5% dos argumentos reais aparecem colados a `,`, `:` ou `?` no pedido
@@ -747,6 +783,50 @@ fn aparar_pontuacao(s: &str) -> String {
         }
     }
     s[ini..fim].trim().to_string()
+}
+
+#[cfg(test)]
+mod testes_normalizar {
+    use super::*;
+
+    #[test]
+    fn tira_o_ponto_que_o_transcritor_poe() {
+        assert_eq!(normalizar_pedido("Feche o Discord pra mim."), "Feche o Discord pra mim");
+        assert_eq!(normalizar_pedido("monitora o consumo de ram."), "monitora o consumo de ram");
+        // Reticencias tambem: o transcritor as usa para hesitacao.
+        assert_eq!(normalizar_pedido("faz aquilo la..."), "faz aquilo la");
+    }
+
+    /// 20 das 329 frases da regua terminam em `?` escrito por gente. Ali a marca e
+    /// sinal do usuario, nao ruido de transcricao — tirar apagaria informacao.
+    #[test]
+    fn a_interrogacao_fica() {
+        assert_eq!(normalizar_pedido("qual meu ip?"), "qual meu ip?");
+        assert_eq!(normalizar_pedido("Pula para a proxima!"), "Pula para a proxima!");
+    }
+
+    /// O ponto do MEIO e do nome do arquivo e nao pode sair. Se saisse, `notas.txt`
+    /// viraria `notas` e a ferramenta abriria o arquivo errado.
+    #[test]
+    fn ponto_do_nome_de_arquivo_nao_sai() {
+        assert_eq!(normalizar_pedido("le o notas.txt"), "le o notas.txt");
+        assert_eq!(normalizar_pedido("le o notas.txt."), "le o notas.txt");
+    }
+
+    /// Pedido que e SO pontuacao volta inteiro. Virar vazio trocaria uma resposta
+    /// ruim por um erro — `decidir` recusa pedido vazio.
+    #[test]
+    fn so_pontuacao_volta_inteiro() {
+        assert_eq!(normalizar_pedido("..."), "...");
+        assert_eq!(normalizar_pedido("."), ".");
+    }
+
+    /// Sem ponto no fim nao aloca: o caminho comum e o digitado.
+    #[test]
+    fn sem_ponto_nao_copia() {
+        let s = "abre o discord";
+        assert!(matches!(normalizar_pedido(s), std::borrow::Cow::Borrowed(b) if b == s));
+    }
 }
 
 #[cfg(test)]
