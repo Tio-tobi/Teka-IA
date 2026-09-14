@@ -434,7 +434,61 @@ impl<T: Float> Agente<T> {
         cache: &mut AgenteCache<T>,
     ) -> Result<(Chamada, Confianca), String> {
         let (bytes, decisao, conf) = self.decidir(ops, patcher, pedido, cache)?;
-        self.escrever(&bytes, &decisao).map(|ch| (ch, conf))
+        let ch = self.escrever(&bytes, &decisao)?;
+        Ok((self.recuar_se_impossivel(ch), conf))
+    }
+
+    /// Chamada que a ferramenta NÃO conseguiria executar vira `perguntar`.
+    ///
+    /// ## O número que justifica
+    ///
+    /// Medido em 13/09, nas 131 frases de abstenção do benchmark, 12 sementes:
+    ///
+    /// ```text
+    /// escolheu `atalho`   164 vezes
+    ///   dessas, o argumento casa a tabela dela:     4
+    ///   dessas, NAO casa e a primitiva recusaria: 160
+    /// ```
+    ///
+    /// Aqueles 160 já terminam em erro — a primitiva devolve *"nao conheco o atalho
+    /// X"*. O que muda aqui é **quando**: em vez de descobrir na hora de agir, ela
+    /// descobre na hora de decidir, e aí a resposta certa existe e é `perguntar`.
+    ///
+    /// ## Por que isto não é uma regra escrita à mão
+    ///
+    /// O projeto registra o Achado 19 — escrever regra de verbo na decisão não
+    /// funciona. Isto não é uma regra sobre o pedido: é a **própria ferramenta**
+    /// dizendo que não consegue. Espelha exatamente o que `prim::atalho` faz,
+    /// chamando as mesmas duas funções na mesma ordem. Se a tabela mudar, os dois
+    /// lados mudam juntos.
+    ///
+    /// ## Por que só `atalho`
+    ///
+    /// Porque é onde a medição diz que existe: `criar_pasta` e `executar_comando`
+    /// erram 74 e 72 vezes e AGIRIAM — para elas não há checagem barata, o argumento
+    /// é plausível. Estender a outras sem número que sustente seria inventar.
+    fn recuar_se_impossivel(&self, ch: Chamada) -> Chamada {
+        let Some(f) = self.registro.ferramentas.get(ch.ferramenta) else {
+            return ch;
+        };
+        if f.nome != "atalho" {
+            return ch;
+        }
+        let nome = ch
+            .args
+            .iter()
+            .find(|(k, _)| k == "nome")
+            .map(|(_, v)| v.as_str())
+            .unwrap_or("");
+        let alcancavel = crate::tools::teclado::como_de(nome).is_some()
+            || crate::tools::gatilhos::casar(nome).is_some();
+        if alcancavel {
+            return ch;
+        }
+        match self.registro.indice("perguntar") {
+            Some(i) => Chamada { ferramenta: i, args: Vec::new() },
+            None => ch,
+        }
     }
 
     /// Como [`Teka::responder_com_confianca`], mas quando a chamada não pode ser
@@ -693,6 +747,72 @@ fn aparar_pontuacao(s: &str) -> String {
         }
     }
     s[ini..fim].trim().to_string()
+}
+
+#[cfg(test)]
+mod testes_recuo {
+    use super::*;
+
+    fn ag() -> Agente<f32> {
+        Agente::<f32>::novo(Config::pequeno(), Registro::padrao(), &mut Rng::new(3))
+    }
+
+    fn chamada(a: &Agente<f32>, ferr: &str, args: &[(&str, &str)]) -> Chamada {
+        Chamada {
+            ferramenta: a.registro.indice(ferr).expect("ferramenta do teste"),
+            args: args.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
+        }
+    }
+
+    /// Atalho que a tabela NAO conhece vira `perguntar`.
+    ///
+    /// Medido em 13/09: 160 das 164 vezes em que ela escolheu `atalho` numa frase de
+    /// abstencao, o argumento nao casava gatilho nenhum e a primitiva ia recusar.
+    #[test]
+    fn atalho_que_nao_existe_recua_para_perguntar() {
+        let a = ag();
+        let c = a.recuar_se_impossivel(chamada(&a, "atalho", &[("nome", "ajeita aquele negocio")]));
+        assert_eq!(a.registro.ferramentas[c.ferramenta].nome, "perguntar");
+        assert!(c.args.is_empty(), "perguntar nao leva argumento");
+    }
+
+    /// E o outro lado, que e o que impede isto de virar sabotagem: atalho que a
+    /// tabela CONHECE passa intacto. Sem esta metade, um bug que recusasse tudo
+    /// pareceria "ela ficou prudente".
+    #[test]
+    fn atalho_de_verdade_passa_intacto() {
+        let a = ag();
+        let orig = chamada(&a, "atalho", &[("nome", "aumenta o volume")]);
+        let c = a.recuar_se_impossivel(orig.clone());
+        assert_eq!(a.registro.ferramentas[c.ferramenta].nome, "atalho");
+        assert_eq!(c.args, orig.args, "o argumento nao pode ser mexido");
+    }
+
+    /// O nome CANONICO tambem passa -- `prim::atalho` aceita os dois caminhos
+    /// (`teclado::como_de` antes de `gatilhos::casar`), e esta checagem espelha os
+    /// dois. Sem isto, `atalho(nome="mudo")` recuaria sem motivo.
+    #[test]
+    fn nome_canonico_do_teclado_passa() {
+        let a = ag();
+        let c = a.recuar_se_impossivel(chamada(&a, "atalho", &[("nome", "mudo")]));
+        assert_eq!(a.registro.ferramentas[c.ferramenta].nome, "atalho");
+    }
+
+    /// Nenhuma outra ferramenta e tocada. A checagem existe onde a medicao a
+    /// justifica, e `criar_pasta` erra 74 vezes AGINDO -- mas ali o argumento e
+    /// plausivel e nao ha checagem barata. Mexer nela seria inventar.
+    #[test]
+    fn outras_ferramentas_passam_sem_serem_olhadas() {
+        let a = ag();
+        for (f, args) in [
+            ("criar_pasta", vec![("caminho", "backup")]),
+            ("executar_comando", vec![("comando", "dir")]),
+            ("hora", vec![]),
+        ] {
+            let c = a.recuar_se_impossivel(chamada(&a, f, &args));
+            assert_eq!(a.registro.ferramentas[c.ferramenta].nome, f, "{f} foi mexida");
+        }
+    }
 }
 
 #[cfg(test)]

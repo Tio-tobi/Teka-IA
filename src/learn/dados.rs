@@ -531,52 +531,26 @@ const MOLDES: &[Molde] = &[
     Molde {
         ferramenta: "perguntar",
         frases: &[
-            // IMPERATIVO VAGO — a forma que faltava, e faltava inteira.
+            // IMPERATIVO VAGO: TENTADO E FALSEADO EM 13/09. Nao repetir.
             //
-            // Medido em 12/09: `perguntar` esta em 54,5%, o pior numero dela, e das
-            // 716 acoes indevidas 324 usam ferramenta que MEXE NO SISTEMA. O maior
-            // ladrao e `atalho` (20,3%), e NAO e a tabela de gatilhos sendo gulosa:
-            // 13 das 14 frases que ela rouba nao casam gatilho nenhum. E a cabeca de
-            // INTENCAO escolhendo.
+            // A hipotese era boa e a evidencia parecia amarrada: `perguntar` tem 102
+            // frases, 64 curtas, e as curtas eram TODAS sociais ("bom dia", "valeu
+            // mesmo"). As do John sao imperativas vagas ("tira aquele negocio"). E
+            // medido que 13 das 14 frases roubadas pelo `atalho` nao casam gatilho
+            // nenhum -- logo e a cabeca de intencao, nao a tabela.
             //
-            // O porque se ve comparando as frases CURTAS dos dois lados:
+            // Acrescentei 20 imperativos vagos. Medido em 12 sementes:
             //
-            //     perguntar  "bom dia" | "e ai beleza" | "obrigado pela ajuda"
-            //     o John     "tira aquele negocio" | "executa isso ai" | "ve la pra mim"
+            //     perguntar   54,5% -> 54,6%   (+0,2, ruido)
+            //     atalho rouba  145 -> 164     (+19, PIOROU)
             //
-            // As curtas de `perguntar` eram todas SOCIAIS. Ela nunca tinha visto um
-            // imperativo VAGO -- e os moldes de `atalho` SAO os gatilhos, que sao
-            // imperativos curtos. Entao a frase vaga ia para quem possuia aquela
-            // forma, e `atalho` age.
+            // Piorou onde mais importa. E o motivo se ve depois: as minhas frases
+            // tem a MESMA forma dos gatilhos -- imperativo curto. Em vez de ensinar
+            // `perguntar` a dominar aquele espaco, eu pus exemplos confundiveis na
+            // fronteira do `atalho`. Revertido.
             //
-            // Os verbos do John (faz, ve, resolve, pega, arruma, mexe, coloca, tira,
-            // manda, salva, roda, conserta, muda, da um jeito) NAO entram: sao a
-            // regua, e sao 28 das 131 frases de `perguntar` do benchmark. Entram
-            // OUTROS da mesma familia, conferidos livres por `checa_vazamento.py`.
-            //
-            // FALSEAMENTO: se `perguntar` nao subir com o dobro de forma vaga, a
-            // explicacao esta errada e o problema nao e a forma.
-            "cuida daquilo ali",
-            "ajeita aquele negocio",
-            "termina o que falta",
-            "continua dali onde parou",
-            "organiza essas coisas ai",
-            "prepara aquilo pra mim",
-            "adianta esse lado",
-            "revisa aquele ponto",
-            "trata disso ai",
-            "finaliza aquele resto",
-            "acerta aquele detalhe",
-            "encaminha aquilo",
-            "despacha isso ai",
-            "ajeita la do jeito certo",
-            "cuida do resto",
-            "termina aquilo depois",
-            "organiza do jeito que voce achar",
-            "prepara o que for preciso",
-            "revisa e me avisa",
-            "acerta o que estiver torto",
-
+            // O conserto certo nao e dado, e mecanismo: ver `Agente::responder` e a
+            // checagem de chamada montavel.
             // conversa
             "oi tudo bem com voce",
             "bom dia",
