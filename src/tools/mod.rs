@@ -128,9 +128,23 @@ pub fn amaciar_saida(ferramenta: &str, saida: &str) -> Option<String> {
     if ferramenta != "executar_comando" || !saida.trim_start().starts_with("[stderr]") {
         return None;
     }
-    Some(
-        "nao entendi o que voce quer que eu execute. pode dizer de outro jeito?".into(),
-    )
+    // ANOTA, nao substitui. A primeira versao TROCAVA o erro do shell por esta
+    // frase, e em 13/09 ela escondeu um erro que importava:
+    //
+    //     taskkill /F /IM Mir4G.exe
+    //       real      ERRO: o processo nao pode ser finalizado. Razao: Acesso negado.
+    //       mostrado  nao entendi o que voce quer que eu execute
+    //
+    // "Acesso negado" diz ao John que falta privilegio. "Nao entendi" nao diz nada,
+    // e manda ele reformular um pedido que estava certo.
+    //
+    // E nao ha como separar os dois casos: medido, `cmd /C` devolve 1 tanto para
+    // comando inexistente quanto para comando que rodou e falhou, e o texto do
+    // shell e localizado. Entao nao se escolhe -- mostra-se os dois.
+    Some(format!(
+        "{saida}
+  (se eu entendi errado o que voce queria executar, me diga de outro jeito)"
+    ))
 }
 
 
@@ -143,9 +157,11 @@ mod testes_amaciar {
     fn so_stderr_vira_pergunta() {
         let cru = "
 [stderr] 'txt' nao e reconhecido como um comando interno";
-        let m = amaciar_saida("executar_comando", cru).expect("devia amaciar");
-        assert!(m.contains("nao entendi"), "{m}");
-        assert!(!m.contains("stderr"), "o erro cru nao pode vazar: {m}");
+        let m = amaciar_saida("executar_comando", cru).expect("devia anotar");
+        assert!(m.contains("de outro jeito"), "{m}");
+        // O ERRO CRU TEM DE FICAR. Trocar "Acesso negado" por "nao entendi" tira do
+        // John a unica informacao util -- aconteceu em 13/09 com o `taskkill`.
+        assert!(m.contains("nao e reconhecido"), "o erro do shell some: {m}");
     }
 
     /// E o outro lado, que e o que impede isto de engolir resultado bom: comando que
