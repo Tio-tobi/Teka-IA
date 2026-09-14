@@ -654,6 +654,53 @@ Consertado o teste, e nao o dado: a taxa de maiuscula agora tem denominador prop
 Quatro vezes em tres dias. **Regua nova erra mais que o codigo medido** — e sonda
 curta antes de corrida longa e o que separa "medi" de "achei que medi".
 
+### "FECHA" E "ABRE" SAO A MESMA COISA PARA ELA (2026-09-13)
+
+Achado por acaso, e o acaso tem metodo: o John pediu para ela fechar o Discord
+escrevendo "discordia", porque e assim que o Whisper transcreve a fala dele.
+
+```
+"abre o discord"    ->  abrir_programa(discord)
+"fecha o discord"   ->  abrir_programa(discord)    IDENTICO
+"fecha o notepad"   ->  abrir_programa(notepad)
+"fecha o spotify"   ->  abrir_programa(spotify)
+```
+
+Nao e errar a ferramenta: e fazer o CONTRARIO do pedido, com ferramenta que age. A
+confirmacao salva, mas so se alguem ler e notar a inversao.
+
+DUAS CAUSAS, as duas de registro e dado:
+
+1. Nao existe `fechar_programa`. `abrir_programa` e dona sozinha do espaco "verbo +
+   nome de programa", entao qualquer verbo com um programa cai nela.
+
+2. Nos moldes de `abrir_programa` o sinal e o NOME do programa, nao o verbo. Ela
+   nunca precisou distinguir verbo naquele espaco.
+
+O mesmo apareceu no Mir4 na mesma noite: "fecha o mir4" -> `calcular("mir4")`, e
+"encerra o processo Mir4G" -> `perguntar` (certo, ela nao tem a ferramenta). Pelo
+caminho do comando ela acerta em cheio: `taskkill /F /IM Mir4G.exe`. A capacidade
+existe; falta o nome.
+
+(O Mir4 nao fecha nem assim -- roda protegido, `taskkill` devolve Acesso negado.)
+
+#### O METODO QUE ACHOU ISTO, e que vale mais que o achado
+
+Eu nao teria testado "fecha o discord". Nao me ocorreria, porque eu SEI que a
+ferramenta nao existe -- e quem sabe o codigo nao testa o que o codigo nao faz.
+
+Todo dado de teste que eu escrevo sai da minha cabeca e herda meus pontos cegos. E a
+mesma razao de as 196 frases do John terem valido mais que tudo que eu escrevi
+sozinho na semana (ver [[teka-regua-independente]]).
+
+PROXIMO PASSO COMBINADO (13/09): usar o `omnivoice-pt` do John, que tem a voz dele,
+para gerar fala, passar pelo Whisper, e usar a TRANSCRICAO como entrada de teste.
+Erro de transcricao e ruido real com estrutura real -- palavra parecida trocada
+("discordia"), palavra colada, pontuacao sumida. Nenhum deles eu inventaria.
+
+Fica em `C:/Users/User/Projetos/omnivoice-pt` (edicao AMD, Vulkan+GGUF, roda na
+RX 580 sem CUDA).
+
 ### CINCO FERRAMENTAS QUEBRADAS QUE NINGUEM SABIA (2026-09-12)
 
 As 196 frases do John entraram no benchmark e ele foi de 150 para 329, de 10 para 20
