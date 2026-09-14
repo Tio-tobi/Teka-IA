@@ -94,6 +94,78 @@ pub struct Chamada {
     pub args: Vec<(String, String)>,
 }
 
+/// A saída de uma ferramenta, traduzida para quem está lendo.
+///
+/// ## O caso que isto atende
+///
+/// Medido em 13/09, nas 131 frases de abstenção do benchmark: `executar_comando`
+/// foi escolhida 72 vezes por engano, e **nenhuma das 72 chegou a rodar** — o shell
+/// recusa `'txt' não é reconhecido como um comando`. Ela não fazia nada de errado;
+/// só respondia feio.
+///
+/// ```text
+/// antes   [stderr] 'txt' nao e reconhecido como um comando interno ou externo...
+/// depois  nao entendi o que voce quer que eu execute. pode dizer de outro jeito?
+/// ```
+///
+/// ## Por que aqui e não na decisão
+///
+/// Dava para checar antes de decidir — e valeria ~6 pontos no benchmark, porque ele
+/// pontua a ESCOLHA da ferramenta. Mas para quem usa as duas coisas dão o mesmo:
+/// ela não faz nada e diz algo compreensível. Mudar a decisão custaria um `spawn`
+/// por token novo e uma dependência de PATH no caminho quente; mudar a apresentação
+/// custa zero.
+///
+/// Decisão do John em 13/09: a experiência, não a contabilidade.
+///
+/// ## Por que NÃO casar o texto do shell
+///
+/// `'X' não é reconhecido` é localizado, e o código de saída não distingue: medido,
+/// `cmd /C txt` e `findstr semmatch nul` devolvem 1 os dois. O sinal usado é NOSSO —
+/// `executar_cmd` põe a saída primeiro e o `[stderr]` depois, então uma resposta que
+/// **começa** com `[stderr]` é uma que não produziu nada além da reclamação.
+pub fn amaciar_saida(ferramenta: &str, saida: &str) -> Option<String> {
+    if ferramenta != "executar_comando" || !saida.trim_start().starts_with("[stderr]") {
+        return None;
+    }
+    Some(
+        "nao entendi o que voce quer que eu execute. pode dizer de outro jeito?".into(),
+    )
+}
+
+
+#[cfg(test)]
+mod testes_amaciar {
+    use super::*;
+
+    /// Saida que e SO reclamacao do shell vira pergunta.
+    #[test]
+    fn so_stderr_vira_pergunta() {
+        let cru = "
+[stderr] 'txt' nao e reconhecido como um comando interno";
+        let m = amaciar_saida("executar_comando", cru).expect("devia amaciar");
+        assert!(m.contains("nao entendi"), "{m}");
+        assert!(!m.contains("stderr"), "o erro cru nao pode vazar: {m}");
+    }
+
+    /// E o outro lado, que e o que impede isto de engolir resultado bom: comando que
+    /// PRODUZIU saida passa intacto, mesmo tendo escrito algo no stderr.
+    #[test]
+    fn saida_de_verdade_passa_mesmo_com_stderr() {
+        let cru = "Limbo
+[stderr] aviso qualquer";
+        assert_eq!(amaciar_saida("executar_comando", cru), None);
+    }
+
+    /// Nenhuma outra ferramenta e tocada. Sem isto, um `ler_arquivo` cujo conteudo
+    /// comecasse com "[stderr]" viraria pergunta.
+    #[test]
+    fn outras_ferramentas_nao_sao_amaciadas() {
+        let cru = "[stderr] isto e o conteudo do arquivo";
+        assert_eq!(amaciar_saida("ler_arquivo", cru), None);
+    }
+}
+
 impl Registro {
     pub fn n(&self) -> usize {
         self.ferramentas.len()

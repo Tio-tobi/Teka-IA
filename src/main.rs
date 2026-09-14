@@ -628,8 +628,23 @@ fn responder(
             }
             let ok = match saida {
                 Ok(s) => {
-                    for linha in s.lines().take(14) {
-                        println!("    {linha}");
+                    // Saida que e so reclamacao do shell vira pergunta. Ver
+                    // `tools::amaciar_saida` -- medido que 72 escolhas erradas de
+                    // `executar_comando` nunca chegaram a rodar, e a Teka respondia
+                    // com o erro cru do Windows.
+                    let nome = ag
+                        .registro
+                        .ferramentas
+                        .get(c.ferramenta)
+                        .map(|f| f.nome.as_str())
+                        .unwrap_or("");
+                    match teka::tools::amaciar_saida(nome, &s) {
+                        Some(macio) => println!("    {macio}"),
+                        None => {
+                            for linha in s.lines().take(14) {
+                                println!("    {linha}");
+                            }
+                        }
                     }
                     true
                 }
