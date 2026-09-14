@@ -808,6 +808,19 @@ abrir_programa | sobe o explorador de arquivos | explorador de arquivos
 abrir_programa | liga o steam ai | steam
 abrir_programa | traz o paint pra frente | paint
 
+# A GEMEA. Os mesmos programas do bloco de cima, DE PROPOSITO: aqui o unico sinal
+# que separa as duas ferramentas e o verbo, e era justamente isso que faltava.
+fechar_programa | fecha o discord ai | discord
+fechar_programa | encerra o spotify pra mim | spotify
+fechar_programa | sai do navegador | navegador
+fechar_programa | quero o bloco de notas fechado | bloco de notas
+fechar_programa | finaliza o vscode | vscode
+fechar_programa | derruba o gerenciador de tarefas | gerenciador de tarefas
+fechar_programa | fecha a calculadora rapidinho | calculadora
+fechar_programa | desliga o explorador de arquivos | explorador de arquivos
+fechar_programa | mata o steam ai | steam
+fechar_programa | tira o paint da frente | paint
+
 criar_pasta | cria a pasta relatorios pra mim | relatorios
 criar_pasta | faz um diretorio chamado backup | backup
 criar_pasta | preciso de uma pasta scripts | scripts

@@ -480,3 +480,14 @@ perguntar | dá um jeito nisso |
 perguntar | Teka, vê lá pra mim |
 perguntar | faz igual aquele outro |
 perguntar | arruma lá |
+
+fechar_programa | ja terminei com o discord | discord
+fechar_programa | nao to mais usando o spotify | spotify
+fechar_programa | manda o chrome embora | chrome
+fechar_programa | o steam pode ir embora | steam
+fechar_programa | esse obs pode sair | obs
+fechar_programa | dispensa o vscode ai | vscode
+fechar_programa | hoje ja deu de whatsapp | whatsapp
+fechar_programa | libera a memoria do firefox | firefox
+fechar_programa | o notepad nao serve mais | notepad
+fechar_programa | desativa o edge ai | edge

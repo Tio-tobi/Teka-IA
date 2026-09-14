@@ -200,6 +200,53 @@ const MOLDES: &[Molde] = &[
             "abre o programa chamado {0}",
         ],
     },
+    // ── fechar_programa ─────────────────────────────────────────────────────
+    //
+    // A GEMEA de `abrir_programa`, e a razao de existir e de registro.
+    //
+    // Medido em 13-14/09, 12 sementes: sem esta ferramenta, pedir para fechar virava
+    // `abrir_programa` em 71% das vezes, contra 90% de acerto no controle de abrir.
+    // O verbo nao era sinal porque NADA dependia dele.
+    //
+    // Por isso os moldes daqui usam O MESMO POCO DE PROGRAMAS que `abrir_programa`:
+    // se o nome do programa mudasse junto, ela aprenderia o nome em vez do verbo, e
+    // eu teria consertado a medida sem consertar a coisa. O verbo tem que ser a
+    // UNICA diferenca entre os dois conjuntos.
+    Molde {
+        ferramenta: "fechar_programa",
+        frases: &[
+            "fecha o {0}",
+            "fecha o programa {0}",
+            "encerra o {0}",
+            "finaliza o {0}",
+            "sai do {0}",
+            "desliga o {0}",
+            "para o {0}",
+            "fecha o {0} pra mim",
+            "pode fechar o {0}",
+            "quero fechar o {0}",
+            "manda fechar o {0}",
+            "faz fechar o {0}",
+            "tira o {0} da tela",
+            "fecha a janela do {0}",
+            "me fecha o {0}",
+            "consegue fechar o {0}",
+            "vai la e fecha o {0}",
+            "encerra o programa {0}",
+            "derruba o {0}",
+            "mata o {0}",
+            "mata o processo do {0}",
+            "quero o {0} fechado",
+            "nao preciso mais do {0} aberto",
+            "poe o {0} pra fechar",
+            "da um fim no {0}",
+            "termina o {0}",
+            "fecha {0} ai",
+            "sai fora do {0}",
+            "cansei do {0}, fecha",
+            "fecha esse {0} ai",
+        ],
+    },
     // ── copiar_arquivo ──────────────────────────────────────────────────────
     //
     // Duas obrigatorias. `escrever_arquivo` tem a mesma forma e e a ferramenta mais
@@ -1870,6 +1917,7 @@ const SEM_OBJETO: &[(&str, &[&str], &str, &str, &str)] = &[
     ("mover_arquivo", &["arquivo"], "esse arquivo", "desse arquivo", "nesse arquivo"),
     ("criar_pasta", &["pasta", "diretorio"], "essa pasta", "dessa pasta", "nessa pasta"),
     ("abrir_programa", &["programa", "app", "aplicativo"], "esse programa", "desse programa", "nesse programa"),
+    ("fechar_programa", &["programa", "app", "aplicativo"], "esse programa", "desse programa", "nesse programa"),
     ("buscar_web", &["assunto", "isso"], "esse assunto", "desse assunto", "nesse assunto"),
 ];
 
@@ -2122,6 +2170,8 @@ fn valor_para(ferramenta: &str, nome_param: &str, rng: &mut Rng) -> &'static str
         ("atalho", _) => NOMES_DE_ATALHO,
         ("buscar_web", _) => CONSULTAS,
         ("abrir_programa", _) => PROGRAMAS,
+        // O MESMO poco de propositO: o verbo tem que ser a unica diferenca.
+        ("fechar_programa", _) => PROGRAMAS,
         // A ORIGEM e sempre arquivo. Sortear origem e destino do mesmo poco pode
         // dar os dois iguais, e isso e um caso real — "copia notas.md pra notas.md"
         // e um pedido bobo que ela tem de saber executar sem quebrar.

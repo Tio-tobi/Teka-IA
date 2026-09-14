@@ -318,6 +318,22 @@ impl Registro {
                     vec![Param::obrigatorio("programa", Texto)],
                     P::AbrirPrograma,
                 ),
+                // A GEMEA, e a razao de ela existir e de registro, nao de capacidade.
+                //
+                // Medido em 13-14/09: sem ela, `abrir_programa` era dona sozinha do
+                // espaco "verbo + nome de programa", e o verbo nao era sinal nenhum
+                // porque NADA dependia dele. "fecha o discord" virava
+                // `abrir_programa(discord)` em 71% das vezes -- o contrario do
+                // pedido, com ferramenta que age -- contra 90% de acerto no controle.
+                //
+                // Duas ferramentas que dividem o argumento e diferem so no verbo
+                // FORCAM o verbo a virar o unico discriminador.
+                f(
+                    "fechar_programa",
+                    "fecha um programa que esta aberto",
+                    vec![Param::obrigatorio("programa", Texto)],
+                    P::FecharPrograma,
+                ),
                 // Duas obrigatorias, como `escrever_arquivo` — que e a ferramenta
                 // mais fraca dela hoje justamente por isso: das quatro formas
                 // naturais testadas, nenhuma acertou os dois argumentos.
@@ -510,7 +526,16 @@ mod tests {
         //              Medido: das 25 da ponte, ~12 servem e 8 exigem agente.
         //              `ler_imagem` esta do lado errado da linha por construcao.
         //              Custava metade dos -2,75 de 09/09 e entregava nada.
-        assert_eq!(r.n(), 21);
+        // 22 desde 14/09: entrou `fechar_programa`.
+        //
+        // A gemea de `abrir_programa`. Nao entrou por capacidade -- ela ja fechava
+        // programa pelo `executar_comando` com taskkill e acertava. Entrou porque
+        // SEM ela o verbo nao era sinal: nada dependia dele, `abrir_programa` era
+        // dona sozinha de "verbo + nome de programa", e pedir para fechar virava
+        // ABRIR em 71% das vezes (contra 90% de acerto no controle). Duas
+        // ferramentas que dividem o argumento e diferem so no verbo forcam o verbo
+        // a virar o unico discriminador.
+        assert_eq!(r.n(), 22);
         assert_eq!(
             r.ferramentas[0].nome, "perguntar",
             "perguntar tem de ser a primeira: e o que ela escolhe quando nada encaixa"

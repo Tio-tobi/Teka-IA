@@ -66,6 +66,10 @@ pub enum Primitiva {
     /// Busca na internet. **A unica que alcanca fora da maquina.**
     BuscarWeb,
     AbrirPrograma,
+    /// A gemea de `AbrirPrograma`. Existe porque sem ela o VERBO nao era sinal:
+    /// nada dependia dele, e "fecha o discord" virava `abrir_programa(discord)` em
+    /// 71% das vezes. Ver `fechar_programa`.
+    FecharPrograma,
     CopiarArquivo,
     MoverArquivo,
     CriarPasta,
@@ -140,6 +144,7 @@ impl Primitiva {
             | Primitiva::MoverArquivo
             | Primitiva::CriarPasta
             | Primitiva::AbrirPrograma
+            | Primitiva::FecharPrograma
             | Primitiva::ApagarArquivo
             | Primitiva::ExecutarComando => Efeito::Local,
             // Sai da maquina: manda o que voce escreveu para um servidor, e traz de
@@ -210,6 +215,7 @@ impl Primitiva {
                 )
             }
             Primitiva::AbrirPrograma => abrir_programa(&arg("programa"), pol),
+            Primitiva::FecharPrograma => fechar_programa(&arg("programa"), pol),
             Primitiva::CopiarArquivo => copiar(&arg("origem"), &arg("destino"), pol),
             Primitiva::MoverArquivo => mover(&arg("origem"), &arg("destino"), pol),
             Primitiva::CriarPasta => criar_pasta(Path::new(&arg("caminho")), pol),
@@ -550,6 +556,97 @@ fn abrir_programa(nome: &str, pol: &Politica) -> Result<String, String> {
         .spawn()
         .map_err(|e| e.to_string())?;
     Ok(format!("abrindo {nome}"))
+}
+
+/// Processos que fechar derruba a sessão inteira. Não é lista de "perigoso": é lista
+/// de "a máquina cai ou desloga na hora".
+///
+/// `explorer.exe` fica **de fora de propósito** — fechar a barra de tarefas assusta,
+/// mas é reversível e às vezes é exatamente o que se quer. Recusar seria decidir pelo
+/// John numa coisa que a confirmação já cobre.
+const CRITICOS: &[&str] = &[
+    "system", "smss.exe", "csrss.exe", "wininit.exe", "winlogon.exe", "services.exe",
+    "lsass.exe", "svchost.exe", "dwm.exe", "fontdrvhost.exe", "sihost.exe",
+    // Ela mesma: "fecha a teka" pelo caminho da ferramenta mata o processo no meio
+    // da chamada, e o que volta e o nada.
+    "teka.exe",
+];
+
+/// Fecha um programa que está rodando, **pedindo** em vez de matar.
+///
+/// Nasceu de uma medição de 13-14/09: sem esta ferramenta, `abrir_programa` era dona
+/// sozinha do espaço "verbo + nome de programa", e pedir para fechar virava ABRIR em
+/// 71% dos casos — o contrário do pedido, com ferramenta que age. O controle de abrir
+/// acertava 90% no mesmo teste.
+///
+/// ## Duas decisões que valem mais que o código
+///
+/// **Sem `/F`.** `taskkill /IM` manda `WM_CLOSE`: o programa fecha sozinho e salva o
+/// que estava aberto. `/F` mata e perde o trabalho não salvo. O padrão tem que ser o
+/// educado — quem quer matar à força ainda tem o `executar_comando`, que é explícito
+/// sobre estar matando à força.
+///
+/// **Resolve o nome pelo que está RODANDO.** O John fala "discord", o processo é
+/// `Discord.exe`. Chutar `discord.exe` erraria a caixa em metade dos programas, e
+/// pior: quando o programa não está aberto, chutar mata silenciosamente outra coisa
+/// parecida. Olhando o `tasklist` primeiro, "não está aberto" vira uma resposta
+/// honesta em vez de um acidente.
+fn fechar_programa(nome: &str, pol: &Politica) -> Result<String, String> {
+    let alvo = nome.trim().trim_end_matches(".exe").trim();
+    if alvo.is_empty() {
+        return Err("fechar_programa precisa de um nome".into());
+    }
+    if pol.modo == Modo::Sandbox {
+        return Ok(format!("[sandbox] fecharia {alvo}"));
+    }
+    if !pol.processos {
+        return Ok(format!("[sem processos] fecharia {alvo}"));
+    }
+    let saida = std::process::Command::new("tasklist")
+        .args(["/FO", "CSV", "/NH"])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let txt = String::from_utf8_lossy(&saida.stdout);
+    let baixo = alvo.to_lowercase();
+
+    // Nome exato ganha de prefixo: com "code" rodando junto de "code_helper", o que o
+    // usuario quis dizer e o exato.
+    let mut exato: Option<String> = None;
+    let mut parcial: Option<String> = None;
+    for linha in txt.lines() {
+        let img = linha.trim_start_matches('"').split('"').next().unwrap_or("").trim();
+        if img.is_empty() {
+            continue;
+        }
+        let sem = img.to_lowercase();
+        let sem = sem.trim_end_matches(".exe").to_string();
+        if sem == baixo {
+            exato = Some(img.to_string());
+            break;
+        }
+        if parcial.is_none() && (sem.starts_with(&baixo) || baixo.starts_with(&sem)) {
+            parcial = Some(img.to_string());
+        }
+    }
+    let Some(img) = exato.or(parcial) else {
+        return Err(format!("nao achei {alvo} rodando"));
+    };
+    if CRITICOS.contains(&img.to_lowercase().as_str()) {
+        return Err(format!("{img} segura a sessao do Windows; fechar derruba tudo"));
+    }
+    let r = std::process::Command::new("taskkill")
+        .args(["/IM", &img])
+        .output()
+        .map_err(|e| e.to_string())?;
+    if r.status.success() {
+        return Ok(format!("pedi para {img} fechar"));
+    }
+    // A saida crua do `taskkill` importa: "Acesso negado" de programa protegido e a
+    // unica informacao util que existe ali, e ja foi escondida uma vez por um
+    // amaciador meu. Ver `tools::amaciar_saida`.
+    let err = String::from_utf8_lossy(&r.stderr);
+    let out = String::from_utf8_lossy(&r.stdout);
+    Err(format!("{img} nao fechou: {}", if err.trim().is_empty() { out.trim() } else { err.trim() }))
 }
 
 /// Destino que é PASTA recebe o arquivo DENTRO dela, com o nome da origem.
@@ -1187,6 +1284,46 @@ mod tests {
         let pol = Politica::real_em(std::env::temp_dir());
         assert!(executar_cmd("del /s C:\\", &pol).is_err());
         assert!(executar_cmd("shutdown -s", &pol).is_err());
+    }
+
+    /// A gemea nao lanca nada quando a politica proibe processo — mesma guarda de
+    /// `abrir_programa`, e vale mais aqui: um `taskkill` solto dentro do `cargo test`
+    /// nao abriria janela, fecharia as do John.
+    #[test]
+    fn fechar_respeita_a_politica() {
+        let pol = Politica::real_sem_processos(std::env::temp_dir());
+        let r = fechar_programa("carinho", &pol).unwrap();
+        assert!(r.starts_with("[sem processos]"), "mexeu de verdade: {r}");
+        assert!(fechar_programa("   ", &pol).is_err(), "nome vazio tem de recusar");
+        // `.exe` escrito pelo usuario nao pode virar `carinho.exe.exe`.
+        let r = fechar_programa("carinho.exe", &pol).unwrap();
+        assert!(r.ends_with("carinho"), "nao tirou o .exe: {r}");
+    }
+
+    /// Programa que nao esta rodando devolve ERRO, e nao um "fechei" mentiroso.
+    ///
+    /// E a razao de a ferramenta olhar o `tasklist` antes: chutar `discord.exe` erra
+    /// a caixa em metade dos programas e, pior, quando o programa nao esta aberto
+    /// mata silenciosamente outra coisa parecida.
+    #[test]
+    fn programa_que_nao_roda_da_erro_honesto() {
+        let pol = Politica::real_em(std::env::temp_dir());
+        let e = fechar_programa("nao_existe_esse_programa_xyz", &pol).unwrap_err();
+        assert!(e.contains("nao achei"), "erro pouco claro: {e}");
+    }
+
+    /// O que segura a sessao do Windows nao fecha nem sendo pedido.
+    ///
+    /// `explorer.exe` fica FORA da lista de proposito: assusta, mas e reversivel, e
+    /// as vezes e exatamente o que se quer.
+    #[test]
+    fn nao_derruba_a_sessao_do_windows() {
+        let pol = Politica::real_em(std::env::temp_dir());
+        // `csrss.exe` roda em toda maquina Windows, entao o `tasklist` acha e a
+        // recusa vem da lista, nao de "nao achei".
+        let e = fechar_programa("csrss", &pol).unwrap_err();
+        assert!(e.contains("segura a sessao"), "devia recusar por critico: {e}");
+        assert!(CRITICOS.contains(&"teka.exe"), "ela nao pode se matar no meio da chamada");
     }
 
     /// A raiz confina caminho. Ela nunca confinou processo — e por meses ninguem
