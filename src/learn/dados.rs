@@ -165,6 +165,21 @@ const MOLDES: &[Molde] = &[
         ],
     },
     // ── abrir_programa ──────────────────────────────────────────────────────
+    //
+    // SAIRAM em 14/09 "chama o {0} ai" e "dispara o {0}". Nao por serem feias: por
+    // ensinarem a MESMA superficie que `executar_comando` ja ensinava.
+    //
+    //     abrir_programa      "chama o {0} ai"     "dispara o {0}"
+    //     executar_comando    "chama o {0}"        "dispara o comando {0}"
+    //
+    // `"chama o X"` ensinando duas ferramentas: o unico sinal que sobrava era um
+    // "ai" no fim. Medido em 14/09, `abrir_programa` rouba 30 de 240 pedidos de
+    // comando (12,5%) -- e o maior ladrao de `executar_comando`, e e defeito ANTIGO,
+    // anterior a gemea.
+    //
+    // O que DEVE separar as duas nao e o verbo, e o objeto: "roda o APLICATIVO x"
+    // contra "roda o COMANDO x". Por isso os moldes com verbo de comando que ficam
+    // sao so os que carregam marcador ("programa", "aplicativo", "app").
     Molde {
         ferramenta: "abrir_programa",
         frases: &[
@@ -173,7 +188,6 @@ const MOLDES: &[Molde] = &[
             "starta o {0}",
             "poe o {0} pra rodar",
             "abre o programa {0}",
-            "chama o {0} ai",
             "quero abrir o {0}",
             "liga o {0}",
             "abre {0} pra mim",
@@ -193,7 +207,6 @@ const MOLDES: &[Molde] = &[
             "coloca o {0} pra abrir",
             "faz abrir o {0}",
             "quero o {0} rodando",
-            "dispara o {0}",
             "me abre o {0}",
             "consegue abrir o {0}",
             "vai la e abre o {0}",
@@ -1242,6 +1255,36 @@ const MOLDES: &[Molde] = &[
             "chama o {0}",
             "roda um {0} ai",
             "dispara o comando {0}",
+            // --- ENTRARAM EM 14/09 ---
+            //
+            // Duas familias, e as duas miram o mesmo furo: `abrir_programa` ganha
+            // o pedido quando a frase nao diz claramente que aquilo e um COMANDO.
+            //
+            // 1) MARCADOR DE LUGAR. A regua usa console/terminal/prompt; estas usam
+            //    cmd, shell, linha de comando, janela preta. Marcador novo, mesmo
+            //    fenomeno -- e a regra da casa: cobre o fenomeno com superficie
+            //    NOVA, nunca copiando a frase que ela erra.
+            "{0} no cmd",
+            "roda {0} na linha de comando",
+            "joga {0} na janela preta",
+            "{0} pelo cmd por favor",
+            "abre o cmd e roda {0}",
+            "pelo shell, {0}",
+            "na linha de comando: {0}",
+            "sobe o cmd e manda {0}",
+            // 2) VERBO DE FAZER sem marcador nenhum, que e onde ela mais perde.
+            //    Aqui o UNICO sinal e a forma do argumento -- 44 dos 62 valores de
+            //    COMANDOS tem flag ou mais de um token, contra 0 flags em PROGRAMAS.
+            //    E a mesma logica da gemea de hoje: a distincao so e aprendida
+            //    quando alguma coisa DEPENDE dela.
+            "faz {0}",
+            "faz o {0} ai",
+            "manda ver no {0}",
+            "toca {0}",
+            "bota {0} pra rodar",
+            "quero que execute {0}",
+            "preciso que rode {0}",
+            "poe {0} pra executar",
             "no prompt roda {0}",
             "faz um {0} no terminal",
             "queria rodar {0}",
