@@ -567,10 +567,29 @@ fn abrir_programa(nome: &str, pol: &Politica) -> Result<String, String> {
 const CRITICOS: &[&str] = &[
     "system", "smss.exe", "csrss.exe", "wininit.exe", "winlogon.exe", "services.exe",
     "lsass.exe", "svchost.exe", "dwm.exe", "fontdrvhost.exe", "sihost.exe",
-    // Ela mesma: "fecha a teka" pelo caminho da ferramenta mata o processo no meio
-    // da chamada, e o que volta e o nada.
-    "teka.exe",
+    // Os pseudo-processos do Windows. Entraram em 14/09 porque a sonda de robustez
+    // mostrou "s", "sy" e "sys" casando com "System Idle Process" por prefixo e
+    // NAO caindo na lista -- `system` nao e igual a `system idle process`.
+    "system idle process", "secure system", "registry", "memory compression",
 ];
+
+/// O nome do executavel DELA MESMA, em minusculas.
+///
+/// Tinha `"teka.exe"` fixo na lista de criticos, e a sonda de robustez de 14/09
+/// mostrou que isso nao vale nada: o processo do treino chama `teka_fechar.exe`, o
+/// pedido "teka" casou por prefixo, e a recusa NAO disparou. Ela se mataria no meio
+/// da propria chamada.
+///
+/// Nome fixo nao funciona porque o binario e copiado com outro nome a cada braco de
+/// experimento (`teka_tres.exe`, `teka_fechar.exe`). Perguntar ao sistema funciona
+/// sempre.
+fn meu_executavel() -> Option<String> {
+    std::env::current_exe()
+        .ok()?
+        .file_name()?
+        .to_str()
+        .map(str::to_lowercase)
+}
 
 /// Fecha um programa que está rodando, **pedindo** em vez de matar.
 ///
@@ -606,34 +625,7 @@ fn fechar_programa(nome: &str, pol: &Politica) -> Result<String, String> {
         .args(["/FO", "CSV", "/NH"])
         .output()
         .map_err(|e| e.to_string())?;
-    let txt = String::from_utf8_lossy(&saida.stdout);
-    let baixo = alvo.to_lowercase();
-
-    // Nome exato ganha de prefixo: com "code" rodando junto de "code_helper", o que o
-    // usuario quis dizer e o exato.
-    let mut exato: Option<String> = None;
-    let mut parcial: Option<String> = None;
-    for linha in txt.lines() {
-        let img = linha.trim_start_matches('"').split('"').next().unwrap_or("").trim();
-        if img.is_empty() {
-            continue;
-        }
-        let sem = img.to_lowercase();
-        let sem = sem.trim_end_matches(".exe").to_string();
-        if sem == baixo {
-            exato = Some(img.to_string());
-            break;
-        }
-        if parcial.is_none() && (sem.starts_with(&baixo) || baixo.starts_with(&sem)) {
-            parcial = Some(img.to_string());
-        }
-    }
-    let Some(img) = exato.or(parcial) else {
-        return Err(format!("nao achei {alvo} rodando"));
-    };
-    if CRITICOS.contains(&img.to_lowercase().as_str()) {
-        return Err(format!("{img} segura a sessao do Windows; fechar derruba tudo"));
-    }
+    let img = resolver_alvo(&String::from_utf8_lossy(&saida.stdout), alvo)?;
     let r = std::process::Command::new("taskkill")
         .args(["/IM", &img])
         .output()
@@ -647,6 +639,95 @@ fn fechar_programa(nome: &str, pol: &Politica) -> Result<String, String> {
     let err = String::from_utf8_lossy(&r.stderr);
     let out = String::from_utf8_lossy(&r.stdout);
     Err(format!("{img} nao fechou: {}", if err.trim().is_empty() { out.trim() } else { err.trim() }))
+}
+
+
+/// Decide QUAL imagem fechar, e se pode — sem matar nada.
+///
+/// Separada de [`fechar_programa`] de proposito, e a razao e metodologica. A sonda
+/// de robustez de 14/09 nao conseguia chamar a decisao sem executar o `taskkill`,
+/// entao COPIOU a regra para dentro dela — e quando eu apertei o casamento aqui, a
+/// sonda continuou imprimindo o resultado antigo, porque media a copia.
+///
+/// Esse e o erro que mais custou tempo neste projeto: medir o proxy no lugar da
+/// propriedade. A correcao nao e escrever a copia com mais cuidado, e tirar a
+/// necessidade da copia.
+///
+/// Recebe a saida crua do `tasklist /FO CSV /NH` para poder ser testada com uma
+/// maquina de mentira.
+pub fn resolver_alvo(tasklist_csv: &str, alvo: &str) -> Result<String, String> {
+    // O `.exe` sai AQUI, e nao em quem chama.
+    //
+    // Estava do lado de fora, e o primeiro teste com maquina de mentira pegou: a
+    // funcao publica se comportava diferente da ferramenta que a usa. Regra que so
+    // vale quando o chamador lembra dela nao e regra, e armadilha.
+    let alvo = alvo.trim().trim_end_matches(".exe").trim();
+    let baixo = alvo.to_lowercase();
+    let txt = tasklist_csv;
+    // ------------------------------------------------------------------
+    // O CASAMENTO, apertado em 14/09 depois da sonda de robustez
+    // ------------------------------------------------------------------
+    //
+    // A primeira versao casava prefixo nas DUAS direcoes e sem tamanho minimo. A
+    // sonda mostrou o que isso faz numa maquina com 329 processos:
+    //
+    //     "s"   -> System Idle Process     "c"  -> csrss.exe
+    //     "sv"  -> svchost.exe             "si" -> sihost.exe
+    //
+    // Uma letra escolhendo qual processo morrer. E isto nao e hipotese de
+    // laboratorio: a entrada dela vem de VOZ, e o Whisper corta palavra --
+    // "fecha o s..." chegaria assim.
+    //
+    // Agora: menos de 3 letras nao casa nada; prefixo so a partir de 4; e so na
+    // direcao "o pedido e prefixo da imagem". A direcao inversa era a que fazia
+    // "system32" virar System.
+    const MIN_CASAR: usize = 3;
+    const MIN_PREFIXO: usize = 4;
+    if baixo.chars().count() < MIN_CASAR {
+        return Err(format!("{alvo} e curto demais para eu saber qual programa e"));
+    }
+    let mut exato: Option<String> = None;
+    let mut parciais: Vec<String> = Vec::new();
+    for linha in txt.lines() {
+        let img = linha.trim_start_matches('"').split('"').next().unwrap_or("").trim();
+        if img.is_empty() {
+            continue;
+        }
+        let sem = img.to_lowercase();
+        let sem = sem.trim_end_matches(".exe").to_string();
+        if sem == baixo {
+            exato = Some(img.to_string());
+            break;
+        }
+        if baixo.chars().count() >= MIN_PREFIXO
+            && sem.starts_with(&baixo)
+            && !parciais.iter().any(|p: &String| p.eq_ignore_ascii_case(img))
+        {
+            parciais.push(img.to_string());
+        }
+    }
+    let img = match exato {
+        Some(e) => e,
+        None => match parciais.len() {
+            0 => return Err(format!("nao achei {alvo} rodando")),
+            1 => parciais.swap_remove(0),
+            // Ambiguidade NAO se resolve no chute. Fechar o programa errado nao
+            // tem desfazer, e a Teka ja tem um jeito certo de nao saber: dizer.
+            _ => {
+                parciais.sort();
+                return Err(format!("{alvo} casa com mais de um: {}", parciais.join(", ")));
+            }
+        },
+    };
+    let img_baixa = img.to_lowercase();
+    if CRITICOS.contains(&img_baixa.as_str()) {
+        return Err(format!("{img} segura a sessao do Windows; fechar derruba tudo"));
+    }
+    // Ela mesma, perguntando ao sistema em vez de confiar num nome fixo.
+    if meu_executavel().is_some_and(|meu| meu == img_baixa) {
+        return Err(format!("{img} sou eu; fechar me mataria no meio da chamada"));
+    }
+    Ok(img)
 }
 
 /// Destino que é PASTA recebe o arquivo DENTRO dela, com o nome da origem.
@@ -1323,7 +1404,90 @@ mod tests {
         // recusa vem da lista, nao de "nao achei".
         let e = fechar_programa("csrss", &pol).unwrap_err();
         assert!(e.contains("segura a sessao"), "devia recusar por critico: {e}");
-        assert!(CRITICOS.contains(&"teka.exe"), "ela nao pode se matar no meio da chamada");
+        // A auto-protecao saiu da lista fixa e virou `meu_executavel()` em 14/09:
+        // nome fixo nao vale nada quando o binario e copiado como `teka_fechar.exe`.
+        // Ver `ela_nao_se_mata`.
+        assert!(!CRITICOS.contains(&"teka.exe"), "nome fixo nao protege: use meu_executavel()");
+    }
+
+    /// A decisao inteira, com uma maquina de MENTIRA.
+    ///
+    /// E o que a extracao de `resolver_alvo` comprou: da para exercitar ambiguidade,
+    /// prefixo e criticos sem depender do que por acaso esta rodando nesta maquina.
+    #[test]
+    fn resolver_alvo_decide_certo() {
+        const FALSA: &str = concat!(
+            "\"System Idle Process\",\"0\",\"Services\",\"0\",\"8 K\"
+",
+            "\"csrss.exe\",\"612\",\"Services\",\"0\",\"5.000 K\"
+",
+            "\"Discord.exe\",\"9001\",\"Console\",\"1\",\"200.000 K\"
+",
+            "\"Code.exe\",\"9002\",\"Console\",\"1\",\"300.000 K\"
+",
+            "\"Code_helper.exe\",\"9003\",\"Console\",\"1\",\"50.000 K\"
+",
+        );
+        // Exato ganha, mesmo havendo prefixo concorrente ("Code" e "Code_helper").
+        assert_eq!(resolver_alvo(FALSA, "code").unwrap(), "Code.exe");
+        // Caixa nao importa, e o `.exe` escrito pelo usuario tambem nao.
+        assert_eq!(resolver_alvo(FALSA, "DISCORD.exe").unwrap(), "Discord.exe");
+        // Prefixo unico resolve.
+        assert_eq!(resolver_alvo(FALSA, "discor").unwrap(), "Discord.exe");
+        // Critico recusa.
+        assert!(resolver_alvo(FALSA, "csrss").unwrap_err().contains("segura a sessao"));
+        // Curto demais nao casa nada — nem "System Idle Process" por prefixo.
+        assert!(resolver_alvo(FALSA, "sy").unwrap_err().contains("curto demais"));
+        // Nao esta rodando: erro honesto, nao um chute parecido.
+        assert!(resolver_alvo(FALSA, "spotify").unwrap_err().contains("nao achei"));
+    }
+
+    /// Ambiguidade vira PERGUNTA, nao chute.
+    ///
+    /// Fechar o programa errado nao tem desfazer. Quando duas imagens casam o mesmo
+    /// prefixo, o certo e dizer quais sao — a Teka ja tem um jeito de nao saber.
+    #[test]
+    fn ambiguidade_nao_vira_chute() {
+        const DUAS: &str = concat!(
+            "\"Code_helper.exe\",\"1\",\"Console\",\"1\",\"1 K\"
+",
+            "\"Code_gpu.exe\",\"2\",\"Console\",\"1\",\"1 K\"
+",
+        );
+        let e = resolver_alvo(DUAS, "code_").unwrap_err();
+        assert!(e.contains("mais de um"), "devia listar as duas: {e}");
+        assert!(e.contains("Code_gpu.exe") && e.contains("Code_helper.exe"), "{e}");
+    }
+
+    /// Uma letra nao escolhe qual processo morre.
+    ///
+    /// A sonda de robustez de 14/09, numa maquina com 329 processos: "s" casava com
+    /// System Idle Process, "c" com csrss.exe, "sv" com svchost.exe. E a entrada
+    /// dela vem de VOZ, onde o Whisper corta palavra -- "fecha o s..." chega assim.
+    #[test]
+    fn nome_curto_nao_casa_nada() {
+        let pol = Politica::real_em(std::env::temp_dir());
+        for curto in ["s", "sy", "c", "sv"] {
+            let e = fechar_programa(curto, &pol).unwrap_err();
+            assert!(e.contains("curto demais"), "{curto:?} devia recusar por curto: {e}");
+        }
+    }
+
+    /// Ela nao se mata. E o nome NAO pode ser fixo: o binario e copiado com outro
+    /// nome a cada braco de experimento (`teka_fechar.exe`), e foi exatamente assim
+    /// que a sonda achou o furo — `"teka.exe"` na lista, `teka_fechar.exe` rodando,
+    /// e o pedido "teka" passando batido.
+    #[test]
+    fn ela_nao_se_mata() {
+        let meu = meu_executavel().expect("o teste precisa saber o proprio nome");
+        assert!(meu.ends_with(".exe") || !meu.is_empty());
+        let pol = Politica::real_em(std::env::temp_dir());
+        // O nome do binario de teste, sem `.exe`, tem de bater nela mesma.
+        let sem = meu.trim_end_matches(".exe").to_string();
+        if sem.chars().count() >= 3 {
+            let e = fechar_programa(&sem, &pol).unwrap_err();
+            assert!(e.contains("sou eu"), "devia se reconhecer: {e}");
+        }
     }
 
     /// A raiz confina caminho. Ela nunca confinou processo — e por meses ninguem
