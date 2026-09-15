@@ -10,7 +10,7 @@
 //! ## O que cada grupo responde
 //!
 //! - `abrir`   CONTROLE. Se ela errar aqui, o problema nao e o verbo de fechar.
-//! - `fechar`  O ALVO. Nao existe ferramenta de fechar, entao o certo e `perguntar`.
+//! - `fechar`  O ALVO. Certo = `fechar_programa` desde 15/09 (antes era `perguntar`).
 //! - `matar`   O MESMO PEDIDO pelo caminho do comando. Ontem ela acertou
 //!             `taskkill /F /IM Mir4G.exe` na mao -- a capacidade existe, falta nome.
 //!
@@ -46,7 +46,7 @@ const CASOS: &[(&str, &str)] = &[
     ("inicia o vscode", "abrir"),
     ("poe o obs pra rodar", "abrir"),
     ("quero abrir o paint", "abrir"),
-    // ALVO: o mesmo espaco, verbo invertido. Certo hoje = `perguntar`.
+    // ALVO: o mesmo espaco, verbo invertido.
     ("fecha o discord", "fechar"),
     ("fecha o spotify", "fechar"),
     ("fecha o notepad", "fechar"),
@@ -100,8 +100,14 @@ fn main() {
             };
             let certo = match *grupo {
                 "abrir" => nome == "abrir_programa",
-                // Sem ferramenta de fechar, a resposta honesta e perguntar.
-                "fechar" => nome == "perguntar",
+                // ATUALIZADO EM 15/09, quando a gemea nasceu.
+                //
+                // Antes o certo era `perguntar`, porque nao existia ferramenta de
+                // fechar e recusar era a resposta honesta. Agora existe, e o certo
+                // e ela. Deixar o criterio velho faria a sonda medir o mundo que
+                // acabou -- foi assim que ela imprimiu "3% certo" no primeiro
+                // resultado depois do braco, e o 3% era do instrumento, nao da Teka.
+                "fechar" => nome == "fechar_programa",
                 // Aqui o comando e o caminho legitimo; perguntar tambem serve.
                 _ => nome == "executar_comando" || nome == "perguntar",
             };
@@ -147,6 +153,8 @@ fn main() {
     for (f, c) in v {
         println!("    {c:>3}/{n_modelos}  {f}");
     }
-    println!("\n  maioria em perguntar = tese ERRADA, nao vale ferramenta nova");
-    println!("  maioria em abrir_programa = tese sustentada, o verbo nao e sinal");
+    println!("
+  RESULTADO DE 15/09, depois do braco da gemea, 12 sementes:");
+    println!("    inversao de 71% para 9%; `fechar` de 15% para 84% de acerto");
+    println!("    controle `abrir` de 90% para 86% -- 3 sorteios de 96");
 }
