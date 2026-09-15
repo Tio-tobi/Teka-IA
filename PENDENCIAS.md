@@ -1,6 +1,6 @@
 # Teka — o que falta, o que está quebrado, e quanto custa consertar
 
-Estado em **2026-09-14, 23h**. Branch `tres_formas`, 31 commits à frente de `origin/main`.
+Estado em **2026-09-15, 01h30**. Branch `tres_formas`, publicada em `origin`.
 
 Este documento é escrito para alguém **de fora** do projeto. Todo número aqui foi medido;
 onde não foi, está escrito que não foi. Se você encontrar uma afirmação sem método, é um
@@ -58,7 +58,7 @@ Ela nunca escreveu `taskkill` sozinha. Nenhuma vez.
 
 | medida | valor | como foi medido |
 |---|---|---|
-| ferramenta certa (régua de 329) | **71,4%** | 12 sementes, `dados/frases_teste.txt` |
+| ferramenta certa (régua de 339) | **69,7%** | 12 sementes, dois instrumentos independentes concordam |
 | efeito acontece no disco | **77,5%** | 40 tarefas, 1 semente, `examples/sonda_efeito.rs` |
 | chamada certa → efeito certo | **100%** | 0 casos de "chamada boa, nada aconteceu" |
 | `executar_comando` ponta a ponta | **70,0%** | 20 frases × 6 sementes |
@@ -75,6 +75,61 @@ controle — o gabarito de cada tarefa é executado antes, e 40/40 produzem o ef
 o instrumento está calibrado, mas a amostra é fina.
 
 ---
+
+### 3.1 Resultado do braço `fechar_programa` (fechado 15/09, 01h13)
+
+Criada a gêmea de `abrir_programa`: mesmo parâmetro, diferindo só no verbo. A hipótese
+era de **registro**, não de capacidade — o verbo não carregava informação porque nada
+dependia dele.
+
+Falsificação registrada **antes** da execução, e o que aconteceu:
+
+| condição que mataria a hipótese | resultado | veredito |
+|---|---|---|
+| `fechar` abaixo de 50% | **84%** (era 15%) | passou |
+| controle `abrir` cair mais de 3 pontos | 90% → **86%** | **cruzou a linha** |
+| primário cair mais de 2 pontos | **subiu 3,77** (t pareado +2,97) | passou |
+
+Inversão `"fecha X"` → `abrir_programa`: **de 71% para 9%.**
+
+O primário é as 329 frases comuns aos dois braços, repontuadas com os rótulos atuais
+**nos dois lados** — repontuar só um lado produziria ganho fabricado. Nove sementes
+subiram, três caíram.
+
+**Sobre o gatilho que cruzou:** o controle caiu 3 sorteios em 96 (8 frases × 12
+sementes), e nessa amostra 1 sorteio vale 1,04 ponto. O limiar de 3 pontos era apertado
+demais — deveria ter sido definido em sorteios, não em pontos. Fica registrado como
+cruzado porque foi o que estava escrito antes; afrouxar limiar depois do resultado é o
+que este projeto proíbe. A leitura honesta é que o controle não se moveu de forma
+distinguível de ruído.
+
+### 3.2 Discrepância de instrumento, em aberto
+
+Este documento citava **71,4%** como linha de base, número da sonda ao vivo sobre os
+modelos do braço anterior. O log de treino dos **mesmos modelos** declara **67,4%**, e
+o recálculo independente bate com o log.
+
+Nos modelos novos os dois instrumentos concordam exatamente (69,7% e 69,7%), então não
+há viés sistemático. Mas os modelos antigos **não carregam mais** (21 contra 22
+ferramentas) e a discrepância não tem como ser resolvida.
+
+**Use 69,7%.** Se você viu 71,4% em qualquer lugar, está velho.
+
+### 3.3 Instrumento que mede o mundo que acabou
+
+Padrão que apareceu **três vezes esta semana** e que vale conhecer antes de escrever
+sonda:
+
+- `examples/sonda_fechar.rs` imprimiu `fechar: 3% certo` depois do braço, porque o
+  critério dela era `perguntar` — escrito quando não existia ferramenta de fechar. Os
+  3% eram do instrumento.
+- `examples/sonda_robustez.rs` continuou acusando um defeito **já consertado**, porque
+  tinha a regra de decisão copiada do código de produção.
+- A trava anti-binário-velho do script de experimento se derrotou a si mesma ao
+  comparar `mtime` de um arquivo que ela mesma recopiava.
+
+Quando você consertar algo, **confirme que a sonda mudou de resposta.** Se o número não
+se moveu, a primeira suspeita é a sonda, não o conserto.
 
 ## 4. Defeitos conhecidos, por gravidade
 
@@ -281,11 +336,11 @@ que ficou vermelho por meses sem ninguém saber. Use `--no-fail-fast`.
 
 ## 9. Antes de publicar (`git push`)
 
-1. Commitar `src/learn/dados.rs` (braço 1 preparado, ainda não medido).
-2. `roda_carga.sh` — decidir se entra ou sai.
-3. O treino da gêmea termina ~1h30. **Não interromper.**
-4. Branch `tres_formas` está 31 commits à frente de `origin/main` e nunca foi publicada.
-   Decidir: `push` da branch, ou merge em `main` antes.
+Feito: a branch `tres_formas` foi publicada em `origin`. Clone e `git checkout tres_formas`.
+
+Falta decidir: **merge em `main`**. A branch está ~34 commits à frente e `main` continua
+no estado antigo (21 ferramentas, régua de 329). Quem clonar o `main` pega uma árvore
+que não carrega nenhum modelo produzido nesta branch.
 
 ---
 
